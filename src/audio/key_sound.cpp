@@ -1,6 +1,6 @@
-#include "ksh/audio/key_sound.hpp"
+#include "kson/audio/key_sound.hpp"
 
-void ksh::to_json(nlohmann::json& j, const KeySoundParams& params)
+void kson::to_json(nlohmann::json& j, const KeySoundParams& params)
 {
 	j = nlohmann::json::object();
 
@@ -10,7 +10,7 @@ void ksh::to_json(nlohmann::json& j, const KeySoundParams& params)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const KeySoundDef& def)
+void kson::to_json(nlohmann::json& j, const KeySoundDef& def)
 {
 	if (!nlohmann::json(def.v).empty())
 	{
@@ -18,12 +18,12 @@ void ksh::to_json(nlohmann::json& j, const KeySoundDef& def)
 	}
 }
 
-bool ksh::KeySoundFXInfo::empty() const
+bool kson::KeySoundFXInfo::empty() const
 {
 	return def.empty() && chipInvoke.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const KeySoundFXInfo& fx)
+void kson::to_json(nlohmann::json& j, const KeySoundFXInfo& fx)
 {
 	if (!fx.def.empty())
 	{
@@ -36,12 +36,12 @@ void ksh::to_json(nlohmann::json& j, const KeySoundFXInfo& fx)
 	}
 }
 
-bool ksh::KeySoundLaserInfo::empty() const
+bool kson::KeySoundLaserInfo::empty() const
 {
 	return def.empty() && slamInvoke.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const KeySoundLaserInfo& laser)
+void kson::to_json(nlohmann::json& j, const KeySoundLaserInfo& laser)
 {
 	if (!laser.def.empty())
 	{
@@ -54,12 +54,12 @@ void ksh::to_json(nlohmann::json& j, const KeySoundLaserInfo& laser)
 	}
 }
 
-bool ksh::KeySoundRoot::empty() const
+bool kson::KeySoundRoot::empty() const
 {
 	return fx.empty() && laser.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const KeySoundRoot& keySound)
+void kson::to_json(nlohmann::json& j, const KeySoundRoot& keySound)
 {
 	if (!keySound.fx.empty())
 	{

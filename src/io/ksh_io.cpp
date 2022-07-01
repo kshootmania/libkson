@@ -1,5 +1,5 @@
-#include "ksh/io/ksh_io.hpp"
-#include "ksh/encoding/encoding.hpp"
+#include "kson/io/ksh_io.hpp"
+#include "kson/encoding/encoding.hpp"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -10,7 +10,7 @@
 
 namespace
 {
-	using namespace ksh;
+	using namespace kson;
 
 	constexpr char kOptionSeparator = '=';
 	constexpr char kBlockSeparator = '|';
@@ -910,7 +910,7 @@ namespace
 
 	template <typename ChartDataType>
 	ChartDataType CreateChartDataFromKSHMetaData(const std::unordered_map<std::string, std::string>& meta)
-		requires std::is_same_v<ChartDataType, ksh::ChartData> || std::is_same_v<ChartDataType, ksh::MetaChartData>
+		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
 	{
 		ChartDataType chartData;
 
@@ -1007,7 +1007,7 @@ namespace
 	}
 }
 
-std::unordered_map<std::string, std::string> ksh::LoadKSHMetaDataHashMap(std::istream& stream, bool* pIsUTF8)
+std::unordered_map<std::string, std::string> kson::LoadKSHMetaDataHashMap(std::istream& stream, bool* pIsUTF8)
 {
 	std::unordered_map<std::string, std::string> metaDataHashMap;
 
@@ -1057,13 +1057,13 @@ std::unordered_map<std::string, std::string> ksh::LoadKSHMetaDataHashMap(std::is
 	return metaDataHashMap;
 }
 
-MetaChartData ksh::LoadKSHMetaChartData(std::istream& stream)
+MetaChartData kson::LoadKSHMetaChartData(std::istream& stream)
 {
 	const auto meta = LoadKSHMetaDataHashMap(stream);
 	return CreateChartDataFromKSHMetaData<MetaChartData>(meta);
 }
 
-MetaChartData ksh::LoadKSHMetaChartData(const std::string& filePath)
+MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -1086,7 +1086,7 @@ MetaChartData ksh::LoadKSHMetaChartData(const std::string& filePath)
 	return chartData;
 }
 
-ksh::ChartData ksh::LoadKSHChartData(std::istream& stream)
+kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 {
 	bool isUTF8 = false;
 	const auto meta = LoadKSHMetaDataHashMap(stream, &isUTF8);
@@ -1545,7 +1545,7 @@ ksh::ChartData ksh::LoadKSHChartData(std::istream& stream)
 	return chartData;
 }
 
-ChartData ksh::LoadKSHChartData(const std::string& filePath)
+ChartData kson::LoadKSHChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{

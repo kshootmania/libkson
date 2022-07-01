@@ -1,11 +1,11 @@
-#include "ksh/camera/camera.hpp"
+#include "kson/camera/camera.hpp"
 
-bool ksh::CameraRoot::empty() const
+bool kson::CameraRoot::empty() const
 {
 	return cam.empty() && tilt.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const CameraRoot& camera)
+void kson::to_json(nlohmann::json& j, const CameraRoot& camera)
 {
 	j = nlohmann::json::object();
 

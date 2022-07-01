@@ -1,6 +1,6 @@
-#include "ksh/common/common.hpp"
+#include "kson/common/common.hpp"
 
-void ksh::to_json(nlohmann::json& j, const GraphValue& graphValue)
+void kson::to_json(nlohmann::json& j, const GraphValue& graphValue)
 {
 	if (graphValue.v == graphValue.vf)
 	{
@@ -17,7 +17,7 @@ void ksh::to_json(nlohmann::json& j, const GraphValue& graphValue)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const RelGraphValue& graphValue)
+void kson::to_json(nlohmann::json& j, const RelGraphValue& graphValue)
 {
 	if (graphValue.rv == graphValue.rvf)
 	{
@@ -34,7 +34,7 @@ void ksh::to_json(nlohmann::json& j, const RelGraphValue& graphValue)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const ByPulse<Interval>& intervals)
+void kson::to_json(nlohmann::json& j, const ByPulse<Interval>& intervals)
 {
 	j = nlohmann::json::array();
 
@@ -56,7 +56,7 @@ void ksh::to_json(nlohmann::json& j, const ByPulse<Interval>& intervals)
 	}
 }
 
-void ksh::IntervalByRelPulseToJSON(nlohmann::json& j, const ByRelPulse<Interval>& intervals)
+void kson::IntervalByRelPulseToJSON(nlohmann::json& j, const ByRelPulse<Interval>& intervals)
 {
 	j = nlohmann::json::array();
 
@@ -78,7 +78,7 @@ void ksh::IntervalByRelPulseToJSON(nlohmann::json& j, const ByRelPulse<Interval>
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const ByPulseMulti<Interval>& intervals)
+void kson::to_json(nlohmann::json& j, const ByPulseMulti<Interval>& intervals)
 {
 	j = nlohmann::json::array();
 
@@ -101,7 +101,7 @@ void ksh::to_json(nlohmann::json& j, const ByPulseMulti<Interval>& intervals)
 }
 
 // Note: This function cannot overload to_json() because ByRelPulseMulti<T> is the same type as ByPulseMulti<T>
-void ksh::IntervalByRelPulseMultiToJSON(nlohmann::json& j, const ByRelPulseMulti<Interval>& intervals)
+void kson::IntervalByRelPulseMultiToJSON(nlohmann::json& j, const ByRelPulseMulti<Interval>& intervals)
 {
 	j = nlohmann::json::array();
 

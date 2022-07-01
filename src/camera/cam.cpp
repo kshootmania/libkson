@@ -1,6 +1,6 @@
-#include "ksh/camera/cam.hpp"
+#include "kson/camera/cam.hpp"
 
-void ksh::to_json(nlohmann::json& j, const CamPatternParams& params)
+void kson::to_json(nlohmann::json& j, const CamPatternParams& params)
 {
 	j["l"] = params.length;
 
@@ -25,7 +25,7 @@ void ksh::to_json(nlohmann::json& j, const CamPatternParams& params)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const CamPatternDef& def)
+void kson::to_json(nlohmann::json& j, const CamPatternDef& def)
 {
 	j = {
 		{ "body", def.body },
@@ -33,12 +33,12 @@ void ksh::to_json(nlohmann::json& j, const CamPatternDef& def)
 	};
 }
 
-bool ksh::CamPatternLaserInfo::empty() const
+bool kson::CamPatternLaserInfo::empty() const
 {
 	return def.empty() && slamInvoke.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const CamPatternLaserInfo& info)
+void kson::to_json(nlohmann::json& j, const CamPatternLaserInfo& info)
 {
 	j = nlohmann::json::object();
 
@@ -53,24 +53,24 @@ void ksh::to_json(nlohmann::json& j, const CamPatternLaserInfo& info)
 	}
 }
 
-bool ksh::CamPatternInfo::empty() const
+bool kson::CamPatternInfo::empty() const
 {
 	return laser.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const CamPatternInfo& info)
+void kson::to_json(nlohmann::json& j, const CamPatternInfo& info)
 {
 	j = {
 		{ "laser", info.laser },
 	};
 }
 
-bool ksh::CamRoot::empty() const
+bool kson::CamRoot::empty() const
 {
 	return body.empty() && pattern.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const CamRoot& cam)
+void kson::to_json(nlohmann::json& j, const CamRoot& cam)
 {
 	j = nlohmann::json::object();
 

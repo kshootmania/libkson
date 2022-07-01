@@ -1,11 +1,11 @@
-#include "ksh/camera/tilt.hpp"
+#include "kson/camera/tilt.hpp"
 
-bool ksh::TiltRoot::empty() const
+bool kson::TiltRoot::empty() const
 {
 	return scale.empty() && manual.empty() && keep.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const TiltRoot& tilt)
+void kson::to_json(nlohmann::json& j, const TiltRoot& tilt)
 {
 	j = nlohmann::json::object();
 

@@ -1,6 +1,6 @@
-#include "ksh/note/note.hpp"
+#include "kson/note/note.hpp"
 
-void ksh::to_json(nlohmann::json& j, const Lane<LaserSection>& lane)
+void kson::to_json(nlohmann::json& j, const Lane<LaserSection>& lane)
 {
 	j = nlohmann::json::array();
 
@@ -20,7 +20,7 @@ void ksh::to_json(nlohmann::json& j, const Lane<LaserSection>& lane)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const NoteRoot& noteRoot)
+void kson::to_json(nlohmann::json& j, const NoteRoot& noteRoot)
 {
 	nlohmann::json bt = nlohmann::json::array();
 	for (const auto& lane : noteRoot.btLanes)

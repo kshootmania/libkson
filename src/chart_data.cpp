@@ -1,6 +1,6 @@
-#include "ksh/chart_data.hpp"
+#include "kson/chart_data.hpp"
 
-void ksh::to_json(nlohmann::json& j, const ChartData& chartData)
+void kson::to_json(nlohmann::json& j, const ChartData& chartData)
 {
 	j = {
 		{ "meta", chartData.meta },

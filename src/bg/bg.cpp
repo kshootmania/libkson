@@ -1,11 +1,11 @@
-#include "ksh/bg/bg.hpp"
+#include "kson/bg/bg.hpp"
 
-bool ksh::KSHRotationFlags::operator==(const KSHRotationFlags& rhs) const
+bool kson::KSHRotationFlags::operator==(const KSHRotationFlags& rhs) const
 {
 	return tiltAffected == rhs.tiltAffected && spinAffected == rhs.spinAffected;
 }
 
-void ksh::to_json(nlohmann::json& j, const KSHRotationFlags& flags)
+void kson::to_json(nlohmann::json& j, const KSHRotationFlags& flags)
 {
 	j = {
 		{ "tilt", flags.tiltAffected },
@@ -13,18 +13,18 @@ void ksh::to_json(nlohmann::json& j, const KSHRotationFlags& flags)
 	};
 }
 
-void ksh::from_json(const nlohmann::json& j, KSHRotationFlags& flags)
+void kson::from_json(const nlohmann::json& j, KSHRotationFlags& flags)
 {
 	j.at("tilt").get_to(flags.tiltAffected);
 	j.at("spin").get_to(flags.spinAffected);
 }
 
-bool ksh::KSHBGInfo::operator==(const KSHBGInfo& rhs) const
+bool kson::KSHBGInfo::operator==(const KSHBGInfo& rhs) const
 {
 	return filename == rhs.filename && rotationFlags == rhs.rotationFlags;
 }
 
-void ksh::to_json(nlohmann::json& j, const KSHBGInfo& bg)
+void kson::to_json(nlohmann::json& j, const KSHBGInfo& bg)
 {
 	j = {
 		{ "filename", bg.filename },
@@ -36,12 +36,12 @@ void ksh::to_json(nlohmann::json& j, const KSHBGInfo& bg)
 	}
 }
 
-bool ksh::KSHLayerInfo::operator==(const KSHLayerInfo& rhs) const
+bool kson::KSHLayerInfo::operator==(const KSHLayerInfo& rhs) const
 {
 	return filename == rhs.filename && durationMs == rhs.durationMs && rotationFlags == rhs.rotationFlags;
 }
 
-void ksh::to_json(nlohmann::json& j, const KSHLayerInfo& layer)
+void kson::to_json(nlohmann::json& j, const KSHLayerInfo& layer)
 {
 	j = {
 		{ "filename", layer.filename },
@@ -58,12 +58,12 @@ void ksh::to_json(nlohmann::json& j, const KSHLayerInfo& layer)
 	}
 }
 
-bool ksh::KSHMovieInfo::empty() const
+bool kson::KSHMovieInfo::empty() const
 {
 	return filename.empty() && offsetMs == 0;
 }
 
-void ksh::to_json(nlohmann::json& j, const KSHMovieInfo& movie)
+void kson::to_json(nlohmann::json& j, const KSHMovieInfo& movie)
 {
 	j = {
 		{ "filename", movie.filename },
@@ -71,7 +71,7 @@ void ksh::to_json(nlohmann::json& j, const KSHMovieInfo& movie)
 	};
 }
 
-void ksh::to_json(nlohmann::json& j, const LegacyBGRoot& legacy)
+void kson::to_json(nlohmann::json& j, const LegacyBGRoot& legacy)
 {
 	j = nlohmann::json::object();
 
@@ -99,12 +99,12 @@ void ksh::to_json(nlohmann::json& j, const LegacyBGRoot& legacy)
 	}
 }
 
-bool ksh::LegacyBGRoot::empty() const
+bool kson::LegacyBGRoot::empty() const
 {
 	return bgInfos.empty() && layerInfos.empty() && movieInfos.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const BGRoot& bg)
+void kson::to_json(nlohmann::json& j, const BGRoot& bg)
 {
 	j = nlohmann::json::object();
 

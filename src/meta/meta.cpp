@@ -1,16 +1,16 @@
-#include "ksh/meta/meta.hpp"
+#include "kson/meta/meta.hpp"
 
-void ksh::to_json(nlohmann::json& j, const DifficultyInfo& difficulty)
+void kson::to_json(nlohmann::json& j, const DifficultyInfo& difficulty)
 {
 	j["idx"] = difficulty.idx;
 }
 
-bool ksh::LegacyMetaInfo::empty() const
+bool kson::LegacyMetaInfo::empty() const
 {
 	return titleImageFilename.empty() && artistImageFilename.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const LegacyMetaInfo& legacy)
+void kson::to_json(nlohmann::json& j, const LegacyMetaInfo& legacy)
 {
 	j = nlohmann::json::object();
 
@@ -25,7 +25,7 @@ void ksh::to_json(nlohmann::json& j, const LegacyMetaInfo& legacy)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const MetaRoot& meta)
+void kson::to_json(nlohmann::json& j, const MetaRoot& meta)
 {
 	j = {
 		{ "title", meta.title },

@@ -1,8 +1,8 @@
-#include "ksh/audio/audio_effect.hpp"
+#include "kson/audio/audio_effect.hpp"
 
 namespace
 {
-	using namespace ksh;
+	using namespace kson;
 
 	const std::unordered_map<std::string_view, AudioEffectType> s_ksonPresetAudioEffectNames
 	{
@@ -23,7 +23,7 @@ namespace
 	};
 }
 
-ksh::AudioEffectType ksh::StrToAudioEffectType(std::string_view str)
+kson::AudioEffectType kson::StrToAudioEffectType(std::string_view str)
 {
 	if (s_ksonPresetAudioEffectNames.contains(str))
 	{
@@ -35,7 +35,7 @@ ksh::AudioEffectType ksh::StrToAudioEffectType(std::string_view str)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const AudioEffectParams& params)
+void kson::to_json(nlohmann::json& j, const AudioEffectParams& params)
 {
 	j = nlohmann::json::object();
 	for (const auto& [name, value] : params)
@@ -73,7 +73,7 @@ void ksh::to_json(nlohmann::json& j, const AudioEffectParams& params)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const AudioEffectDef& def)
+void kson::to_json(nlohmann::json& j, const AudioEffectDef& def)
 {
 	j["type"] = def.type;
 
@@ -83,33 +83,33 @@ void ksh::to_json(nlohmann::json& j, const AudioEffectDef& def)
 	}
 }
 
-ksh::AudioEffectParam::AudioEffectParam(double value)
+kson::AudioEffectParam::AudioEffectParam(double value)
 	: value(value)
 	, valueOn(value)
 	, valueOnMax(value)
 {
 }
 
-ksh::AudioEffectParam::AudioEffectParam(double value, double valueOn)
+kson::AudioEffectParam::AudioEffectParam(double value, double valueOn)
 	: value(value)
 	, valueOn(valueOn)
 	, valueOnMax(valueOn)
 {
 }
 
-ksh::AudioEffectParam::AudioEffectParam(double value, double valueOn, double valueOnMax)
+kson::AudioEffectParam::AudioEffectParam(double value, double valueOn, double valueOnMax)
 	: value(value)
 	, valueOn(valueOn)
 	, valueOnMax(valueOnMax)
 {
 }
 
-bool ksh::AudioEffectFXInfo::empty() const
+bool kson::AudioEffectFXInfo::empty() const
 {
 	return def.empty() && paramChange.empty() && longInvoke.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const AudioEffectFXInfo& fx)
+void kson::to_json(nlohmann::json& j, const AudioEffectFXInfo& fx)
 {
 	j = nlohmann::json::object();
 
@@ -130,12 +130,12 @@ void ksh::to_json(nlohmann::json& j, const AudioEffectFXInfo& fx)
 }
 
 
-bool ksh::AudioEffectLaserInfo::empty() const
+bool kson::AudioEffectLaserInfo::empty() const
 {
 	return def.empty() && paramChange.empty() && pulseInvoke.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const AudioEffectLaserInfo& laser)
+void kson::to_json(nlohmann::json& j, const AudioEffectLaserInfo& laser)
 {
 	j = nlohmann::json::object();
 
@@ -155,12 +155,12 @@ void ksh::to_json(nlohmann::json& j, const AudioEffectLaserInfo& laser)
 	}
 }
 
-bool ksh::AudioEffectRoot::empty() const
+bool kson::AudioEffectRoot::empty() const
 {
 	return fx.empty() && laser.empty();
 }
 
-void ksh::to_json(nlohmann::json& j, const AudioEffectRoot& audioEffect)
+void kson::to_json(nlohmann::json& j, const AudioEffectRoot& audioEffect)
 {
 	if (!audioEffect.fx.empty())
 	{

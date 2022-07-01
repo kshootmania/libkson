@@ -1,6 +1,6 @@
-#include "ksh/beat/beat_map.hpp"
+#include "kson/beat/beat_map.hpp"
 
-void ksh::to_json(nlohmann::json& j, const BeatMap& beatMap)
+void kson::to_json(nlohmann::json& j, const BeatMap& beatMap)
 {
 	nlohmann::json bpmChanges = {};
 	for (const auto [y, bpm] : beatMap.bpmChanges)
@@ -22,7 +22,7 @@ void ksh::to_json(nlohmann::json& j, const BeatMap& beatMap)
 	}
 }
 
-void ksh::from_json(const nlohmann::json& j, BeatMap& beatMap)
+void kson::from_json(const nlohmann::json& j, BeatMap& beatMap)
 {
 	j.at("bpm").get_to(beatMap.bpmChanges);
 	j.at("time_sig").get_to(beatMap.timeSigChanges);

@@ -1,6 +1,6 @@
-#include "ksh/audio/legacy_audio_info.hpp"
+#include "kson/audio/legacy_audio_info.hpp"
 
-std::vector<std::string> ksh::LegacyAudioBGMInfo::toStrArray() const
+std::vector<std::string> kson::LegacyAudioBGMInfo::toStrArray() const
 {
 	if (!filenameFP.empty())
 	{
@@ -29,7 +29,7 @@ std::vector<std::string> ksh::LegacyAudioBGMInfo::toStrArray() const
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const LegacyAudioBGMInfo& legacy)
+void kson::to_json(nlohmann::json& j, const LegacyAudioBGMInfo& legacy)
 {
 	j = nlohmann::json::object();
 
@@ -39,7 +39,7 @@ void ksh::to_json(nlohmann::json& j, const LegacyAudioBGMInfo& legacy)
 	}
 }
 
-void ksh::to_json(nlohmann::json& j, const LegacyAudioInfo& legacy)
+void kson::to_json(nlohmann::json& j, const LegacyAudioInfo& legacy)
 {
 	j = nlohmann::json::object();
 

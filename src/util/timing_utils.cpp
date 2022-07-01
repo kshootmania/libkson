@@ -1,12 +1,12 @@
-#include "ksh/util/timing_utils.hpp"
+#include "kson/util/timing_utils.hpp"
 #include <cassert>
 
-ksh::Pulse ksh::TimingUtils::TimeSigMeasurePulse(const TimeSig& timeSig, Pulse resolution)
+kson::Pulse kson::TimingUtils::TimeSigMeasurePulse(const TimeSig& timeSig, Pulse resolution)
 {
     return resolution * static_cast<Pulse>(timeSig.numerator) / static_cast<Pulse>(timeSig.denominator);
 }
 
-ksh::TimingCache ksh::TimingUtils::CreateTimingCache(const BeatMap& beatMap)
+kson::TimingCache kson::TimingUtils::CreateTimingCache(const BeatMap& beatMap)
 {
     // FIXME: DO NOT USE UNFLEXIBLE C ASSERTION
 
@@ -61,7 +61,7 @@ ksh::TimingCache ksh::TimingUtils::CreateTimingCache(const BeatMap& beatMap)
     return cache;
 }
 
-ksh::Ms ksh::TimingUtils::PulseToMs(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
+kson::Ms kson::TimingUtils::PulseToMs(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest BPM change
     const auto itr = CurrentAt(beatMap.bpmChanges, pulse);
@@ -74,7 +74,7 @@ ksh::Ms ksh::TimingUtils::PulseToMs(Pulse pulse, const BeatMap& beatMap, const T
     return ms;
 }
 
-ksh::Pulse ksh::TimingUtils::MsToPulse(Ms ms, const BeatMap& beatMap, const TimingCache& cache)
+kson::Pulse kson::TimingUtils::MsToPulse(Ms ms, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest tempo change
     const auto itr = CurrentAt(cache.bpmChangePulse, ms);
@@ -88,7 +88,7 @@ ksh::Pulse ksh::TimingUtils::MsToPulse(Ms ms, const BeatMap& beatMap, const Timi
     return pulse;
 }
 
-int64_t ksh::TimingUtils::PulseToMeasureIdx(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
+int64_t kson::TimingUtils::PulseToMeasureIdx(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);
@@ -102,12 +102,12 @@ int64_t ksh::TimingUtils::PulseToMeasureIdx(Pulse pulse, const BeatMap& beatMap,
     return measureCount;
 }
 
-int64_t ksh::TimingUtils::MsToMeasureIdx(Ms ms, const BeatMap& beatMap, const TimingCache& cache)
+int64_t kson::TimingUtils::MsToMeasureIdx(Ms ms, const BeatMap& beatMap, const TimingCache& cache)
 {
     return PulseToMeasureIdx(MsToPulse(ms, beatMap, cache), beatMap, cache);
 }
 
-ksh::Pulse ksh::TimingUtils::MeasureIdxToPulse(int64_t measureIdx, const BeatMap& beatMap, const TimingCache& cache)
+kson::Pulse kson::TimingUtils::MeasureIdxToPulse(int64_t measureIdx, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
     const auto itr = CurrentAt(cache.timeSigChangePulse, measureIdx);
@@ -121,7 +121,7 @@ ksh::Pulse ksh::TimingUtils::MeasureIdxToPulse(int64_t measureIdx, const BeatMap
     return pulse;
 }
 
-ksh::Pulse ksh::TimingUtils::MeasureValueToPulse(double measureValue, const BeatMap& beatMap, const TimingCache& cache)
+kson::Pulse kson::TimingUtils::MeasureValueToPulse(double measureValue, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
     const int64_t measureIdx = static_cast<int64_t>(measureValue);
@@ -136,17 +136,17 @@ ksh::Pulse ksh::TimingUtils::MeasureValueToPulse(double measureValue, const Beat
     return pulse;
 }
 
-ksh::Ms ksh::TimingUtils::MeasureIdxToMs(int64_t measureIdx, const BeatMap& beatMap, const TimingCache& cache)
+kson::Ms kson::TimingUtils::MeasureIdxToMs(int64_t measureIdx, const BeatMap& beatMap, const TimingCache& cache)
 {
     return PulseToMs(MeasureIdxToPulse(measureIdx, beatMap, cache), beatMap, cache);
 }
 
-ksh::Ms ksh::TimingUtils::MeasureValueToMs(double measureValue, const BeatMap& beatMap, const TimingCache& cache)
+kson::Ms kson::TimingUtils::MeasureValueToMs(double measureValue, const BeatMap& beatMap, const TimingCache& cache)
 {
     return PulseToMs(MeasureValueToPulse(measureValue, beatMap, cache), beatMap, cache);
 }
 
-bool ksh::TimingUtils::IsPulseBarLine(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
+bool kson::TimingUtils::IsPulseBarLine(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);
@@ -157,14 +157,14 @@ bool ksh::TimingUtils::IsPulseBarLine(Pulse pulse, const BeatMap& beatMap, const
     return ((pulse - nearestTimeSigChangePulse) % TimeSigMeasurePulse(nearestTimeSig, beatMap.resolution)) == 0;
 }
 
-double ksh::TimingUtils::PulseTempo(Pulse pulse, const BeatMap& beatMap)
+double kson::TimingUtils::PulseTempo(Pulse pulse, const BeatMap& beatMap)
 {
     // Fetch the nearest BPM change
     assert(!beatMap.bpmChanges.empty());
     return CurrentAt(beatMap.bpmChanges, pulse)->second;
 }
 
-const ksh::TimeSig& ksh::TimingUtils::PulseTimeSig(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
+const kson::TimeSig& kson::TimingUtils::PulseTimeSig(Pulse pulse, const BeatMap& beatMap, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);

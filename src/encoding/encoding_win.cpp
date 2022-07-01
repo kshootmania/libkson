@@ -1,5 +1,5 @@
 #ifdef _WIN32
-#include "ksh/encoding/encoding.hpp"
+#include "kson/encoding/encoding.hpp"
 #include <Windows.h>
 
 namespace
@@ -10,7 +10,7 @@ namespace
 	constexpr UINT kShiftJISCodePage = 932;
 }
 
-std::string ksh::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
+std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 {
 	// Convert Shift-JIS to UTF-16
 	const int requiredWstrSize = MultiByteToWideChar(932, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), nullptr, 0);

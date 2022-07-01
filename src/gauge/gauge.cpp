@@ -1,11 +1,11 @@
-#include "ksh/gauge/gauge.hpp"
+#include "kson/gauge/gauge.hpp"
 
-bool ksh::GaugeRoot::empty() const
+bool kson::GaugeRoot::empty() const
 {
 	return total == 0.0;
 }
 
-void ksh::to_json(nlohmann::json& j, const GaugeRoot& gauge)
+void kson::to_json(nlohmann::json& j, const GaugeRoot& gauge)
 {
 	j = nlohmann::json::object();
 
