@@ -1,5 +1,14 @@
 # libkson
-K-Shoot MANIA chart file (.kson/.ksh) parser library written in C++20
+K-Shoot MANIA chart file (.ksh/.kson) parser library written in C++20
+
+## Status
+- [x] KSH file loading (compatible with `171`)
+- [ ] KSH file saving
+- [ ] KSON file loading
+- [x] KSON file saving (compatible with `0.4.0`)
+
+## KSH/KSON file format specification
+See this repository: https://github.com/m4saka/ksm-chart-format-spec
 
 ## Compilation
 ### With Visual Studio 2022
