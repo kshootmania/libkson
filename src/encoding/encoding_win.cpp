@@ -13,9 +13,9 @@ namespace
 std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 {
 	// Convert Shift-JIS to UTF-16
-	const int requiredWstrSize = MultiByteToWideChar(932, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), nullptr, 0);
+	const int requiredWstrSize = MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), nullptr, 0);
 	std::wstring wstr(requiredWstrSize, L'\0');
-	MultiByteToWideChar(932, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), wstr.data(), requiredWstrSize);
+	MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), wstr.data(), requiredWstrSize);
 
 	// Convert UTF-16 to UTF-8
 	const int requiredStrSize = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
