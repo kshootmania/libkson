@@ -209,7 +209,7 @@ namespace
 	{
 		// Skip if empty
 		bool allEmpty = true;
-		for (std::size_t i = 0U; i < kNumLaserLanes; ++i)
+		for (std::size_t i = 0U; i < kNumLaserLanesSZ; ++i)
 		{
 			if (!lanes[i].empty())
 			{
@@ -224,7 +224,7 @@ namespace
 
 		auto& j = json[key];
 		j = nlohmann::json::array();
-		for (std::size_t i = 0U; i < kNumLaserLanes; ++i)
+		for (std::size_t i = 0U; i < kNumLaserLanesSZ; ++i)
 		{
 			for (const auto& [y, laserSection] : lanes[i])
 			{

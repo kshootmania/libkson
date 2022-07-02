@@ -987,14 +987,14 @@ namespace
 
 	struct PreparedLongNoteArray
 	{
-		std::array<PreparedLongBTNote, kNumBTLanes> bt;
-		std::array<PreparedLongFXNote, kNumFXLanes> fx;
-		std::array<PreparedLaserSection, kNumLaserLanes> laser;
+		std::array<PreparedLongBTNote, kNumBTLanesSZ> bt;
+		std::array<PreparedLongFXNote, kNumFXLanesSZ> fx;
+		std::array<PreparedLaserSection, kNumLaserLanesSZ> laser;
 
 		explicit PreparedLongNoteArray(ChartData* pTargetChartData)
-			: bt(MakePreparedLongNoteArray<PreparedLongBTNote, kNumBTLanes>(pTargetChartData))
-			, fx(MakePreparedLongNoteArray<PreparedLongFXNote, kNumFXLanes>(pTargetChartData))
-			, laser(MakePreparedLongNoteArray<PreparedLaserSection, kNumLaserLanes>(pTargetChartData))
+			: bt(MakePreparedLongNoteArray<PreparedLongBTNote, kNumBTLanesSZ>(pTargetChartData))
+			, fx(MakePreparedLongNoteArray<PreparedLongFXNote, kNumFXLanesSZ>(pTargetChartData))
+			, laser(MakePreparedLongNoteArray<PreparedLaserSection, kNumLaserLanesSZ>(pTargetChartData))
 		{
 		}
 	};
@@ -1331,10 +1331,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	PreparedGraphSection preparedManualTilt(&chartData);
 
 	// Note option buffers (key: chart line index)
-	std::array<std::unordered_set<std::size_t>, kNumLaserLanes> currentMeasureLaserXScale2x;
-	std::array<std::unordered_map<std::size_t, std::string>, kNumFXLanes> currentMeasureFXAudioEffectStrs; // "fx-l=" or "fx-r=" in KSH
-	std::array<std::unordered_map<std::size_t, std::string>, kNumFXLanes> currentMeasureFXAudioEffectParamStrs; // "fx-l_param1=" or "fx-r_param1=" in KSH
-	std::array<std::unordered_map<std::size_t, BufKeySound>, kNumFXLanes> currentMeasureFXKeySounds; // "fx-l_se=" or "fx-r_se=" in KSH
+	std::array<std::unordered_set<std::size_t>, kNumLaserLanesSZ> currentMeasureLaserXScale2x;
+	std::array<std::unordered_map<std::size_t, std::string>, kNumFXLanesSZ> currentMeasureFXAudioEffectStrs; // "fx-l=" or "fx-r=" in KSH
+	std::array<std::unordered_map<std::size_t, std::string>, kNumFXLanesSZ> currentMeasureFXAudioEffectParamStrs; // "fx-l_param1=" or "fx-r_param1=" in KSH
+	std::array<std::unordered_map<std::size_t, BufKeySound>, kNumFXLanesSZ> currentMeasureFXKeySounds; // "fx-l_se=" or "fx-r_se=" in KSH
 	std::unordered_map<std::size_t, std::string> currentMeasureLaserKeySounds; // "chokkakuse=" in KSH
 
 	Pulse currentPulse = 0;
@@ -1708,7 +1708,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						continue;
 					}
 
-					if (currentBlock == kBlockIdxBT && laneIdx < kNumBTLanes) // BT notes
+					if (currentBlock == kBlockIdxBT && laneIdx < kNumBTLanesSZ) // BT notes
 					{
 						auto& preparedLongNoteRef = preparedLongNoteArray.bt[laneIdx];
 						switch (buf[j])
@@ -1729,7 +1729,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							break;
 						}
 					}
-					else if (currentBlock == kBlockIdxFX && laneIdx < kNumFXLanes) // FX notes
+					else if (currentBlock == kBlockIdxFX && laneIdx < kNumFXLanesSZ) // FX notes
 					{
 						auto& preparedLongNoteRef = preparedLongNoteArray.fx[laneIdx];
 						switch (buf[j])
@@ -1773,7 +1773,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							break;
 						}
 					}
-					else if (currentBlock == kBlockIdxLaser && laneIdx < kNumLaserLanes) // Laser notes
+					else if (currentBlock == kBlockIdxLaser && laneIdx < kNumLaserLanesSZ) // Laser notes
 					{
 						auto& preparedLaserSectionRef = preparedLongNoteArray.laser[laneIdx];
 						switch (buf[j])
@@ -1812,7 +1812,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							break;
 						}
 					}
-					else if (currentBlock == kBlockIdxLaser && laneIdx == kNumLaserLanes) // Lane spin
+					else if (currentBlock == kBlockIdxLaser && laneIdx == kNumLaserLanesSZ) // Lane spin
 					{
 						// Create a lane spin from string
 						const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKSHSpinStr(buf.substr(j));

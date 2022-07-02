@@ -12,9 +12,18 @@
 
 namespace kson
 {
-	constexpr std::size_t kNumBTLanes = 4;
-	constexpr std::size_t kNumFXLanes = 2;
-	constexpr std::size_t kNumLaserLanes = 2;
+	template <typename T = std::int32_t>
+	constexpr T kNumBTLanes = 4;
+
+	template <typename T = std::int32_t>
+	constexpr T kNumFXLanes = 2;
+
+	template <typename T = std::int32_t>
+	constexpr T kNumLaserLanes = 2;
+
+	constexpr std::size_t kNumBTLanesSZ = kNumBTLanes<std::size_t>;
+	constexpr std::size_t kNumFXLanesSZ = kNumFXLanes<std::size_t>;
+	constexpr std::size_t kNumLaserLanesSZ = kNumLaserLanes<std::size_t>;
 
 	using Ms = double;
 	using Pulse = std::int64_t;
@@ -30,13 +39,13 @@ namespace kson
 	using ByPulse = std::map<Pulse, T>;
 
 	template <typename T>
-	using BTLane = std::array<ByPulse<T>, kNumBTLanes>;
+	using BTLane = std::array<ByPulse<T>, kNumBTLanesSZ>;
 
 	template <typename T>
-	using FXLane = std::array<ByPulse<T>, kNumFXLanes>;
+	using FXLane = std::array<ByPulse<T>, kNumFXLanesSZ>;
 
 	template <typename T>
-	using LaserLane = std::array<ByPulse<T>, kNumLaserLanes>;
+	using LaserLane = std::array<ByPulse<T>, kNumLaserLanesSZ>;
 
 	template <typename T>
 	using ByPulseMulti = std::multimap<Pulse, T>;
