@@ -32,11 +32,11 @@ kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 
     // Calculate ms for each tempo change
     {
-        Ms ms = 0.0;
+        double ms = 0.0;
         auto prevItr = beatInfo.bpm.cbegin();
         for (auto itr = std::next(prevItr); itr != beatInfo.bpm.cend(); ++itr)
         {
-            ms += static_cast<Ms>(itr->first - prevItr->first) / kResolution * 60 * 1000 / prevItr->second;
+            ms += static_cast<double>(itr->first - prevItr->first) / kResolution * 60 * 1000 / prevItr->second;
             cache.bpmChangeMs[itr->first] = ms;
             cache.bpmChangePulse[ms] = itr->first;
             prevItr = itr;
@@ -59,7 +59,7 @@ kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
     return cache;
 }
 
-kson::Ms kson::PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
+kson::double kson::PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest BPM change
     assert(!beatInfo.bpm.empty());
@@ -68,7 +68,7 @@ kson::Ms kson::PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCach
     const double nearestBPM = itr->second;
 
     // Calculate ms using pulse difference from nearest tempo change
-    const Ms ms = cache.bpmChangeMs.at(nearestBPMChangePulse) + static_cast<Ms>(pulse - nearestBPMChangePulse) / kResolution * 60 * 1000 / nearestBPM;
+    const double ms = cache.bpmChangeMs.at(nearestBPMChangePulse) + static_cast<double>(pulse - nearestBPMChangePulse) / kResolution * 60 * 1000 / nearestBPM;
 
     return ms;
 }
@@ -78,12 +78,12 @@ double kson::PulseToSec(Pulse pulse, const BeatInfo& beatInfo, const TimingCache
     return PulseToMs(pulse, beatInfo, cache) / 1000;
 }
 
-kson::Pulse kson::MsToPulse(Ms ms, const BeatInfo& beatInfo, const TimingCache& cache)
+kson::Pulse kson::MsToPulse(double ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest tempo change
     assert(!cache.bpmChangePulse.empty());
     const auto itr = CurrentAt(cache.bpmChangePulse, ms);
-    const Ms nearestBPMChangeMs = itr->first;
+    const double nearestBPMChangeMs = itr->first;
     const Pulse nearestBPMChangePulse = itr->second;
     const double nearestBPM = beatInfo.bpm.at(nearestBPMChangePulse);
 
@@ -113,7 +113,7 @@ std::int64_t kson::PulseToMeasureIdx(Pulse pulse, const BeatInfo& beatInfo, cons
     return measureCount;
 }
 
-std::int64_t kson::MsToMeasureIdx(Ms ms, const BeatInfo& beatInfo, const TimingCache& cache)
+std::int64_t kson::MsToMeasureIdx(double ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     return PulseToMeasureIdx(MsToPulse(ms, beatInfo, cache), beatInfo, cache);
 }
@@ -154,7 +154,7 @@ kson::Pulse kson::MeasureValueToPulse(double measureValue, const BeatInfo& beatI
     return pulse;
 }
 
-kson::Ms kson::MeasureIdxToMs(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
+kson::double kson::MeasureIdxToMs(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     return PulseToMs(MeasureIdxToPulse(measureIdx, beatInfo, cache), beatInfo, cache);
 }
@@ -164,7 +164,7 @@ double kson::MeasureIdxToSec(std::int64_t measureIdx, const BeatInfo& beatInfo, 
     return MeasureIdxToMs(measureIdx, beatInfo, cache) / 1000;
 }
 
-kson::Ms kson::MeasureValueToMs(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
+kson::double kson::MeasureValueToMs(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     return PulseToMs(MeasureValueToPulse(measureValue, beatInfo, cache), beatInfo, cache);
 }

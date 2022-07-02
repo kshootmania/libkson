@@ -20,7 +20,6 @@ namespace kson
 	constexpr std::size_t kNumFXLanesSZ = std::size_t{ kNumFXLanes };
 	constexpr std::size_t kNumLaserLanesSZ = std::size_t{ kNumLaserLanes };
 
-	using Ms = double;
 	using Pulse = std::int64_t;
 	using RelPulse = std::int64_t;
 
