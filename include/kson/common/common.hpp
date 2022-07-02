@@ -12,18 +12,13 @@
 
 namespace kson
 {
-	template <typename T = std::int32_t>
-	constexpr T kNumBTLanes = 4;
+	constexpr std::int32_t kNumBTLanes = 4;
+	constexpr std::int32_t kNumFXLanes = 2;
+	constexpr std::int32_t kNumLaserLanes = 2;
 
-	template <typename T = std::int32_t>
-	constexpr T kNumFXLanes = 2;
-
-	template <typename T = std::int32_t>
-	constexpr T kNumLaserLanes = 2;
-
-	constexpr std::size_t kNumBTLanesSZ = kNumBTLanes<std::size_t>;
-	constexpr std::size_t kNumFXLanesSZ = kNumFXLanes<std::size_t>;
-	constexpr std::size_t kNumLaserLanesSZ = kNumLaserLanes<std::size_t>;
+	constexpr std::size_t kNumBTLanesSZ = std::size_t{ kNumBTLanes };
+	constexpr std::size_t kNumFXLanesSZ = std::size_t{ kNumFXLanes };
+	constexpr std::size_t kNumLaserLanesSZ = std::size_t{ kNumLaserLanes };
 
 	using Ms = double;
 	using Pulse = std::int64_t;
