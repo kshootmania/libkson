@@ -6,7 +6,7 @@ namespace kson
 {
 	struct TimingCache
 	{
-		std::map<Pulse, double> bpmChangeMs;
+		std::map<Pulse, double> bpmChangeSec;
 		std::map<double, Pulse> bpmChangePulse;
 		std::map<std::int64_t, Pulse> timeSigChangePulse;
 		std::map<Pulse, std::int64_t> timeSigChangeMeasureIdx;
