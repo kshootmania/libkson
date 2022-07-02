@@ -1078,9 +1078,7 @@ namespace
 	{
 		if (!stream.good())
 		{
-			return {
-				.error = Error::GeneralIOError,
-			};
+			return { .error = Error::GeneralIOError };
 		}
 
 		ChartDataType chartData;
@@ -1088,6 +1086,12 @@ namespace
 		if (pIsUTF8)
 		{
 			*pIsUTF8 = isUTF8;
+		}
+
+		// First option line must be "title="
+		if (stream.peek() != 't')
+		{
+			return { .error = Error::GeneralChartFormatError };
 		}
 
 		// Read header lines and create meta data hash map
