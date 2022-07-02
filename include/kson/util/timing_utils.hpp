@@ -12,7 +12,7 @@ namespace kson
 		std::map<Pulse, std::int64_t> timeSigChangeMeasureIdx;
 	};
 
-	Pulse TimeSigMeasurePulse(const TimeSig& timeSig);
+	Pulse TimeSigOneMeasurePulse(const TimeSig& timeSig);
 
 	TimingCache CreateTimingCache(const BeatInfo& beatInfo);
 
@@ -37,9 +37,9 @@ namespace kson
 	double MeasureValueToMs(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache);
 	double MeasureValueToSec(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache);
 
-	bool IsPulseBarLine(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+	bool IsBarLinePulse(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 
-	double PulseTempo(Pulse pulse, const BeatInfo& beatInfo);
+	double TempoAt(Pulse pulse, const BeatInfo& beatInfo);
 
-	const TimeSig& PulseTimeSig(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+	const TimeSig& TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 }

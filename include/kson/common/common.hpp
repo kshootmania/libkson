@@ -93,7 +93,7 @@ namespace kson
 	}
 
 	template <typename T, typename U>
-	auto CurrentAt(const std::map<T, U>& map, T key)
+	auto ValueItrAt(const std::map<T, U>& map, T key)
 	{
 		auto itr = map.upper_bound(key);
 		if (itr != map.begin())
