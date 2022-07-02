@@ -1056,7 +1056,7 @@ namespace
 		return std::clamp(value, minValue, maxValue);
 	}
 
-	const std::unordered_map<std::string_view, std::int8_t> s_difficultyNameTable
+	const std::unordered_map<std::string_view, std::int32_t> s_difficultyNameTable
 	{
 		{ "light", 0 },
 		{ "challenge", 1 },
@@ -1141,7 +1141,7 @@ namespace
 			}
 			else
 			{
-				chartData.meta.difficulty.idx = 3;
+				chartData.meta.difficulty.idx = 3; // Unknown difficulty is recognized as "infinite" (=3)
 			}
 
 			chartData.meta.level = PopInt<std::int32_t>(metaDataHashMap, "level", 1, 1, 20);
@@ -1858,6 +1858,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		preparedManualTilt.publishManualTilt();
 	}
 
+#ifndef NDEBUG
 	// KSH file must end with the bar line "--" (except for user-defined audio effects), so there can never be a prepared button note here
 	for (const auto& preparedBTNote : preparedLongNoteArray.bt)
 	{
@@ -1867,6 +1868,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	{
 		assert(!preparedFXNote.prepared());
 	}
+#endif
 
 	// The prepared laser section is published only when the laser lane is blank ("-"), so there can be unpublished laser sections here
 	for (auto& preparedFXSection : preparedLongNoteArray.laser)
