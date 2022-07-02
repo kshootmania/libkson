@@ -332,9 +332,9 @@ namespace
 		// TimeSig must have "/"
 		assert(slashIdx != std::string::npos);
 
-		return TimeSig{
-			ParseNumeric<std::int64_t>(str.substr(0, slashIdx)),
-			ParseNumeric<std::int64_t>(str.substr(slashIdx + 1))
+		return {
+			.n = ParseNumeric<std::int32_t>(str.substr(0, slashIdx)),
+			.d = ParseNumeric<std::int32_t>(str.substr(slashIdx + 1))
 		};
 	}
 
@@ -1499,7 +1499,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		if (IsBarLine(line))
 		{
 			const std::size_t bufLineCount = chartLines.size();
-			const RelPulse oneLinePulse = kResolution4 * currentTimeSig.numerator / currentTimeSig.denominator / bufLineCount;
+			const RelPulse oneLinePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d / bufLineCount;
 
 			// Add options that require their position
 			for (const auto& [lineIdx, key, value] : optionLines)
@@ -1859,7 +1859,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			{
 				map.clear();
 			}
-			currentPulse += kResolution4 * currentTimeSig.numerator / currentTimeSig.denominator;
+			currentPulse += kResolution4 * currentTimeSig.n / currentTimeSig.d;
 			++currentMeasureIdx;
 			continue;
 		}

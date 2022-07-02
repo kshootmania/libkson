@@ -3,7 +3,7 @@
 
 kson::Pulse kson::TimingUtils::TimeSigMeasurePulse(const TimeSig& timeSig)
 {
-    return kResolution4 * static_cast<Pulse>(timeSig.numerator) / static_cast<Pulse>(timeSig.denominator);
+    return kResolution4 * static_cast<Pulse>(timeSig.n) / static_cast<Pulse>(timeSig.d);
 }
 
 kson::TimingCache kson::TimingUtils::CreateTimingCache(const BeatInfo& beatInfo)
@@ -49,7 +49,7 @@ kson::TimingCache kson::TimingUtils::CreateTimingCache(const BeatInfo& beatInfo)
         auto prevItr = beatInfo.timeSig.cbegin();
         for (auto itr = std::next(prevItr); itr != beatInfo.timeSig.cend(); ++itr)
         {
-            pulse += (itr->first - prevItr->first) * (kResolution4 * prevItr->second.numerator / prevItr->second.denominator);
+            pulse += (itr->first - prevItr->first) * (kResolution4 * prevItr->second.n / prevItr->second.d);
             cache.timeSigChangePulse[itr->first] = pulse;
             cache.timeSigChangeMeasureIdx[pulse] = itr->first;
             prevItr = itr;

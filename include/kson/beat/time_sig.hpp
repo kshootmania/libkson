@@ -5,7 +5,7 @@ namespace kson
 {
     struct TimeSig
     {
-        std::int64_t numerator = 4;
-        std::int64_t denominator = 4;
+        std::int32_t n = 4;
+        std::int32_t d = 4;
     };
 }

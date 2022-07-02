@@ -156,8 +156,8 @@ namespace
 		{
 			j.push_back({
 				{ "idx", idx },
-				{ "n", timeSig.numerator },
-				{ "d", timeSig.denominator },
+				{ "n", timeSig.n },
+				{ "d", timeSig.d },
 			});
 		}
 	}
