@@ -133,7 +133,10 @@ namespace kson
 	}
 
 	template <typename T>
-	bool AlmostEquals(T a, T b) requires std::is_floating_point_v<T>
+	bool AlmostEquals(T a, T b)
+#ifdef __cpp_concepts
+		requires std::is_floating_point_v<T>
+#endif
 	{
 		// Not perfect algorithm, but okay for now.
 		return std::abs(a - b) <= std::numeric_limits<T>::epsilon();

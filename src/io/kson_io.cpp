@@ -13,11 +13,13 @@ namespace
 	//       (e.g., ByPulse<T> shouldn't be converted as std::map, Pulse and RelPulse shouldn't be the same),
 	//       we write our own conversion functions here.
 
+#ifdef __cpp_concepts
 	template <class T>
 	concept Serializable = requires (nlohmann::json & json, const T & d)
 	{
 		json = d;
 	};
+#endif
 
 	void Write(nlohmann::json& json, const char* key, nlohmann::json&& value)
 	{
@@ -27,7 +29,11 @@ namespace
 		}
 	}
 
+#ifdef __cpp_concepts
 	template <Serializable T>
+#else
+	template <typename T>
+#endif
 	void Write(nlohmann::json& json, const char* key, const T& value)
 	{
 		if constexpr (
@@ -53,7 +59,11 @@ namespace
 		}
 	}
 
+#ifdef __cpp_concepts
 	template <Serializable T, typename U>
+#else
+	template <typename T, typename U>
+#endif
 	void Write(nlohmann::json& json, const char* key, const T& value, const U& defaultValue)
 	{
 		if constexpr (std::is_floating_point_v<T>)
@@ -74,7 +84,11 @@ namespace
 		}
 	}
 
+#ifdef __cpp_concepts
 	template <Serializable T>
+#else
+	template <typename T>
+#endif
 	void WriteByPulse(nlohmann::json& json, const char* key, const ByPulse<T>& byPulse)
 	{
 		if (byPulse.empty())
@@ -93,7 +107,11 @@ namespace
 		}
 	}
 
+#ifdef __cpp_concepts
 	template <Serializable T>
+#else
+	template <typename T>
+#endif
 	void WriteByPulse(nlohmann::json& json, const char* key, const ByPulse<T>& byPulse, const T& defaultValue)
 	{
 		bool allDefaultOrEmpty = true;
@@ -124,7 +142,11 @@ namespace
 		WriteByPulse(json, key, byPulse);
 	}
 
+#ifdef __cpp_concepts
 	template <Serializable T>
+#else
+	template <typename T>
+#endif
 	void WriteByPulseMulti(nlohmann::json& json, const char* key, const ByPulseMulti<T>& byPulse)
 	{
 		if (byPulse.empty())

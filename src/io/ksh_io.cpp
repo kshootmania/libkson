@@ -1072,7 +1072,9 @@ namespace
 
 	template <typename ChartDataType>
 	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8)
+#ifdef __cpp_concepts
 		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
+#endif
 	{
 		if (!stream.good())
 		{
