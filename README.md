@@ -20,8 +20,8 @@ kson::ChartData chartData = kson::LoadKSHChartData("chart.ksh");
 kson::SaveKSHChartData("chart.kson", chartData);
 
 // Access to chart meta data
-const std::string& title = chart.meta.title;
-const std::string& artist = chart.meta.artist;
+const std::string& title = chartData.meta.title;
+const std::string& artist = chartData.meta.artist;
 
 // Access to note data, convert pulses to seconds
 const kson::TimingCache timingCache = kson::CreateTimingCache(chartData.beat);
@@ -63,6 +63,7 @@ $ cmake --build build
 
 ## Dependency
 - [nlohmann/json](https://github.com/nlohmann/json) (included in `include/kson/third_party/nlohmann/json.hpp`)
+- iconv (Linux/macOS)
 
 ## License
 MIT License
