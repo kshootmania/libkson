@@ -44,7 +44,7 @@ Almost all variables are the same as in the KSON specification, but the followin
 - All unsigned numbers in KSON specification are stored as signed numbers.
 
 ### ksh2kson tool
-ksh2kson is a command line tool that converts KSH files to KSON files.
+ksh2kson is a command line tool that converts KSH files to KSON files. Converted KSON files are saved in the same folder with the extension ".kson".
 
 ```bash
 $ ./ksh2kson [KSH file(s)...]
@@ -52,7 +52,7 @@ $ ./ksh2kson [KSH file(s)...]
 
 ## Compilation
 ### With Visual Studio 2022
-Open kson.vcxproj and click the build button.
+Open kson.sln and click the build button.
 
 ### With CMake
 ```bash
