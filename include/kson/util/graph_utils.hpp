@@ -8,7 +8,7 @@ namespace kson
 	double GraphValueAt(const Graph& graph, Pulse pulse);
 
 	template <class GS>
-	ByPulse<GS>::const_iterator GraphSectionAt(const ByPulse<GS>& graphSections, Pulse pulse) requires std::is_same_v<GS, GraphSection> || std::is_same_v<GS, LaserSection>
+	typename ByPulse<GS>::const_iterator GraphSectionAt(const ByPulse<GS>& graphSections, Pulse pulse) requires std::is_same_v<GS, GraphSection> || std::is_same_v<GS, LaserSection>
 	{
 		assert(!graphSections.empty());
 
