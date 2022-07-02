@@ -753,8 +753,13 @@ namespace
 	}
 }
 
-bool kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
+kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
 {
+	if (!stream.good())
+	{
+		return Error::GeneralIOError;
+	}
+
 	nlohmann::json json = nlohmann::json::object();
 	Write(json, "version", "0.4.0");
 	Write(json, "meta", ToJSON(chartData.meta));
@@ -767,20 +772,19 @@ bool kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
 	Write(json, "editor", ToJSON(chartData.editor));
 	Write(json, "compat", ToJSON(chartData.compat));
 	Write(json, "impl", chartData.impl);
+	
 	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
-	return true;
+
+	return Error::None;
 }
 
-bool kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
+kson::Error kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
 {
 	std::ofstream ofs(filePath);
-	if (ofs.good())
+	if (!ofs.good())
 	{
-		return kson::SaveKSONChartData(ofs, chartData);
+		return Error::CouldNotOpenOutputFileStream;
 	}
-	else
-	{
-		return false;
-	}
+	return kson::SaveKSONChartData(ofs, chartData);
 }
 #endif

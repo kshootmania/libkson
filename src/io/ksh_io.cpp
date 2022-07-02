@@ -1068,6 +1068,13 @@ namespace
 	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8)
 		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
 	{
+		if (!stream.good())
+		{
+			return {
+				.error = Error::GeneralIOError,
+			};
+		}
+
 		ChartDataType chartData;
 		const bool isUTF8 = EliminateUTF8BOM(stream);
 		if (pIsUTF8)
@@ -1119,8 +1126,16 @@ namespace
 		}
 
 		// .ksh files must have at least one bar line ("--")
-		// TODO: Error handling
-		assert(barLineExists);
+		if (!barLineExists)
+		{
+			return { .error = Error::GeneralChartFormatError };
+		}
+
+		// .ksh files must have "title=" line
+		if (!metaDataHashMap.contains("title"))
+		{
+			return { .error = Error::GeneralChartFormatError };
+		}
 
 		// Insert meta data to chartData
 		{
@@ -1265,30 +1280,34 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
-		return {
-			.error = Error::kFileNotFound,
-		};
+		return { .error = Error::FileNotFound };
 	}
 
 	std::ifstream ifs(filePath, std::ios_base::binary);
 	if (!ifs.good())
 	{
-		return {
-			.error = Error::kCannotOpenFileStream,
-		};
+		return { .error = Error::CouldNotOpenInputFileStream };
 	}
 
 	MetaChartData chartData = LoadKSHMetaChartData(ifs);
 	chartData.filePath = filePath;
-
 	return chartData;
 }
 
 kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 {
+	if (!stream.good())
+	{
+		return { .error = Error::GeneralIOError };
+	}
+
 	// Load chart meta data
 	bool isUTF8;
 	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8);
+	if (chartData.error != Error::None)
+	{
+		return chartData;
+	}
 
 	assert(chartData.beat.timeSig.contains(0));
 	TimeSig currentTimeSig = chartData.beat.timeSig.at(0);
@@ -2026,17 +2045,13 @@ ChartData kson::LoadKSHChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
-		return {
-			.error = Error::kFileNotFound,
-		};
+		return { .error = Error::FileNotFound };
 	}
 
 	std::ifstream ifs(filePath, std::ios_base::binary);
 	if (!ifs.good())
 	{
-		return {
-			.error = Error::kCannotOpenFileStream,
-		};
+		return { .error = Error::CouldNotOpenInputFileStream };
 	}
 
 	ChartData chartData = LoadKSHChartData(ifs);

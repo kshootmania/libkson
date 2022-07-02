@@ -16,13 +16,18 @@
 
 namespace kson
 {
-	enum class Error
+	enum class Error : int
 	{
-		kNone = 0,
-		kFileNotFound,
-		kCannotOpenFileStream,
-		kChartFormatError,
-		kUnknownError,
+		None = 0,
+
+		GeneralIOError = 10000,
+		FileNotFound = 10001,
+		CouldNotOpenInputFileStream = 10002,
+		CouldNotOpenOutputFileStream = 10003,
+
+		GeneralChartFormatError = 20000,
+
+		UnknownError = 90000,
 	};
 
 	struct MetaChartData
@@ -32,7 +37,7 @@ namespace kson
 		MetaCompatInfo compat;
 
 		std::string filePath; // Note: OS native encoding (Not UTF-8 in Windows)
-		Error error = Error::kNone;
+		Error error = Error::None;
 	};
 
 	struct ChartData
@@ -52,6 +57,6 @@ namespace kson
 #endif
 
 		std::string filePath; // Note: OS native encoding (Not UTF-8 in Windows)
-		Error error = Error::kNone;
+		Error error = Error::None;
 	};
 }
