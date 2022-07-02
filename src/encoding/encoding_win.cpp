@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include "kson/encoding/encoding.hpp"
+#include <iostream>
 #include <Windows.h>
 
 namespace
@@ -15,12 +16,20 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 	// Convert Shift-JIS to UTF-16
 	const int requiredWstrSize = MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), nullptr, 0);
 	std::wstring wstr(requiredWstrSize, L'\0');
-	MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), wstr.data(), requiredWstrSize);
+	if (MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), wstr.data(), requiredWstrSize) == 0)
+	{
+		std::cerr << "MultiByteToWideChar error (GetLastError():" << GetLastError() << "). Input encoding may not be Shift-JIS.\n";
+		return std::string();
+	}
 
 	// Convert UTF-16 to UTF-8
 	const int requiredStrSize = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, nullptr, 0, nullptr, nullptr);
 	std::string str(requiredStrSize, '\0');
-	WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, reinterpret_cast<char *>(str.data()), requiredStrSize, nullptr, nullptr);
+	if (WideCharToMultiByte(CP_UTF8, 0, wstr.data(), -1, reinterpret_cast<char *>(str.data()), requiredStrSize, nullptr, nullptr) == 0)
+	{
+		std::cerr << "WideCharToMultiByte error (GetLastError():" << GetLastError() << "). Input encoding may not be Shift-JIS.\n";
+		return std::string();
+	}
 
 	// Remove an extra null terminator
 	if (str.back() == '\0')
@@ -30,5 +39,4 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 
 	return str;
 }
-
 #endif

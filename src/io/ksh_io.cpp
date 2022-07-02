@@ -118,7 +118,8 @@ namespace
 
 	bool IsOptionLine(std::string_view line)
 	{
-		return line.find(kOptionSeparator) != std::string_view::npos;
+		// Note: It the key is empty ("=..."), the line is not recognized as an option line
+		return line.size() >= 2 && !line.starts_with('=') && line.find(kOptionSeparator, 1U) != std::string_view::npos;
 	}
 
 	bool IsBarLine(std::string_view line)
@@ -134,6 +135,11 @@ namespace
 	std::pair<std::string, std::string> SplitOptionLine(std::string_view optionLine, bool isUTF8)
 	{
 		const std::string optionLineUTF8 = ToUTF8(optionLine, isUTF8);
+		if (!optionLine.empty() && optionLineUTF8.empty())
+		{
+			// Encoding error (the error is handled by the caller)
+			return std::pair<std::string, std::string>();
+		}
 		const std::size_t equalIdx = optionLineUTF8.find_first_of(kOptionSeparator);
 
 		// Option line must have "="
@@ -1122,6 +1128,11 @@ namespace
 			}
 
 			const auto [key, value] = SplitOptionLine(line, isUTF8);
+			if (key.empty())
+			{
+				// Encoding error (the key must not be empty because IsOptionLine() is true)
+				return { .error = Error::EncodingError };
+			}
 			metaDataHashMap.insert_or_assign(key, value);
 		}
 
@@ -1422,10 +1433,15 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				{
 					const std::size_t semicolonIdx = sv.find_first_of(kAudioEffectStrSeparator);
 					std::string_view paramSV = (semicolonIdx == std::string_view::npos) ? sv : sv.substr(0, semicolonIdx);
-					const std::pair<std::string, std::string> pair = SplitOptionLine(paramSV, isUTF8);
-					if (!pair.second.empty())
+					const auto [paramName, value] = SplitOptionLine(paramSV, isUTF8);
+					if (paramName.empty())
 					{
-						params.emplace(pair);
+						// Encoding error (the parameter name must not be empty)
+						return { .error = Error::EncodingError };
+					}
+					if (!value.empty())
+					{
+						params.emplace(paramName, value);
 					}
 
 					if (semicolonIdx == std::string_view::npos)
@@ -1480,6 +1496,12 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		if (IsOptionLine(line))
 		{
 			const auto [key, value] = SplitOptionLine(line, isUTF8);
+			if (key.empty())
+			{
+				// Encoding error (the key must not be empty because IsOptionLine() is true)
+				return { .error = Error::EncodingError };
+			}
+
 			if (key == "beat")
 			{
 				currentTimeSig = ParseTimeSig(value);

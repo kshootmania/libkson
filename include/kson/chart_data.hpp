@@ -9,6 +9,7 @@
 #include "kson/bg/bg_info.hpp"
 #include "kson/editor/editor_info.hpp"
 #include "kson/compat/compat_info.hpp"
+#include "kson/error.hpp"
 
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "third_party/nlohmann/json.hpp"
@@ -16,20 +17,6 @@
 
 namespace kson
 {
-	enum class Error : int
-	{
-		None = 0,
-
-		GeneralIOError = 10000,
-		FileNotFound = 10001,
-		CouldNotOpenInputFileStream = 10002,
-		CouldNotOpenOutputFileStream = 10003,
-
-		GeneralChartFormatError = 20000,
-
-		UnknownError = 90000,
-	};
-
 	struct MetaChartData
 	{
 		MetaInfo meta;

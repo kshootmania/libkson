@@ -1,0 +1,22 @@
+#pragma once
+
+namespace kson
+{
+	enum class Error : int
+	{
+		None = 0,
+
+		GeneralIOError = 10000,
+		FileNotFound = 10001,
+		CouldNotOpenInputFileStream = 10002,
+		CouldNotOpenOutputFileStream = 10003,
+
+		GeneralChartFormatError = 20000,
+
+		EncodingError = 30000,
+
+		UnknownError = 90000,
+	};
+
+    const char *GetErrorString(Error error);
+}

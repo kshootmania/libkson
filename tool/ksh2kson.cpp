@@ -20,29 +20,7 @@ void PrintHelp()
 
 void PrintError(kson::Error error)
 {
-    switch (error)
-    {
-    case kson::Error::None:
-        break;
-    case kson::Error::GeneralIOError:
-        std::cerr << "Error: IO error\n";
-        break;
-    case kson::Error::FileNotFound:
-        std::cerr << "Error: File not found\n";
-        break;
-    case kson::Error::CouldNotOpenInputFileStream:
-        std::cerr << "Error: Could not open input file stream\n";
-        break;
-    case kson::Error::CouldNotOpenOutputFileStream:
-        std::cerr << "Error: Could not open input file stream\n";
-        break;
-    case kson::Error::GeneralChartFormatError:
-        std::cerr << "Error: Chart format error\n";
-        break;
-    default:
-        std::cerr << "Error: Unknown error (" << static_cast<int>(error) << ")\n";
-        break;
-    }
+    std::cerr << "Error: " << kson::GetErrorString(error) << '\n';
 }
 
 void DoConvert(const char *szInputFilePath)

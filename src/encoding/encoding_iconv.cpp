@@ -1,5 +1,6 @@
 #ifndef _WIN32
 #include "kson/encoding/encoding.hpp"
+#include <iostream>
 #include <cerrno>
 #include <iconv.h>
 
@@ -9,7 +10,8 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 	const iconv_t cd = iconv_open("UTF-8", "CP932");
 	if (cd == (iconv_t)(-1))
 	{
-		return "!!! iconv_open error (errno:" + std::to_string(errno) + ") !!!"; // TODO: error handling
+		std::cerr << "iconv_open error (errno:" << errno << "). The system may not support Shift-JIS to UTF-8 conversion.\n";
+		return std::string();
 	}
 
 	std::string src(shiftJISStr);
@@ -22,11 +24,11 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 	{
 		const int errnoCopy = errno;
 		iconv_close(cd);
-		return "!!! iconv error (errno:" + std::to_string(errnoCopy) + ") !!!"; // TODO: error handling
+		std::cerr << "iconv error (errno:" << errnoCopy << "). Input encoding may not be Shift-JIS.\n";
+		return std::string();
 	}
 	iconv_close(cd);
 
 	return std::string(dst.data());
 }
-
 #endif
