@@ -298,7 +298,7 @@ namespace
 		{ "gain", "gain" },
 	};
 
-	static constexpr std::int32_t kLaserXMax = 100;
+	constexpr std::int32_t kLaserXMax = 100;
 
 	std::int32_t CharToLaserX(char c)
 	{
