@@ -45,6 +45,7 @@ namespace
 	template <typename T>
 	T ParseNumeric(std::string_view str, T defaultValue = T{ 0 })
 	{
+#ifdef _MSC_VER
 		T result{ defaultValue };
 		std::from_chars_result r;
 		if constexpr (std::is_integral_v<T>)
@@ -62,6 +63,34 @@ namespace
 		}
 
 		return defaultValue;
+#else
+		try
+		{
+			if constexpr (std::is_integral_v<T>)
+			{
+				if constexpr (std::is_unsigned_v<T>)
+				{
+					return static_cast<T>(std::stoull(std::string(str)));
+				}
+				else
+				{
+					return static_cast<T>(std::stoll(std::string(str)));
+				}
+			}
+			else
+			{
+				return static_cast<T>(std::stod(std::string(str)));
+			}
+		}
+		catch (const std::out_of_range& e)
+		{
+			return defaultValue;
+		}
+		catch (const std::invalid_argument& e)
+		{
+			return defaultValue;
+		}
+#endif
 	}
 
 	template <typename T, typename U>
@@ -453,9 +482,7 @@ namespace
 				return;
 			}
 
-			m_pTargetChartData->note.bt[m_targetLaneIdx].emplace(
-				m_time,
-				m_length);
+			m_pTargetChartData->note.bt[m_targetLaneIdx].emplace(m_time, Interval{ .length = m_length });
 
 			clear();
 		}
@@ -512,7 +539,7 @@ namespace
 			}
 
 			// Publish prepared long FX note
-			m_pTargetChartData->note.fx[m_targetLaneIdx].emplace(m_time, m_length);
+			m_pTargetChartData->note.fx[m_targetLaneIdx].emplace(m_time, Interval{ .length = m_length });
 
 			clear();
 		}
@@ -806,7 +833,7 @@ namespace
 
 			m_pTargetChartData->camera.tilt.manual.emplace(
 				m_time,
-				m_values);
+				GraphSection{ .v = m_values });
 
 			clear();
 		}
@@ -898,20 +925,27 @@ namespace
 					{
 						const std::string patternKey(s_kshSpinTypeToKsonCamPatternNameTable.at(laneSpin.type));
 
-						CamPatternParams params;
+						WithDirection<CamPatternParams> params;
 						if (laneSpin.type == PreparedLaneSpin::Type::kSwing)
 						{
-							params = {
-								.length = laneSpin.duration,
-								.scale = static_cast<double>(laneSpin.swingAmplitude) * kKSHToKSONSwingScale,
-								.repeat = laneSpin.swingRepeat,
-								.decayOrder = laneSpin.swingDecayOrder,
+							assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
+							params = WithDirection<CamPatternParams>{
+								.d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1,
+								.v = {
+									.length = laneSpin.duration,
+									.scale = static_cast<double>(laneSpin.swingAmplitude) * kKSHToKSONSwingScale,
+									.repeat = laneSpin.swingRepeat,
+									.decayOrder = laneSpin.swingDecayOrder,
+								},
 							};
 						}
 						else
 						{
-							params = {
-								.length = laneSpin.duration,
+							params = WithDirection<CamPatternParams>{
+								.d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1,
+								.v = {
+									.length = laneSpin.duration,
+								},
 							};
 						}
 
@@ -1259,12 +1293,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	assert(chartData.beat.timeSig.contains(0));
 	TimeSig currentTimeSig = chartData.beat.timeSig.at(0);
 
-	double currentTempo = 120.0;
-	if (chartData.beat.bpm.contains(0))
-	{
-		currentTempo = chartData.beat.bpm.at(0);
-	}
-
 	const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
 
 	// For backward compatibility of zoom_top/zoom_bottom/zoom_side
@@ -1433,19 +1461,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		if (IsOptionLine(line))
 		{
 			const auto [key, value] = SplitOptionLine(line, isUTF8);
-			if (key == "t")
-			{
-				if (value.find('-') == std::string::npos)
-				{
-					currentTempo = ParseNumeric<double>(value);
-				}
-				optionLines.push_back({
-					.lineIdx = chartLines.size(),
-					.key = key,
-					.value = value,
-				});
-			}
-			else if (key == "beat")
+			if (key == "beat")
 			{
 				currentTimeSig = ParseTimeSig(value);
 				chartData.beat.timeSig.emplace(currentMeasureIdx, currentTimeSig);
@@ -1687,7 +1703,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							break;
 						case '1': // Chip BT note
 							preparedLongNoteRef.publishLongBTNote();
-							chartData.note.bt[laneIdx].emplace(time, 0);
+							chartData.note.bt[laneIdx].emplace(time, Interval{ .length = 0 });
 							break;
 						default:  // Empty
 							preparedLongNoteRef.publishLongBTNote();
@@ -1700,7 +1716,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						switch (buf[j])
 						{
 						case '2': // Chip FX note
-							chartData.note.fx[laneIdx].emplace(time, 0);
+							chartData.note.fx[laneIdx].emplace(time, Interval{ .length = 0 });
 							if (currentMeasureFXKeySounds[laneIdx].contains(i))
 							{
 								const auto& bufKeySound = currentMeasureFXKeySounds[laneIdx].at(i);
@@ -1988,6 +2004,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 								params.emplace("wave_length", "1/" + param1);
 							}
 							params.emplace("feedback", param2 + "%");
+							break;
+						default:
 							break;
 						};
 

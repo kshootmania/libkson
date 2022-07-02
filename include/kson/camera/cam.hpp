@@ -32,8 +32,8 @@ namespace kson
 	template <typename T>
 	struct WithDirection
 	{
-		T v;
 		std::int32_t d = 0; // laser slam direction, -1 (left) or 1 (right)
+		T v;
 	};
 
 	struct CamPatternLaserInfo

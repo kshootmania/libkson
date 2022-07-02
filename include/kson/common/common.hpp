@@ -1,5 +1,4 @@
 #pragma once
-#pragma warning(disable:26819) // Ignore warnings in nlohmann/json
 #include <string>
 #include <string_view>
 #include <array>
@@ -134,6 +133,6 @@ namespace kson
 	bool AlmostEquals(T a, T b) requires std::is_floating_point_v<T>
 	{
 		// Not perfect algorithm, but okay for now.
-		return std::fabs(a - b) <= std::numeric_limits<T>::epsilon();
+		return std::abs(a - b) <= std::numeric_limits<T>::epsilon();
 	}
 }

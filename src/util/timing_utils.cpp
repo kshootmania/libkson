@@ -62,6 +62,7 @@ kson::TimingCache kson::TimingUtils::CreateTimingCache(const BeatInfo& beatInfo)
 kson::Ms kson::TimingUtils::PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest BPM change
+    assert(!beatInfo.bpm.empty());
     const auto itr = CurrentAt(beatInfo.bpm, pulse);
     const Pulse nearestBPMChangePulse = itr->first;
     const double nearestBPM = itr->second;
@@ -80,6 +81,7 @@ double kson::TimingUtils::PulseToSec(Pulse pulse, const BeatInfo& beatInfo, cons
 kson::Pulse kson::TimingUtils::MsToPulse(Ms ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest tempo change
+    assert(!cache.bpmChangePulse.empty());
     const auto itr = CurrentAt(cache.bpmChangePulse, ms);
     const Ms nearestBPMChangeMs = itr->first;
     const Pulse nearestBPMChangePulse = itr->second;
@@ -99,6 +101,7 @@ kson::Pulse kson::TimingUtils::SecToPulse(double sec, const BeatInfo& beatInfo, 
 std::int64_t kson::TimingUtils::PulseToMeasureIdx(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
+    assert(!cache.timeSigChangeMeasureIdx.empty());
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);
     const Pulse nearestTimeSigChangePulse = itr->first;
     const std::int64_t nearestTimeSigChangeMeasureIdx = itr->second;
@@ -123,6 +126,7 @@ std::int64_t kson::TimingUtils::SecToMeasureIdx(double sec, const BeatInfo& beat
 kson::Pulse kson::TimingUtils::MeasureIdxToPulse(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
+    assert(!cache.timeSigChangePulse.empty());
     const auto itr = CurrentAt(cache.timeSigChangePulse, measureIdx);
     const Pulse nearestTimeSigChangeMeasureIdx = itr->first;
     const std::int64_t nearestTimeSigChangePulse = itr->second;
@@ -137,6 +141,7 @@ kson::Pulse kson::TimingUtils::MeasureIdxToPulse(std::int64_t measureIdx, const 
 kson::Pulse kson::TimingUtils::MeasureValueToPulse(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
+    assert(!cache.timeSigChangePulse.empty());
     const std::int64_t measureIdx = static_cast<std::int64_t>(measureValue);
     const auto itr = CurrentAt(cache.timeSigChangePulse, measureIdx);
     const Pulse nearestTimeSigChangeMeasureIdx = itr->first;
@@ -172,6 +177,7 @@ double kson::TimingUtils::MeasureValueToSec(double measureValue, const BeatInfo&
 bool kson::TimingUtils::IsPulseBarLine(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
+    assert(!cache.timeSigChangeMeasureIdx.empty());
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);
     const Pulse nearestTimeSigChangePulse = itr->first;
     const std::int64_t nearestTimeSigChangeMeasureIdx = itr->second;
@@ -190,8 +196,8 @@ double kson::TimingUtils::PulseTempo(Pulse pulse, const BeatInfo& beatInfo)
 const kson::TimeSig& kson::TimingUtils::PulseTimeSig(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
     // Fetch the nearest time signature change
+    assert(!cache.timeSigChangeMeasureIdx.empty());
     const auto itr = CurrentAt(cache.timeSigChangeMeasureIdx, pulse);
-    const Pulse nearestTimeSigChangePulse = itr->first;
     const std::int64_t nearestTimeSigChangeMeasureIdx = itr->second;
     return beatInfo.timeSig.at(nearestTimeSigChangeMeasureIdx);
 }
