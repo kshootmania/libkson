@@ -248,6 +248,7 @@ namespace
 		j = nlohmann::json::array();
 		for (std::size_t i = 0U; i < kNumLaserLanesSZ; ++i)
 		{
+			nlohmann::json lanesJSON = nlohmann::json::array();
 			for (const auto& [y, laserSection] : lanes[i])
 			{
 				if (laserSection.v.empty())
@@ -278,8 +279,9 @@ namespace
 					prevVf = v.vf;
 				}
 				Write(sectionJSON, "w", laserSection.w, kLaserXScale1x);
-				j.push_back(std::move(sectionJSON));
+				lanesJSON.push_back(std::move(sectionJSON));
 			}
+			j.push_back(std::move(lanesJSON));
 		}
 	}
 
