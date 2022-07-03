@@ -892,6 +892,11 @@ namespace
 			}
 
 			assert(m_values.size() >= 2);
+			if (m_values.size() < 2)
+			{
+				clear();
+				return;
+			}
 
 			// Convert a 32th or shorter laser segment to a laser slam
 			const Pulse laserSlamThreshold = kResolution4 / 32;
@@ -929,8 +934,6 @@ namespace
 				{
 					if (m_values.contains(relPulse) && laneSpin.isValid() && s_kshSpinTypeToKsonCamPatternNameTable.contains(laneSpin.type))
 					{
-						const std::string patternKey(s_kshSpinTypeToKsonCamPatternNameTable.at(laneSpin.type));
-
 						WithDirection<CamPatternParams> params;
 						if (laneSpin.type == PreparedLaneSpin::Type::kSwing)
 						{
@@ -955,6 +958,7 @@ namespace
 							};
 						}
 
+						const std::string patternKey(s_kshSpinTypeToKsonCamPatternNameTable.at(laneSpin.type));
 						if (!patternKey.empty())
 						{
 							m_pTargetChartData->camera.cam.pattern.laser.slamEvent[patternKey].emplace(m_time + relPulse, params);
@@ -976,7 +980,7 @@ namespace
 
 		void addLaneSpin(Pulse time, const PreparedLaneSpin& laneSpin)
 		{
-			m_preparedLaneSpins.emplace(time, laneSpin);
+			m_preparedLaneSpins.emplace(time - m_time, laneSpin);
 		}
 	};
 
