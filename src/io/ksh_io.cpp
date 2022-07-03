@@ -610,9 +610,9 @@ namespace
 			ParseNumeric<std::int32_t>(params[3]));
 	}
 
-	constexpr double kKSHToKSONCamScale = 1.0 / 100.0;
-	constexpr double kKSHToKSONTiltScale = 1.0 / 100.0;
-	constexpr double kKSHToKSONSwingScale = 1.0 / 60.0;
+	constexpr std::int32_t kKSHToKSONCamScaleDenominator = 100;
+	constexpr std::int32_t kKSHToKSONTiltScaleDenominator = 100;
+	constexpr std::int32_t kKSHToKSONSwingScaleDenominator = 60;
 
 	struct PreparedLaneSpin
 	{
@@ -939,7 +939,7 @@ namespace
 								.d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1,
 								.v = {
 									.length = laneSpin.duration,
-									.scale = static_cast<double>(laneSpin.swingAmplitude) * kKSHToKSONSwingScale,
+									.scale = static_cast<double>(laneSpin.swingAmplitude) / kKSHToKSONSwingScaleDenominator,
 									.repeat = laneSpin.swingRepeat,
 									.decayOrder = laneSpin.swingDecayOrder,
 								},
@@ -1568,7 +1568,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_top")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) * kKSHToKSONCamScale;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.rotationX.contains(time)))
 					{
 						chartData.camera.cam.body.rotationX.insert_or_assign(time, dValue);
@@ -1576,7 +1576,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_bottom")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) * kKSHToKSONCamScale;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoom.contains(time)))
 					{
 						chartData.camera.cam.body.zoom.insert_or_assign(time, dValue);
@@ -1584,7 +1584,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_side")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) * kKSHToKSONCamScale;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.shiftX.contains(time)))
 					{
 						chartData.camera.cam.body.shiftX.insert_or_assign(time, dValue);
@@ -1592,7 +1592,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "center_split")
 				{
-					const double dValue = ParseNumeric<double>(value) * kKSHToKSONCamScale;
+					const double dValue = ParseNumeric<double>(value) / kKSHToKSONCamScaleDenominator;
 					if (std::abs(dValue) <= kCenterSplitAbsMax)
 					{
 						chartData.camera.cam.body.centerSplit.insert_or_assign(time, dValue);
@@ -1602,7 +1602,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				{
 					if (IsTiltValueManual(value))
 					{
-						const double dValue = ParseNumeric<double>(value) * kKSHToKSONTiltScale;
+						const double dValue = ParseNumeric<double>(value) / kKSHToKSONTiltScaleDenominator;
 						if (std::abs(dValue) <= kManualTiltAbsMax)
 						{
 							preparedManualTilt.prepare(time);
