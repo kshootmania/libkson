@@ -1891,6 +1891,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			{
 				map.clear();
 			}
+			for (auto& map : currentMeasureFXKeySounds)
+			{
+				map.clear();
+			}
+			currentMeasureLaserKeySounds.clear();
 			currentPulse += kResolution4 * currentTimeSig.n / currentTimeSig.d;
 			++currentMeasureIdx;
 			continue;
