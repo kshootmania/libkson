@@ -38,9 +38,14 @@ namespace
 	{
 		if constexpr (
 			std::is_same_v<T, std::string> ||
-			std::is_arithmetic_v<T>)
+			std::is_integral_v<T>)
 		{
 			json.emplace(key, value);
+		}
+		else if constexpr (std::is_floating_point_v<T>)
+		{
+			// To avoid precision problems (e.g. "0.7000000000000001"), round the value to eight decimal places
+			json.emplace(key, static_cast<std::int64_t>(std::round(value * 1e8)) / 1e8);
 		}
 		else if constexpr (std::is_same_v<T, nlohmann::json>)
 		{
