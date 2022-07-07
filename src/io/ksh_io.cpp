@@ -219,7 +219,7 @@ namespace
 		case 'B': return "BitCrusher;5";
 		case 'Q': return "Phaser";
 		case 'X': return "Wobble;12";
-		case 'A': return "TapeStop;17";
+		case 'A': return "TapeStop";
 		case 'D': return "SideChain";
 		default:  return "";
 		}
