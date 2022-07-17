@@ -3,8 +3,8 @@
 
 namespace kson
 {
-	static constexpr std::int32_t kLaserXScale1x = 1;
-	static constexpr std::int32_t kLaserXScale2x = 2;
+	constexpr std::int32_t kLaserXScale1x = 1;
+	constexpr std::int32_t kLaserXScale2x = 2;
 
 	struct LaserSection
 	{
