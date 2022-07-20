@@ -1204,9 +1204,9 @@ namespace
 			chartData.meta.stdBPM = ParseNumeric<double>(Pop(metaDataHashMap, "to", "0"), 0.0);
 
 			const auto bgmFilenames = Split<4>(Pop(metaDataHashMap, "m"), ';');
+			chartData.audio.bgm.filename = bgmFilenames[0];
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
 			{
-				chartData.audio.bgm.filename = bgmFilenames[0];
 				chartData.audio.bgm.legacy.filenameF = bgmFilenames[1];
 				chartData.audio.bgm.legacy.filenameP = bgmFilenames[2];
 				chartData.audio.bgm.legacy.filenameFP = bgmFilenames[3];

@@ -37,6 +37,8 @@ namespace kson
 
 	struct MetaBGMInfo
 	{
+		std::string filename; // UTF-8 guaranteed
+
 		double vol = 1.0;
 
 		BGMPreviewInfo preview;
