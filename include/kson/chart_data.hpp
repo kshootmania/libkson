@@ -23,7 +23,6 @@ namespace kson
 		MetaAudioInfo audio;
 		MetaCompatInfo compat;
 
-		std::string filePath; // Note: OS native encoding (Not UTF-8 in Windows)
 		Error error = Error::None;
 	};
 
@@ -43,7 +42,6 @@ namespace kson
 		nlohmann::json impl = nlohmann::json::object();
 #endif
 
-		std::string filePath; // Note: OS native encoding (Not UTF-8 in Windows)
 		Error error = Error::None;
 	};
 }

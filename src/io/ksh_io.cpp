@@ -1310,9 +1310,7 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 		return { .error = Error::CouldNotOpenInputFileStream };
 	}
 
-	MetaChartData chartData = LoadKSHMetaChartData(ifs);
-	chartData.filePath = filePath;
-	return chartData;
+	return LoadKSHMetaChartData(ifs);
 }
 
 kson::ChartData kson::LoadKSHChartData(std::istream& stream)
@@ -2091,8 +2089,5 @@ ChartData kson::LoadKSHChartData(const std::string& filePath)
 		return { .error = Error::CouldNotOpenInputFileStream };
 	}
 
-	ChartData chartData = LoadKSHChartData(ifs);
-	chartData.filePath = filePath;
-
-	return chartData;
+	return LoadKSHChartData(ifs);
 }
