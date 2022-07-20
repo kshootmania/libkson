@@ -15,9 +15,4 @@ namespace kson
 		std::string kshVersion;
 		KSHUnknownInfo kshUnknown;
 	};
-
-	struct MetaCompatInfo
-	{
-		std::string kshVersion;
-	};
 }

@@ -21,7 +21,6 @@ namespace kson
 	{
 		MetaInfo meta;
 		MetaAudioInfo audio;
-		MetaCompatInfo compat;
 
 		Error error = Error::None;
 	};

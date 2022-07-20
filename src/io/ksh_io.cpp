@@ -1160,8 +1160,12 @@ namespace
 
 		// Insert meta data to chartData
 		{
-			chartData.compat.kshVersion = Pop(metaDataHashMap, "ver", "");
-			const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
+			const std::string kshVersion = Pop(metaDataHashMap, "ver", "100");
+			const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(kshVersion, 100);
+			if constexpr (std::is_same_v<ChartDataType, ChartData>)
+			{
+				chartData.compat.kshVersion = kshVersion;
+			}
 
 			chartData.meta.title = Pop(metaDataHashMap, "title");
 			chartData.meta.artist = Pop(metaDataHashMap, "artist");
@@ -1214,9 +1218,9 @@ namespace
 
 			const std::int32_t volInt = PopInt<std::int32_t>(metaDataHashMap, "mvol", 50);
 			chartData.audio.bgm.vol = volInt / 100.0;
-			if (chartData.compat.kshVersion.empty())
+			if (kshVersionInt == 100)
 			{
-				// For historical reasons, the value is multiplied by 0.6 if the value of "ver" is not specified.
+				// For historical reasons, if the KSH format version is "100" (including unspecified), the volume is multiplied by 0.6.
 				chartData.audio.bgm.vol *= 0.6;
 			}
 
