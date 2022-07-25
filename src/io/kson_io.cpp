@@ -768,6 +768,7 @@ namespace
 	{
 		nlohmann::json j = nlohmann::json::object();
 		{
+			Write(j, "filename", d.filename, "");
 			nlohmann::json legacyJSON = nlohmann::json::object();
 			{
 				nlohmann::json bgJSON = nlohmann::json::array();
@@ -796,6 +797,12 @@ namespace
 					Write(layerJSON, "rotation", std::move(rotationJSON));
 				}
 				Write(legacyJSON, "layer", std::move(layerJSON));
+			}
+			{
+				nlohmann::json movieJSON = nlohmann::json::object();
+				Write(movieJSON, "filename", d.legacy.movie.filename, "");
+				Write(movieJSON, "offset", d.legacy.movie.offset, 0);
+				Write(legacyJSON, "movie", std::move(movieJSON));
 			}
 			Write(j, "legacy", std::move(legacyJSON));
 		}

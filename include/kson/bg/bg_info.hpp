@@ -36,7 +36,7 @@ namespace kson
 
 	struct BGInfo
 	{
-		// KSMv1 BG format will be legacy!
+		std::string filename; // UTF-8 guaranteed
 		LegacyBGInfo legacy;
 	};
 }
