@@ -7,7 +7,6 @@ enum ExitCode : int
 {
     kExitSuccess = 0,
     kExitNoArgument,
-    kExitUncaughtException,
 };
 
 void PrintHelp()
@@ -67,12 +66,10 @@ int main(int argc, char *argv[])
     catch (const std::exception& e)
     {
         std::cerr << "Error: Uncaught exception '" << e.what() << "'\n";
-        return kExitUncaughtException;
     }
     catch (...)
     {
         std::cerr << "Error: Uncaught exception (unknown)\n";
-        return kExitUncaughtException;
     }
 
     return kExitSuccess;
