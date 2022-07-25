@@ -1181,6 +1181,7 @@ namespace
 			else
 			{
 				chartData.meta.difficulty.idx = 3; // Unknown difficulty is recognized as "infinite" (=3)
+				chartData.meta.difficulty.name = difficultyName;
 			}
 
 			chartData.meta.level = PopInt<std::int32_t>(metaDataHashMap, "level", 1, 1, 20);
