@@ -6,6 +6,7 @@ namespace kson
 	struct DifficultyInfo
 	{
 		std::int32_t idx = 0; // 0-3 in KSH
+		std::string name; // empty if "meta.difficulty" is uint
 	};
 
 	struct MetaInfo

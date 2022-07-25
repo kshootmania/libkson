@@ -497,7 +497,14 @@ namespace
 		Write(j, "artist", d.artist);
 		Write(j, "artist_img_filename", d.artistImgFilename, "");
 		Write(j, "chart_author", d.chartAuthor);
-		Write(j["difficulty"], "idx", d.difficulty.idx);
+		if (d.difficulty.name.empty())
+		{
+			Write(j, "difficulty", d.difficulty.idx);
+		}
+		else
+		{
+			Write(j, "difficulty", d.difficulty.name);
+		}
 		Write(j, "level", d.level);
 		Write(j, "disp_bpm", d.dispBPM, "");
 		Write(j, "std_bpm", d.stdBPM, 0.0);
