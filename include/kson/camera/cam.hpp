@@ -1,4 +1,5 @@
 #pragma once
+#include <tuple>
 #include "kson/common/common.hpp"
 
 namespace kson
@@ -14,32 +15,37 @@ namespace kson
 		Graph centerSplit; // "center_split"
 	};
 
-	struct CamPatternParams
+	struct CamPatternInvokeSwingValue
 	{
-		RelPulse length = 0;
-		double scale = 1.0;  // Swing only
-		std::int32_t repeat = 1;  // Swing only
-		std::int32_t decayOrder = 0;  // Swing only
+		double scale = 1.0;
+		std::int32_t repeat = 1;
+		std::int32_t decayOrder = 0;
 	};
 
-	namespace CamPatternKey
+	namespace detail
 	{
-		constexpr std::string_view kSpin = "spin";
-		constexpr std::string_view kHalfSpin = "half_spin";
-		constexpr std::string_view kSwing = "swing";
+		template <typename ValueType>
+		struct BasicCamPatternInvoke
+		{
+			std::int32_t d = 0; // laser slam direction, -1 (left) or 1 (right)
+			RelPulse length = 0;
+			ValueType v = {};
+		};
 	}
 
-	template <typename T>
-	struct WithDirection
+	using CamPatternInvokeSpin = detail::BasicCamPatternInvoke<std::tuple<>>; // Note: std::tuple<> is empty
+	using CamPatternInvokeSwing = detail::BasicCamPatternInvoke<CamPatternInvokeSwingValue>;
+
+	struct CamPatternLaserInvokeList
 	{
-		// TODO: use d as map key
-		std::int32_t d = 0; // laser slam direction, -1 (left) or 1 (right)
-		T v;
+		ByPulse<CamPatternInvokeSpin> spin;
+		ByPulse<CamPatternInvokeSpin> halfSpin;
+		ByPulse<CamPatternInvokeSwing> swing;
 	};
 
 	struct CamPatternLaserInfo
 	{
-		Dict<ByPulse<WithDirection<CamPatternParams>>> slamEvent;
+		CamPatternLaserInvokeList slamEvent;
 	};
 
 	struct CamPatternInfo

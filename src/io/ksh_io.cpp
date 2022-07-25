@@ -744,14 +744,6 @@ namespace
 		}
 	};
 
-	const std::unordered_map<PreparedLaneSpin::Type, std::string_view> s_kshSpinTypeToKsonCamPatternNameTable
-	{
-		{ PreparedLaneSpin::Type::kNoSpin, "" },
-		{ PreparedLaneSpin::Type::kNormal, CamPatternKey::kSpin },
-		{ PreparedLaneSpin::Type::kHalf, CamPatternKey::kHalfSpin },
-		{ PreparedLaneSpin::Type::kSwing, CamPatternKey::kSwing },
-	};
-
 	const std::unordered_map<std::string_view, double> s_tiltTypeScaleTable
 	{
 		{ "normal", 1.0 },
@@ -932,36 +924,41 @@ namespace
 				// Publish prepared lane spin
 				for (const auto& [relPulse, laneSpin] : m_preparedLaneSpins)
 				{
-					if (m_values.contains(relPulse) && laneSpin.isValid() && s_kshSpinTypeToKsonCamPatternNameTable.contains(laneSpin.type))
+					if (m_values.contains(relPulse) && laneSpin.isValid())
 					{
-						WithDirection<CamPatternParams> params;
-						if (laneSpin.type == PreparedLaneSpin::Type::kSwing)
+						assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
+						const std::int32_t d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1;
+						switch (laneSpin.type)
 						{
-							assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
-							params = WithDirection<CamPatternParams>{
-								.d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1,
-								.v = {
-									.length = laneSpin.duration,
-									.scale = static_cast<double>(laneSpin.swingAmplitude) / kKSHToKSONSwingScaleDenominator,
-									.repeat = laneSpin.swingRepeat,
-									.decayOrder = laneSpin.swingDecayOrder,
-								},
-							};
-						}
-						else
-						{
-							params = WithDirection<CamPatternParams>{
-								.d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1,
-								.v = {
-									.length = laneSpin.duration,
-								},
-							};
-						}
-
-						const std::string patternKey(s_kshSpinTypeToKsonCamPatternNameTable.at(laneSpin.type));
-						if (!patternKey.empty())
-						{
-							m_pTargetChartData->camera.cam.pattern.laser.slamEvent[patternKey].emplace(m_time + relPulse, params);
+							case PreparedLaneSpin::Type::kNormal:
+								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.spin.emplace(
+									m_time + relPulse,
+									CamPatternInvokeSpin{
+										.d = d,
+										.length = laneSpin.duration,
+									});
+								break;
+							case PreparedLaneSpin::Type::kHalf:
+								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
+									m_time + relPulse,
+									CamPatternInvokeSpin{
+										.d = d,
+										.length = laneSpin.duration,
+									});
+								break;
+							case PreparedLaneSpin::Type::kSwing:
+								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.swing.emplace(
+									m_time + relPulse,
+									CamPatternInvokeSwing{
+										.d = d,
+										.length = laneSpin.duration,
+										.v = {
+											.scale = static_cast<double>(laneSpin.swingAmplitude) / kKSHToKSONSwingScaleDenominator,
+											.repeat = laneSpin.swingRepeat,
+											.decayOrder = laneSpin.swingDecayOrder,
+										},
+									});
+								break;
 						}
 					}
 				}

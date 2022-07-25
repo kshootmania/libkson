@@ -460,7 +460,7 @@ namespace
 		}
 	}
 
-	void WriteCamPatternParamsByPulse(nlohmann::json& json, const char* key, const ByPulse<WithDirection<CamPatternParams>>& byPulse)
+	void WriteCamPatternInvokeSpinByPulse(nlohmann::json& json, const char* key, const ByPulse<CamPatternInvokeSpin>& byPulse)
 	{
 		if (byPulse.empty())
 		{
@@ -469,22 +469,36 @@ namespace
 
 		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
-		for (const auto& [y, v] : byPulse)
+		for (const auto& [y, invoke] : byPulse)
+		{
+			j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
+		}
+	}
+
+	void WriteCamPatternInvokeSwingByPulse(nlohmann::json& json, const char* key, const ByPulse<CamPatternInvokeSwing>& byPulse)
+	{
+		if (byPulse.empty())
+		{
+			return;
+		}
+
+		nlohmann::json& j = json[key];
+		j = nlohmann::json::array();
+		for (const auto& [y, invoke] : byPulse)
 		{
 			nlohmann::json vJSON = nlohmann::json::object();
 			{
-				Write(vJSON, "l", v.v.length, 960);
-				Write(vJSON, "scale", v.v.scale, 1.0);
-				Write(vJSON, "repeat", v.v.repeat, 1);
-				Write(vJSON, "decay_order", v.v.decayOrder, 0);
+				Write(vJSON, "scale", invoke.v.scale, 1.0);
+				Write(vJSON, "repeat", invoke.v.repeat, 1);
+				Write(vJSON, "decay_order", invoke.v.decayOrder, 0);
 			}
 			if (vJSON.empty())
 			{
-				j.push_back(nlohmann::json::array({ y, v.d }));
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
 			}
 			else
 			{
-				j.push_back(nlohmann::json::array({ y, v.d, std::move(vJSON) }));
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length, std::move(vJSON) }));
 			}
 		}
 	}
@@ -736,10 +750,9 @@ namespace
 					nlohmann::json laserJSON = nlohmann::json::object();
 					{
 						nlohmann::json slamEventJSON = nlohmann::json::object();
-						for (const auto& [patternName, byPulse] : d.cam.pattern.laser.slamEvent)
-						{
-							WriteCamPatternParamsByPulse(slamEventJSON, patternName.c_str(), byPulse);
-						}
+						WriteCamPatternInvokeSpinByPulse(slamEventJSON, "spin", d.cam.pattern.laser.slamEvent.spin);
+						WriteCamPatternInvokeSpinByPulse(slamEventJSON, "half_spin", d.cam.pattern.laser.slamEvent.halfSpin);
+						WriteCamPatternInvokeSwingByPulse(slamEventJSON, "swing", d.cam.pattern.laser.slamEvent.swing);
 						Write(laserJSON, "slam_event", std::move(slamEventJSON));
 					}
 					Write(camJSON, "laser", std::move(laserJSON));
