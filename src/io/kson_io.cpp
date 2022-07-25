@@ -44,8 +44,7 @@ namespace
 		}
 		else if constexpr (std::is_floating_point_v<T>)
 		{
-			// To avoid precision problems (e.g. "0.7000000000000001"), round the value to eight decimal places
-			json.emplace(key, std::round(value * 1e8) / 1e8);
+			json.emplace(key, RemoveFloatingPointError(value));
 		}
 		else if constexpr (std::is_same_v<T, nlohmann::json>)
 		{
@@ -94,6 +93,111 @@ namespace
 #else
 	template <typename T>
 #endif
+	void WriteByPulseElement(nlohmann::json& arrayJSON, Pulse y, const T& value) // Note: y could be ry
+	{
+		if constexpr (
+			std::is_same_v<T, std::string> ||
+			std::is_integral_v<T>)
+		{
+			arrayJSON.push_back(nlohmann::json::array({ y, value }));
+		}
+		else if constexpr (std::is_floating_point_v<T>)
+		{
+			arrayJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(value) }));
+		}
+		else if constexpr (std::is_same_v<T, nlohmann::json>)
+		{
+			if (value.is_object() && value.empty())
+			{
+				arrayJSON.push_back(y);
+			}
+			else
+			{
+				arrayJSON.push_back(nlohmann::json::array({ y, value }));
+			}
+		}
+		else
+		{
+			nlohmann::json valueJSON = value;
+			if (valueJSON.is_object() && valueJSON.empty())
+			{
+				arrayJSON.push_back(y);
+			}
+			else
+			{
+				arrayJSON.push_back(nlohmann::json::array({ y, std::move(valueJSON) }));
+			}
+		}
+	}
+
+#ifdef __cpp_concepts
+	template <Serializable T, typename U>
+#else
+	template <typename T, typename U>
+#endif
+	void WriteByPulseElement(nlohmann::json& arrayJSON, Pulse y, const T& value, const U& defaultValue) // Note: y could be ry
+	{
+		if constexpr (
+			std::is_same_v<T, std::string> ||
+			std::is_integral_v<T>)
+		{
+			if (value == defaultValue)
+			{
+				arrayJSON.push_back(y);
+			}
+			else
+			{
+				arrayJSON.push_back(nlohmann::json::array({ y, value }));
+			}
+		}
+		else if constexpr (std::is_floating_point_v<T>)
+		{
+			static_assert(std::is_same_v<T, U>);
+			
+			const double valueFixed = RemoveFloatingPointError(value);
+			const double defaultValueFixed = RemoveFloatingPointError(defaultValue);
+			if (valueFixed == defaultValueFixed)
+			{
+				arrayJSON.push_back(y);
+			}
+			else
+			{
+				arrayJSON.push_back(nlohmann::json::array({ y, valueFixed }));
+			}
+		}
+		else
+		{
+			if (value == defaultValue)
+			{
+				arrayJSON.push_back(y);
+			}
+			else
+			{
+				// Pass to a no-default-value version of WriteByPulseElement in order to skip empty objects and empty arrays in addition to the defaults
+				WriteByPulseElement(arrayJSON, y, value);
+			}
+		}
+	}
+
+	void WriteGraphPoint(nlohmann::json& graphJSON, Pulse y, const GraphValue& v) // Note: y could be ry
+	{
+		const double value1 = RemoveFloatingPointError(v.v);
+		const double value2 = RemoveFloatingPointError(v.vf);
+		if (value1 == value2)
+		{
+			graphJSON.push_back(nlohmann::json::array({ y, value1 }));
+		}
+		else
+		{
+			graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ value1, value2 }) }));
+		}
+	}
+
+#ifdef __cpp_concepts
+	template <Serializable T>
+#else
+	template <typename T>
+#endif
 	void WriteByPulse(nlohmann::json& json, const char* key, const ByPulse<T>& byPulse)
 	{
 		if (byPulse.empty())
@@ -101,14 +205,11 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (const auto& [y, v] : byPulse)
 		{
-			j.push_back({
-				{ "y", y },
-				{ "v", v },
-			});
+			WriteByPulseElement(j, y, v);
 		}
 	}
 
@@ -159,14 +260,11 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (const auto& [y, v] : byPulse)
 		{
-			j.push_back({
-				{ "y", y },
-				{ "v", v },
-				});
+			WriteByPulseElement(j, y, v);
 		}
 	}
 
@@ -177,15 +275,14 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (const auto& [idx, timeSig] : byMeasureIdx)
 		{
-			j.push_back({
-				{ "idx", idx },
-				{ "n", timeSig.n },
-				{ "d", timeSig.d },
-			});
+			j.push_back(nlohmann::json::array({
+				idx,
+				nlohmann::json::array({ timeSig.n, timeSig.d }),
+			}));
 		}
 	}
 
@@ -207,28 +304,15 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (std::size_t i = 0U; i < N; ++i)
 		{
-			nlohmann::json a = nlohmann::json::array();
+			nlohmann::json& a = j.emplace_back(nlohmann::json::array());
 			for (const auto& [y, interval] : lanes[i])
 			{
-				if (interval.length == 0)
-				{
-					a.push_back({
-						{ "y", y },
-					});
-				}
-				else
-				{
-					a.push_back({
-						{ "y", y },
-						{ "l", interval.length },
-					});
-				}
+				WriteByPulseElement(a, y, interval.length, 0);
 			}
-			j.push_back(std::move(a));
 		}
 	}
 
@@ -249,11 +333,10 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
-		j = nlohmann::json::array();
+		nlohmann::json& j = json[key];
 		for (std::size_t i = 0U; i < kNumLaserLanesSZ; ++i)
 		{
-			nlohmann::json lanesJSON = nlohmann::json::array();
+			nlohmann::json& laneJSON = j.emplace_back(nlohmann::json::array());
 			for (const auto& [y, laserSection] : lanes[i])
 			{
 				if (laserSection.v.empty())
@@ -261,32 +344,20 @@ namespace
 					continue;
 				}
 
-				nlohmann::json sectionJSON = {
-					{ "y", y },
-				};
-				auto& a = sectionJSON["v"];
-				std::optional<double> prevVf = std::nullopt;
+				nlohmann::json a = nlohmann::json::array();
 				for (const auto& [ry, v] : laserSection.v)
 				{
-					nlohmann::json point = {
-						{ "ry", ry },
-					};
-					if (v.v != prevVf)
-					{
-						Write(point, "v", v.v);
-					}
-					if (v.v != v.vf)
-					{
-						Write(point, "vf", v.vf);
-					}
-					a.push_back(std::move(point));
-					// TODO: a, b for curves
-					prevVf = v.vf;
+					WriteGraphPoint(a, ry, v);
 				}
-				Write(sectionJSON, "w", laserSection.w, kLaserXScale1x);
-				lanesJSON.push_back(std::move(sectionJSON));
+				if (laserSection.w == kLaserXScale1x)
+				{
+					laneJSON.push_back(nlohmann::json::array({ y, std::move(a) }));
+				}
+				else
+				{
+					laneJSON.push_back(nlohmann::json::array({ y, std::move(a), laserSection.w }));
+				}
 			}
-			j.push_back(std::move(lanesJSON));
 		}
 	}
 
@@ -297,26 +368,11 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
-
-		std::optional<double> prevVf = std::nullopt;
 		for (const auto& [y, v] : graph)
 		{
-			nlohmann::json point = {
-				{ "y", y },
-			};
-			if (v.v != prevVf)
-			{
-				Write(point, "v", v.v);
-			}
-			if (v.v != v.vf)
-			{
-				Write(point, "vf", v.vf);
-			}
-			j.push_back(std::move(point));
-			// TODO: a, b for curves
-			prevVf = v.vf;
+			WriteGraphPoint(j, y, v);
 		}
 	}
 
@@ -346,9 +402,8 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
-
 		for (const auto& [y, graphSection] : graphSections)
 		{
 			if (graphSection.v.empty())
@@ -356,29 +411,11 @@ namespace
 				continue;
 			}
 
-			nlohmann::json sectionJSON = {
-				{ "y", y },
-			};
-			auto& a = sectionJSON["v"];
-			std::optional<double> prevVf = std::nullopt;
+			nlohmann::json& graphJSON = j.emplace_back(nlohmann::json::array({ y, nlohmann::json::array() }))[1];
 			for (const auto& [ry, v] : graphSection.v)
 			{
-				nlohmann::json point = {
-					{ "ry", ry },
-				};
-				if (v.v != prevVf)
-				{
-					Write(point, "v", v.v);
-				}
-				if (v.v != v.vf)
-				{
-					Write(point, "vf", v.vf);
-				}
-				a.push_back(std::move(point));
-				// TODO: a, b for curves
-				prevVf = v.vf;
+				WriteGraphPoint(graphJSON, ry, v);
 			}
-			j.push_back(std::move(sectionJSON));
 		}
 	}
 
@@ -389,7 +426,7 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		for (const auto& [name, def] : dict)
 		{
 			nlohmann::json defJSON = {
@@ -407,7 +444,7 @@ namespace
 			return;
 		}
 
-		auto& j1 = json[key];
+		nlohmann::json& j1 = json[key];
 		for (const auto& [audioEffectName, params] : paramChange)
 		{
 			if (params.empty())
@@ -415,7 +452,7 @@ namespace
 				continue;
 			}
 
-			auto& j2 = j1[audioEffectName];
+			nlohmann::json& j2 = j1[audioEffectName];
 			for (const auto& [paramName, byPulse] : params)
 			{
 				WriteByPulse(j2, paramName.c_str(), byPulse);
@@ -430,22 +467,25 @@ namespace
 			return;
 		}
 
-		auto& j = json[key];
+		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (const auto& [y, v] : byPulse)
 		{
-			nlohmann::json paramsJSON = nlohmann::json::object();
-			Write(paramsJSON, "y", y);
-			Write(paramsJSON, "d", v.d);
+			nlohmann::json vJSON = nlohmann::json::object();
 			{
-				nlohmann::json vJSON = nlohmann::json::object();
 				Write(vJSON, "l", v.v.length, 960);
 				Write(vJSON, "scale", v.v.scale, 1.0);
 				Write(vJSON, "repeat", v.v.repeat, 1);
 				Write(vJSON, "decay_order", v.v.decayOrder, 0);
-				Write(paramsJSON, "v", std::move(vJSON));
 			}
-			j.push_back(std::move(paramsJSON));
+			if (vJSON.empty())
+			{
+				j.push_back(nlohmann::json::array({ y, v.d }));
+			}
+			else
+			{
+				j.push_back(nlohmann::json::array({ y, v.d, std::move(vJSON) }));
+			}
 		}
 	}
 
@@ -545,14 +585,11 @@ namespace
 							nlohmann::json laneJSON = nlohmann::json::array();
 							for (const auto& [y, v] : lane)
 							{
-								nlohmann::json eventJSON = nlohmann::json::object();
-								Write(eventJSON, "y", y);
+								nlohmann::json vJSON = nlohmann::json::object();
 								{
-									nlohmann::json vJSON = nlohmann::json::object();
-									Write(eventJSON, "vol", v.vol, 1.0);
-									Write(eventJSON, "v", std::move(vJSON));
+									Write(vJSON, "vol", v.vol, 1.0);
 								}
-								laneJSON.push_back(std::move(eventJSON));
+								WriteByPulseElement(laneJSON, y, vJSON);
 							}
 							lanesJSON.push_back(std::move(laneJSON));
 						}
@@ -574,14 +611,12 @@ namespace
 							continue;
 						}
 
-						nlohmann::json pulseSetJSON = nlohmann::json::array();
+						nlohmann::json& pulseSetJSON = slamEventJSON[filename];
+						pulseSetJSON = nlohmann::json::array();
 						for (const auto& y : pulseSet)
 						{
-							pulseSetJSON.push_back({
-								{ "y", y },
-							});
+							pulseSetJSON.push_back(y);
 						}
-						slamEventJSON.emplace(filename, std::move(pulseSetJSON));
 					}
 					Write(laserJSON, "slam_event", std::move(slamEventJSON));
 				}
@@ -618,20 +653,15 @@ namespace
 							continue;
 						}
 
-						nlohmann::json lanesJSON = nlohmann::json::array();
+						nlohmann::json& lanesJSON = longEventJSON[audioEffectName];
 						for (const auto& lane : lanes)
 						{
-							nlohmann::json laneJSON = nlohmann::json::array();
+							nlohmann::json& laneJSON = lanesJSON.emplace_back(nlohmann::json::array());
 							for (const auto& [y, v] : lane)
 							{
-								nlohmann::json eventJSON = nlohmann::json::object();
-								Write(eventJSON, "y", y);
-								Write(eventJSON, "v", v);
-								laneJSON.push_back(std::move(eventJSON));
+								WriteByPulseElement(laneJSON, y, v);
 							}
-							lanesJSON.push_back(std::move(laneJSON));
 						}
-						longEventJSON.emplace(audioEffectName, std::move(lanesJSON));
 					}
 					Write(fxJSON, "long_event", std::move(longEventJSON));
 				}
@@ -790,7 +820,7 @@ kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chart
 	}
 
 	nlohmann::json json = nlohmann::json::object();
-	Write(json, "version", "0.4.0");
+	Write(json, "version", "0.5.0-alpha1");
 	Write(json, "meta", ToJSON(chartData.meta));
 	Write(json, "beat", ToJSON(chartData.beat));
 	Write(json, "gauge", ToJSON(chartData.gauge));

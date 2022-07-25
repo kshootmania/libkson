@@ -7,6 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include "kson/encoding/encoding.hpp"
 
@@ -132,13 +133,14 @@ namespace kson
 		return itr;
 	}
 
-	template <typename T>
-	bool AlmostEquals(T a, T b)
-#ifdef __cpp_concepts
-		requires std::is_floating_point_v<T>
-#endif
+	inline double RemoveFloatingPointError(double value)
 	{
-		// Not perfect algorithm, but okay for now.
-		return std::abs(a - b) <= std::numeric_limits<T>::epsilon();
+		// Round the value to eight decimal places (e.g. "0.700000004" -> "0.7")
+		return std::round(value * 1e8) / 1e8;
+	}
+
+	inline bool AlmostEquals(double a, double b)
+	{
+		return RemoveFloatingPointError(a) == RemoveFloatingPointError(b);
 	}
 }

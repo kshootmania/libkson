@@ -32,6 +32,7 @@ namespace kson
 	template <typename T>
 	struct WithDirection
 	{
+		// TODO: use d as map key
 		std::int32_t d = 0; // laser slam direction, -1 (left) or 1 (right)
 		T v;
 	};
