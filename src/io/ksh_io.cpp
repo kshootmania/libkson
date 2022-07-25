@@ -1165,7 +1165,9 @@ namespace
 			}
 
 			chartData.meta.title = Pop(metaDataHashMap, "title");
+			chartData.meta.titleImgFilename = Pop(metaDataHashMap, "title_img", "");
 			chartData.meta.artist = Pop(metaDataHashMap, "artist");
+			chartData.meta.artistImgFilename = Pop(metaDataHashMap, "artist_img", "");
 			chartData.meta.chartAuthor = Pop(metaDataHashMap, "effect");
 			chartData.meta.jacketFilename = Pop(metaDataHashMap, "jacket");
 			chartData.meta.jacketAuthor = Pop(metaDataHashMap, "illustrator");

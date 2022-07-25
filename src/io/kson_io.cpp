@@ -520,7 +520,7 @@ namespace
 			Write(j, "difficulty", d.difficulty.name);
 		}
 		Write(j, "level", d.level);
-		Write(j, "disp_bpm", d.dispBPM, "");
+		Write(j, "disp_bpm", d.dispBPM);
 		Write(j, "std_bpm", d.stdBPM, 0.0);
 		Write(j, "jacket_filename", d.jacketFilename, "");
 		Write(j, "jacket_author", d.jacketAuthor, "");
