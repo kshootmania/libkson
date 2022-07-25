@@ -154,15 +154,13 @@ namespace
 		{
 			static_assert(std::is_same_v<T, U>);
 			
-			const double valueFixed = RemoveFloatingPointError(value);
-			const double defaultValueFixed = RemoveFloatingPointError(defaultValue);
-			if (valueFixed == defaultValueFixed)
+			if (AlmostEquals(value, defaultValue))
 			{
 				arrayJSON.push_back(y);
 			}
 			else
 			{
-				arrayJSON.push_back(nlohmann::json::array({ y, valueFixed }));
+				arrayJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(value) }));
 			}
 		}
 		else
@@ -181,15 +179,13 @@ namespace
 
 	void WriteGraphPoint(nlohmann::json& graphJSON, Pulse y, const GraphValue& v) // Note: y could be ry
 	{
-		const double value1 = RemoveFloatingPointError(v.v);
-		const double value2 = RemoveFloatingPointError(v.vf);
-		if (value1 == value2)
+		if (AlmostEquals(v.v, v.vf))
 		{
-			graphJSON.push_back(nlohmann::json::array({ y, value1 }));
+			graphJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(v.v) }));
 		}
 		else
 		{
-			graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ value1, value2 }) }));
+			graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ RemoveFloatingPointError(v.v), RemoveFloatingPointError(v.vf) }) }));
 		}
 	}
 

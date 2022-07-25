@@ -136,11 +136,22 @@ namespace kson
 	inline double RemoveFloatingPointError(double value)
 	{
 		// Round the value to eight decimal places (e.g. "0.700000004" -> "0.7")
-		return std::round(value * 1e8) / 1e8;
+		const double rounded = std::round(value * 1e8) / 1e8;
+
+		// Return rounded only for almost exact values
+		// (e.g. "0.700000001" -> "0.7",  "1.66666666667" -> "1.66666666667")
+		if (std::abs(rounded - value) < 1e-9)
+		{
+			return rounded;
+		}
+		else
+		{
+			return value;
+		}
 	}
 
 	inline bool AlmostEquals(double a, double b)
 	{
-		return RemoveFloatingPointError(a) == RemoveFloatingPointError(b);
+		return std::round(a * 1e8) == std::round(b * 1e8);
 	}
 }
