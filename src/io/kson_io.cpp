@@ -700,9 +700,7 @@ namespace
 						nlohmann::json pulseSetJSON = nlohmann::json::array();
 						for (const Pulse& pulse : pulseSet)
 						{
-							pulseSetJSON.push_back({
-								{ "y", pulse },
-							});
+							pulseSetJSON.push_back(pulse);
 						}
 						pulseEvent.emplace(audioEffectName, std::move(pulseSetJSON));
 					}
