@@ -841,7 +841,7 @@ kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chart
 	}
 
 	nlohmann::json json = nlohmann::json::object();
-	Write(json, "version", "0.5.0");
+	Write(json, "version", "0.5.1");
 	Write(json, "meta", ToJSON(chartData.meta));
 	Write(json, "beat", ToJSON(chartData.beat));
 	Write(json, "gauge", ToJSON(chartData.gauge));
