@@ -2063,7 +2063,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							{
 								params.emplace("wave_length", "1/" + param1);
 							}
-							params.emplace("feedback", param2 + "%");
+							params.emplace("feedback_level", param2 + "%");
 							break;
 						default:
 							break;
