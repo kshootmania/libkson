@@ -67,6 +67,9 @@
     <Filter Include="Source Files\audio">
       <UniqueIdentifier>{f35d69a2-c2d4-41f5-880e-838877ecea7e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\compat">
+      <UniqueIdentifier>{05e145f2-47a5-4e72-aee6-271bf2788672}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\kson\common\common.hpp">
@@ -160,6 +163,9 @@
     </ClCompile>
     <ClCompile Include="src\error.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\compat\compat_info.cpp">
+      <Filter>Source Files\compat</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

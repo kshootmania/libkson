@@ -45,6 +45,7 @@
   <ItemGroup>
     <ClCompile Include="src\audio\audio_effect.cpp" />
     <ClCompile Include="src\audio\bgm_info.cpp" />
+    <ClCompile Include="src\compat\compat_info.cpp" />
     <ClCompile Include="src\encoding\encoding_win.cpp" />
     <ClCompile Include="src\error.cpp" />
     <ClCompile Include="src\io\ksh_io.cpp" />
