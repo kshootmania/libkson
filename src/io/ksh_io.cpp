@@ -302,6 +302,7 @@ namespace
 		{ "freq", "freq" },
 		{ "freqMax", "freq_max" },
 		{ "gain", "gain" },
+		{ "bandwidth", "bandwidth" },
 	};
 
 	constexpr std::int32_t kLaserXMax = 100;
