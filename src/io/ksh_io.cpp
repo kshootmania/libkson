@@ -271,38 +271,36 @@ namespace
 
 	const std::unordered_map<std::string_view, std::string_view> s_audioEffectParamNameTable
 	{
-		{ "updatePeriod", "update_period" },
-		{ "waveLength", "wave_length" },
-		{ "rate", "rate" },
-		{ "updateTrigger", "update_trigger" },
-		{ "mix", "mix" },
-		{ "period", "period" },
+		{ "attackTime", "attack_time" },
+		{ "bandwidth", "bandwidth" },
 		{ "delay", "delay" },
 		{ "depth", "depth" },
 		{ "feedback", "feedback" },
-		{ "stereoWidth", "stereo_width" },
-		{ "volume", "vol" },
-		{ "pitch", "pitch" },
-		{ "chunkSize", "chunk_size" },
-		{ "overWrap", "overlap" },
-		{ "reduction", "reduction" },
-		{ "stage", "stage" },
-		{ "loFreq", "lo_freq" },
-		{ "hiFreq", "hi_freq" },
-		{ "Q", "q" },
-		{ "speed", "speed" },
-		{ "trigger", "trigger" },
 		{ "feedbackLevel", "feedback_level" },
-		{ "holdTime", "hold_time" },
-		{ "attackTime", "attack_time" },
-		{ "releaseTime", "release_time" },
-		{ "ratio", "ratio" },
-		{ "fileName", "filename" },
-		{ "v", "v" },
+		{ "fileName", "filename" }, // renamed
 		{ "freq", "freq" },
 		{ "freqMax", "freq_max" },
 		{ "gain", "gain" },
-		{ "bandwidth", "bandwidth" },
+		{ "hiFreq", "freq_2" }, // renamed
+		{ "holdTime", "hold_time" },
+		{ "loFreq", "freq_1" }, // renamed
+		{ "mix", "mix" },
+		{ "period", "period" },
+		{ "pitch", "pitch" },
+		{ "Q", "q" },
+		{ "rate", "rate" },
+		{ "ratio", "ratio" },
+		{ "reduction", "reduction" },
+		{ "releaseTime", "release_time" },
+		{ "speed", "speed" },
+		{ "stage", "stage" },
+		{ "stereoWidth", "stereo_width" },
+		{ "trigger", "trigger" },
+		{ "updateTrigger", "update_trigger" },
+		{ "v", "v" },
+		{ "volume", "vol" }, // renamed
+		{ "waveLength", "wave_length" },
+		{ "updatePeriod", "update_period" },
 	};
 
 	constexpr std::int32_t kLaserXMax = 100;
@@ -1235,7 +1233,7 @@ namespace
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
 			{
 				chartData.audio.keySound.laser.vol.emplace(0, static_cast<double>(PopInt<std::int32_t>(metaDataHashMap, "chokkakuvol", 50)) / 100);
-				chartData.audio.keySound.laser.legacy.autoVol = PopInt<std::int32_t>(metaDataHashMap, "chokkakuautovol", 1) != 0;
+				chartData.audio.keySound.laser.legacy.volAuto = PopInt<std::int32_t>(metaDataHashMap, "chokkakuautovol", 1) != 0;
 				if (metaDataHashMap.contains("filtertype"))
 				{
 					InsertFiltertype(chartData, 0, Pop(metaDataHashMap, "filtertype", "peak"));
@@ -1484,7 +1482,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				AudioEffectParams paramsKSON;
 				for (const auto& [paramName, value] : params)
 				{
-					// Note: Parameters deleted in the KSON format (e.g., "hiCutGain") are just ignored.
+					// Note: Parameters deleted in the KSON format (e.g., "hiCutGain"/"chunkSize"/"overWrap") are just ignored.
 					if (s_audioEffectParamNameTable.contains(paramName))
 					{
 						paramsKSON.emplace(s_audioEffectParamNameTable.at(paramName), value);

@@ -12,8 +12,10 @@ namespace kson
 	struct MetaInfo
 	{
 		std::string title;
+		std::string titleTranslit; // UTF-8 guaranteed
 		std::string titleImgFilename; // UTF-8 guaranteed
 		std::string artist;
+		std::string artistTranslit; // UTF-8 guaranteed
 		std::string artistImgFilename; // UTF-8 guaranteed
 		std::string chartAuthor;
 		DifficultyInfo difficulty;

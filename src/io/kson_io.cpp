@@ -503,8 +503,10 @@ namespace
 	{
 		nlohmann::json j = nlohmann::json::object();
 		Write(j, "title", d.title);
+		Write(j, "title_translit", d.titleTranslit);
 		Write(j, "title_img_filename", d.titleImgFilename, "");
 		Write(j, "artist", d.artist);
+		Write(j, "artist_translit", d.artistTranslit);
 		Write(j, "artist_img_filename", d.artistImgFilename, "");
 		Write(j, "chart_author", d.chartAuthor);
 		if (d.difficulty.name.empty())
@@ -639,7 +641,7 @@ namespace
 				}
 				{
 					nlohmann::json legacy = nlohmann::json::object();
-					Write(legacy, "auto_vol", d.keySound.laser.legacy.autoVol, false);
+					Write(legacy, "vol_auto", d.keySound.laser.legacy.volAuto, false);
 					Write(laserJSON, "legacy", std::move(legacy));
 				}
 				Write(keySoundJSON, "laser", std::move(laserJSON));
@@ -763,6 +765,7 @@ namespace
 		nlohmann::json j = nlohmann::json::object();
 		{
 			Write(j, "filename", d.filename, "");
+			Write(j, "offset", d.offset, 0);
 			nlohmann::json legacyJSON = nlohmann::json::object();
 			{
 				nlohmann::json bgJSON = nlohmann::json::array();
@@ -841,7 +844,7 @@ kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chart
 	}
 
 	nlohmann::json json = nlohmann::json::object();
-	Write(json, "version", "0.5.1");
+	Write(json, "version", "0.6.0");
 	Write(json, "meta", ToJSON(chartData.meta));
 	Write(json, "beat", ToJSON(chartData.beat));
 	Write(json, "gauge", ToJSON(chartData.gauge));

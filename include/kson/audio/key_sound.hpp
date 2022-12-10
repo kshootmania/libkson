@@ -22,7 +22,7 @@ namespace kson
 
 	struct KeySoundLaserLegacyInfo
 	{
-		bool autoVol = false;
+		bool volAuto = false;
 	};
 
 	struct KeySoundLaserInfo

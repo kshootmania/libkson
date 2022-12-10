@@ -18,7 +18,7 @@ namespace kson
 	{
 		std::string filename; // UTF-8 guaranteed
 		std::int32_t duration = 0;
-		KSHLayerRotationInfo rotation = { true, true };
+		KSHLayerRotationInfo rotation = { .tilt = true, .spin = true };
 	};
 
 	struct KSHMovieInfo
@@ -37,6 +37,7 @@ namespace kson
 	struct BGInfo
 	{
 		std::string filename; // UTF-8 guaranteed
+		std::int32_t offset = 0;
 		LegacyBGInfo legacy;
 	};
 }
