@@ -1437,6 +1437,12 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 						sv = sv.substr(1);
 					}
+
+					// Trim trailing whitespace
+					while (!sv.empty() && sv.ends_with(' '))
+					{
+						sv = sv.substr(0, sv.length() - 1);
+					}
 				}
 
 				Dict<std::string> params;
