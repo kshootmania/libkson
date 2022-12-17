@@ -1215,7 +1215,7 @@ namespace
 				chartData.audio.bgm.legacy.filenameFP = bgmFilenames[3];
 			}
 
-			const std::int32_t volInt = PopInt<std::int32_t>(metaDataHashMap, "mvol", 50);
+			const std::int32_t volInt = PopInt<std::int32_t>(metaDataHashMap, "mvol", 100);
 			chartData.audio.bgm.vol = volInt / 100.0;
 			if (kshVersionInt == 100)
 			{
