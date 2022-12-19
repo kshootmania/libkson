@@ -1,4 +1,4 @@
-#include "kson/util/graph_utils.hpp"
+﻿#include "kson/util/graph_utils.hpp"
 
 double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 {

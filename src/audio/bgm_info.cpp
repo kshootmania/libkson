@@ -1,4 +1,4 @@
-#include "kson/audio/bgm_info.hpp"
+﻿#include "kson/audio/bgm_info.hpp"
 
 bool kson::LegacyBGMInfo::empty() const
 {

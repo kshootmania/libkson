@@ -1,4 +1,4 @@
-#ifndef KSON_WITHOUT_JSON_DEPENDENCY
+﻿#ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/io/kson_io.hpp"
 #include <fstream>
 #include <optional>

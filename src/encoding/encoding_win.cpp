@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 #include "kson/encoding/encoding.hpp"
 #include <iostream>
 #include <Windows.h>
