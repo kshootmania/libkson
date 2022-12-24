@@ -262,11 +262,6 @@ namespace
 		{ "Echo", AudioEffectType::Echo },
 		{ "SideChain", AudioEffectType::Sidechain },
 		{ "SwitchAudio", AudioEffectType::SwitchAudio },
-
-		// Note: These filters are not yet supported in the KSH format, but are added to convert future charts.
-		{ "PeakingFilter", AudioEffectType::PeakingFilter },
-		{ "HighPassFilter", AudioEffectType::HighPassFilter },
-		{ "LowPassFilter", AudioEffectType::LowPassFilter },
 	};
 
 	const std::unordered_map<std::string_view, std::string_view> s_audioEffectParamNameTable
@@ -1509,9 +1504,9 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 				const std::string type = params.at("type");
 				params.erase("type");
-				assert(s_audioEffectTypeTable.contains(type));
 				if (!s_audioEffectTypeTable.contains(type))
 				{
+					assert(false && "Unknown audio effect type");
 					continue;
 				}
 
