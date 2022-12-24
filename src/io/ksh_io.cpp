@@ -303,26 +303,50 @@ namespace
 		{ "updatePeriod", "update_period" },
 	};
 
-	constexpr std::int32_t kLaserXMax = 100;
+	constexpr std::int32_t kLaserXMax = 50;
 
-	std::int32_t CharToLaserX(char c)
+	constexpr std::int32_t CharToLaserX(char c)
 	{
 		if (c >= '0' && c <= '9')
 		{
-			return (c - '0') * kLaserXMax / 50;
+			return c - '0';
 		}
 		else if (c >= 'A' && c <= 'Z')
 		{
-			return (c - 'A' + 10) * kLaserXMax / 50;
+			return c - 'A' + 10;
 		}
 		else if (c >= 'a' && c <= 'o')
 		{
-			return (c - 'a' + 36) * kLaserXMax / 50;
+			return c - 'a' + 36;
 		}
 		else
 		{
-			return -1;
+			return 0;
 		}
+	}
+
+	double LaserXToGraphValue(std::int32_t laserX, bool wide)
+	{
+		double graphValue = static_cast<double>(laserX) / kLaserXMax;
+
+		if (wide)
+		{
+			// Fix left zero position for wide lasers
+			constexpr std::int32_t kLeftZeroLaserX = CharToLaserX('C');
+			if (laserX == kLeftZeroLaserX)
+			{
+				return 0.25;
+			}
+
+			// Fix right zero position for wide lasers
+			constexpr std::int32_t kRightZeroLaserX = CharToLaserX('b');
+			if (laserX == kRightZeroLaserX)
+			{
+				return 0.75;
+			}
+		}
+
+		return graphValue;
 	}
 
 	bool IsTiltValueManual(std::string_view tiltValueStr)
@@ -847,7 +871,7 @@ namespace
 	{
 	private:
 		std::size_t m_targetLaneIdx = 0;
-		std::int32_t m_w = 1; // normal laser: w=1, 2x-widen laser: w=2
+		bool m_wide = false;
 		ByRelPulse<PreparedLaneSpin> m_preparedLaneSpins;
 		std::string m_keySound;
 
@@ -866,12 +890,12 @@ namespace
 
 		void prepare(Pulse) = delete;
 
-		void prepare(Pulse time, std::int32_t w)
+		void prepare(Pulse time, bool wide)
 		{
 			if (!m_prepared)
 			{
 				PreparedGraphSection::prepare(time);
-				m_w = w;
+				m_wide = wide;
 			}
 		}
 
@@ -915,7 +939,7 @@ namespace
 				m_time,
 				LaserSection{
 					.v = convertedGraphSection,
-					.w = m_w,
+					.w = m_wide ? kLaserXScale2x : kLaserXScale1x,
 				});
 
 			if (inserted)
@@ -970,13 +994,18 @@ namespace
 		{
 			PreparedGraphSection::clear();
 
-			m_w = 1;
+			m_wide = false;
 			m_preparedLaneSpins.clear();
 		}
 
 		void addLaneSpin(Pulse time, const PreparedLaneSpin& laneSpin)
 		{
 			m_preparedLaneSpins.emplace(time - m_time, laneSpin);
+		}
+
+		bool wide() const
+		{
+			return m_wide;
 		}
 	};
 
@@ -1830,12 +1859,12 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 								{
 									if (!preparedLaserSectionRef.prepared())
 									{
-										const std::int8_t scaleX = currentMeasureLaserXScale2x[laneIdx].contains(i) ? 2 : 1;
-										preparedLaserSectionRef.prepare(time, scaleX);
+										const bool wide = currentMeasureLaserXScale2x[laneIdx].contains(i);
+										preparedLaserSectionRef.prepare(time, wide);
 									}
 
-									const double dLaserX = static_cast<double>(laserX) / kLaserXMax;
-									preparedLaserSectionRef.addGraphPoint(time, dLaserX);
+									const double graphValue = LaserXToGraphValue(laserX, preparedLaserSectionRef.wide());
+									preparedLaserSectionRef.addGraphPoint(time, graphValue);
 
 									if (currentMeasureLaserKeySounds.contains(i))
 									{
