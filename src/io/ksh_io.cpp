@@ -325,10 +325,8 @@ namespace
 		}
 	}
 
-	double LaserXToGraphValue(std::int32_t laserX, bool wide)
+	constexpr double LaserXToGraphValue(std::int32_t laserX, bool wide)
 	{
-		double graphValue = static_cast<double>(laserX) / kLaserXMax;
-
 		if (wide)
 		{
 			// Fix left zero position for wide lasers
@@ -346,7 +344,7 @@ namespace
 			}
 		}
 
-		return graphValue;
+		return static_cast<double>(laserX) / kLaserXMax;
 	}
 
 	bool IsTiltValueManual(std::string_view tiltValueStr)
@@ -363,7 +361,7 @@ namespace
 
 		return {
 			.n = ParseNumeric<std::int32_t>(str.substr(0, slashIdx)),
-			.d = ParseNumeric<std::int32_t>(str.substr(slashIdx + 1))
+			.d = ParseNumeric<std::int32_t>(str.substr(slashIdx + 1)),
 		};
 	}
 
@@ -735,30 +733,33 @@ namespace
 				direction = Direction::kUnspecified;
 			}
 
-			// Specify the spin length
-			RelPulse duration;
-			std::int32_t swingAmplitude = 0, swingRepeat = 0, swingDecayOrder = 0;
 			if (type == Type::kNoSpin || direction == Direction::kUnspecified)
 			{
-				duration = 0;
+				return {
+					.type = type,
+					.direction = direction,
+				};
 			}
 			else if (type == Type::kSwing)
 			{
-				std::tie(duration, swingAmplitude, swingRepeat, swingDecayOrder) = SplitSwingParams(strFromKsh.substr(2));
+				const auto [duration, swingAmplitude, swingRepeat, swingDecayOrder] = SplitSwingParams(strFromKsh.substr(2));
+				return {
+					.type = type,
+					.direction = direction,
+					.duration = duration,
+					.swingAmplitude = swingAmplitude,
+					.swingRepeat = swingRepeat,
+					.swingDecayOrder = swingDecayOrder,
+				};
 			}
 			else
 			{
-				duration = KSHLengthToRelPulse(strFromKsh.substr(2));
+				return {
+					.type = type,
+					.direction = direction,
+					.duration = KSHLengthToRelPulse(strFromKsh.substr(2)),
+				};
 			}
-
-			return {
-				.type = type,
-				.direction = direction,
-				.duration = duration,
-				.swingAmplitude = swingAmplitude,
-				.swingRepeat = swingRepeat,
-				.swingDecayOrder = swingDecayOrder,
-			};
 		}
 
 		bool isValid() const
@@ -906,9 +907,9 @@ namespace
 				return;
 			}
 
-			assert(m_values.size() >= 2);
 			if (m_values.size() < 2)
 			{
+				assert(false && "Laser section must have at least two points");
 				clear();
 				return;
 			}
@@ -1360,7 +1361,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		return chartData;
 	}
 
-	assert(chartData.beat.timeSig.contains(0));
+	assert(chartData.beat.timeSig.contains(0) && "Loaded KSH chart data must have time signature at zero pulse");
 	TimeSig currentTimeSig = chartData.beat.timeSig.at(0);
 
 	const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
