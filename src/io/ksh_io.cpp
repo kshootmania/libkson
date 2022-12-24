@@ -1974,13 +1974,14 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				continue;
 			}
 
+			const std::int32_t prevSpeed = currentSpeed;
 			currentSpeed += relSpeed;
-			chartData.beat.scrollSpeed.emplace(y, static_cast<double>(currentSpeed));
+			chartData.beat.scrollSpeed.emplace(y, GraphValue{ static_cast<double>(prevSpeed), static_cast<double>(currentSpeed) });
 		}
 
 		if (!chartData.beat.scrollSpeed.contains(0))
 		{
-			chartData.beat.scrollSpeed.emplace(0, 1.0);
+			chartData.beat.scrollSpeed.emplace(0, GraphValue{ 1.0 });
 		}
 	}
 
