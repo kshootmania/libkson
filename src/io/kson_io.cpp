@@ -503,10 +503,10 @@ namespace
 	{
 		nlohmann::json j = nlohmann::json::object();
 		Write(j, "title", d.title);
-		Write(j, "title_translit", d.titleTranslit);
+		Write(j, "title_translit", d.titleTranslit, "");
 		Write(j, "title_img_filename", d.titleImgFilename, "");
 		Write(j, "artist", d.artist);
-		Write(j, "artist_translit", d.artistTranslit);
+		Write(j, "artist_translit", d.artistTranslit, "");
 		Write(j, "artist_img_filename", d.artistImgFilename, "");
 		Write(j, "chart_author", d.chartAuthor);
 		if (d.difficulty.name.empty())
