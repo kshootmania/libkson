@@ -19,8 +19,14 @@ namespace kson
 	double PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 	double PulseToSec(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 
+	double PulseDoubleToMs(double pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+	double PulseDoubleToSec(double pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+
 	Pulse MsToPulse(double ms, const BeatInfo& beatInfo, const TimingCache& cache);
 	Pulse SecToPulse(double sec, const BeatInfo& beatInfo, const TimingCache& cache);
+
+	double MsToPulseDouble(double ms, const BeatInfo& beatInfo, const TimingCache& cache);
+	double SecToPulseDouble(double sec, const BeatInfo& beatInfo, const TimingCache& cache);
 
 	std::int64_t PulseToMeasureIdx(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 
@@ -30,6 +36,8 @@ namespace kson
 	Pulse MeasureIdxToPulse(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache);
 
 	Pulse MeasureValueToPulse(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache);
+
+	double MeasureValueToPulseDouble(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache);
 
 	double MeasureIdxToMs(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache);
 	double MeasureIdxToSec(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache);
