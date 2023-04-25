@@ -8,6 +8,10 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	}
 
 	auto itr = graph.upper_bound(pulse);
+	if (itr == graph.end())
+	{
+		return graph.rbegin()->second.vf;
+	}
 	if (itr != graph.begin())
 	{
 		--itr;
@@ -18,12 +22,14 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	{
 		return value1.v;
 	}
-	if (itr == graph.end())
+
+	const auto nextItr = std::next(itr);
+	if (nextItr == graph.end())
 	{
 		return value1.vf;
 	}
 
-	const auto& [pulse2, value2] = *std::next(itr);
+	const auto& [pulse2, value2] = *nextItr;
 	assert(pulse1 <= pulse && pulse < pulse2);
 
 	const double lerpRate = static_cast<double>(pulse - pulse1) / static_cast<double>(pulse2 - pulse1);
