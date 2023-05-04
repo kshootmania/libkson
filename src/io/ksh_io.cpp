@@ -626,7 +626,6 @@ namespace
 			ParseNumeric<std::int32_t>(params[3]));
 	}
 
-	constexpr std::int32_t kKSHToKSONCamScaleDenominator = 100;
 	constexpr std::int32_t kKSHToKSONTiltScaleDenominator = 100;
 	constexpr std::int32_t kKSHToKSONSwingScaleDenominator = 60;
 
@@ -1604,7 +1603,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_top")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.rotationX.contains(time)))
 					{
 						chartData.camera.cam.body.rotationX.insert_or_assign(time, dValue);
@@ -1612,7 +1611,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_bottom")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoom.contains(time)))
 					{
 						chartData.camera.cam.body.zoom.insert_or_assign(time, dValue);
@@ -1620,7 +1619,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "zoom_side")
 				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar)) / kKSHToKSONCamScaleDenominator;
+					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.shiftX.contains(time)))
 					{
 						chartData.camera.cam.body.shiftX.insert_or_assign(time, dValue);
@@ -1628,7 +1627,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "center_split")
 				{
-					const double dValue = ParseNumeric<double>(value) / kKSHToKSONCamScaleDenominator;
+					const double dValue = ParseNumeric<double>(value);
 					if (std::abs(dValue) <= kCenterSplitAbsMax)
 					{
 						chartData.camera.cam.body.centerSplit.insert_or_assign(time, dValue);
