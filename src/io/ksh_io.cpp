@@ -626,7 +626,6 @@ namespace
 			ParseNumeric<std::int32_t>(params[3]));
 	}
 
-	constexpr std::int32_t kKSHToKSONTiltScaleDenominator = 100;
 	constexpr std::int32_t kKSHToKSONSwingScaleDenominator = 60;
 
 	struct PreparedLaneSpin
@@ -1637,7 +1636,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				{
 					if (IsTiltValueManual(value))
 					{
-						const double dValue = ParseNumeric<double>(value) / kKSHToKSONTiltScaleDenominator;
+						const double dValue = ParseNumeric<double>(value);
 						if (std::abs(dValue) <= kManualTiltAbsMax)
 						{
 							preparedManualTilt.prepare(time);
