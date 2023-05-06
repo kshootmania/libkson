@@ -430,6 +430,18 @@ namespace
 		}
 	}
 
+	void InsertGraphPointOrAssignVf(Graph& graph, Pulse time, double v)
+	{
+		if (graph.contains(time))
+		{
+			graph.at(time).vf = v;
+        }
+        else
+        {
+            graph.emplace(time, v);
+		}
+	}
+
 	// TODO: refactor
 	class AbstractPreparedLongNote
 	{
@@ -1605,7 +1617,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.rotationX.contains(time)))
 					{
-						chartData.camera.cam.body.rotationX.insert_or_assign(time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationX, time, dValue);
 					}
 				}
 				else if (key == "zoom_bottom")
@@ -1613,7 +1625,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoom.contains(time)))
 					{
-						chartData.camera.cam.body.zoom.insert_or_assign(time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoom, time, dValue);
 					}
 				}
 				else if (key == "zoom_side")
@@ -1621,7 +1633,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
 					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.shiftX.contains(time)))
 					{
-						chartData.camera.cam.body.shiftX.insert_or_assign(time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.shiftX, time, dValue);
 					}
 				}
 				else if (key == "center_split")
@@ -1629,7 +1641,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					const double dValue = ParseNumeric<double>(value);
 					if (std::abs(dValue) <= kCenterSplitAbsMax)
 					{
-						chartData.camera.cam.body.centerSplit.insert_or_assign(time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
 					}
 				}
 				else if (key == "tilt")
