@@ -35,7 +35,13 @@ namespace kson
 			return std::nullopt;
 		}
 
-		const auto& [y, graphSection] = *GraphSectionAt(graphSections, pulse);
+		const auto itr = GraphSectionAt(graphSections, pulse);
+		if (itr == graphSections.end())
+        {
+            return std::nullopt;
+        }
+
+		const auto& [y, graphSection] = *itr;
 		const RelPulse ry = pulse - y;
 
 		if (graphSection.v.size() <= 1)
@@ -77,5 +83,30 @@ namespace kson
 		{
 			return defaultValue;
 		}
+	}
+
+	template <class GS>
+	std::optional<GraphValue> GraphPointAt(const ByPulse<GS>& graphSections, Pulse pulse)
+	{
+		if (graphSections.empty())
+		{
+			return std::nullopt;
+		}
+
+		const auto itr = GraphSectionAt(graphSections, pulse);
+		if (itr == graphSections.end())
+		{
+			return std::nullopt;
+		}
+
+		const auto& [y, graphSection] = *itr;
+		const RelPulse ry = pulse - y;
+
+		if (!graphSection.v.contains(ry))
+		{
+			return std::nullopt;
+		}
+
+		return graphSection.v.at(ry);
 	}
 }
