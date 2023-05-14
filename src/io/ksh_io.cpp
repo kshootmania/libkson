@@ -1397,6 +1397,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	Pulse currentPulse = 0;
 	std::int64_t currentMeasureIdx = 0;
 
+	bool useLegacyScaleForManualTilt = false;
+
 	// Read chart body
 	// The stream start from the next of the first bar line ("--")
 	std::string line;
@@ -1653,6 +1655,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						{
 							preparedManualTilt.prepare(time);
 							preparedManualTilt.addGraphPoint(time, dValue);
+						}
+						if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
+						{
+							// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
+							useLegacyScaleForManualTilt = true;
 						}
 					}
 					else
@@ -2116,6 +2123,20 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 			}
 		}
+	}
+
+	// Apply legacy scale to manual tilts
+	if (useLegacyScaleForManualTilt)
+	{
+		constexpr double kToLegacyScale = 14.0 / 10.0;
+		for (auto& [y, section] : chartData.camera.tilt.manual)
+        {
+			for (auto& [ry, v] : section.v)
+			{
+				v.v *= kToLegacyScale;
+				v.vf *= kToLegacyScale;
+			}
+        }
 	}
 
 	return chartData;
