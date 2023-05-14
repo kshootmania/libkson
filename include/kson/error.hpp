@@ -18,5 +18,5 @@ namespace kson
 		UnknownError = 90000,
 	};
 
-    const char *GetErrorString(Error error);
+	const char *GetErrorString(Error error);
 }

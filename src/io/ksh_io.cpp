@@ -435,10 +435,10 @@ namespace
 		if (graph.contains(time))
 		{
 			graph.at(time).vf = v;
-        }
-        else
-        {
-            graph.emplace(time, v);
+		}
+		else
+		{
+			graph.emplace(time, v);
 		}
 	}
 
@@ -2130,13 +2130,13 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	{
 		constexpr double kToLegacyScale = 14.0 / 10.0;
 		for (auto& [y, section] : chartData.camera.tilt.manual)
-        {
+		{
 			for (auto& [ry, v] : section.v)
 			{
 				v.v *= kToLegacyScale;
 				v.vf *= kToLegacyScale;
 			}
-        }
+		}
 	}
 
 	return chartData;
