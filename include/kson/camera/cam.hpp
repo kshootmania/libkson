@@ -10,8 +10,6 @@ namespace kson
 		Graph shiftX; // "zoom_side"
 		Graph rotationX; // "zoom_top"
 		Graph rotationZ; // Rotation degree
-		Graph rotationZHighway; // Rotation degree (highway only)
-		Graph rotationZJdgline; // Rotation degree (judgment line only)
 		Graph centerSplit; // "center_split"
 	};
 

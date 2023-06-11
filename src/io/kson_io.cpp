@@ -735,8 +735,6 @@ namespace
 				WriteGraph(bodyJSON, "shift_x", d.cam.body.shiftX, 0.0);
 				WriteGraph(bodyJSON, "rotation_x", d.cam.body.rotationX, 0.0);
 				WriteGraph(bodyJSON, "rotation_z", d.cam.body.rotationZ, 0.0);
-				WriteGraph(bodyJSON, "rotation_z.highway", d.cam.body.rotationZHighway, 0.0);
-				WriteGraph(bodyJSON, "rotation_z.jdgline", d.cam.body.rotationZJdgline, 0.0);
 				WriteGraph(bodyJSON, "center_split", d.cam.body.centerSplit, 0.0);
 				Write(camJSON, "body", bodyJSON);
 			}
