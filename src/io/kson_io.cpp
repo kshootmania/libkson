@@ -808,6 +808,8 @@ namespace
 	{
 
 		nlohmann::json j = nlohmann::json::object();
+		Write(j, "app_name", d.appName, "");
+		Write(j, "app_version", d.appVersion, "");
 		WriteByPulse(j, "comment", d.comment);
 		return j;
 	}
