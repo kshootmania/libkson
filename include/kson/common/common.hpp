@@ -87,12 +87,6 @@ namespace kson
 	template <typename T>
 	using Dict = std::unordered_map<std::string, T>;
 
-	template <typename T>
-	T Lerp(T value1, T value2, double rate)
-	{
-		return value1 + static_cast<T>((value2 - value1) * rate);
-	}
-
 	template <typename T, typename U>
 	auto ValueItrAt(const std::map<T, U>& map, T key)
 	{
