@@ -98,6 +98,17 @@ namespace kson
 		return itr;
 	}
 
+	template <typename T, typename U>
+	U ValueAtOrDefault(const std::map<T, U>& map, T key, const U& defaultValue)
+	{
+		const auto itr = ValueItrAt(map, key);
+		if (itr == map.end() || key < itr->first)
+		{
+			return defaultValue;
+		}
+		return itr->second;
+	}
+
 	template <typename T>
 	std::size_t CountInRange(const ByPulse<T>& map, Pulse start, Pulse end)
 	{
