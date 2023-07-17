@@ -1366,8 +1366,16 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		return chartData;
 	}
 
-	assert(chartData.beat.timeSig.contains(0) && "Loaded KSH chart data must have time signature at zero pulse");
-	TimeSig currentTimeSig = chartData.beat.timeSig.at(0);
+	TimeSig currentTimeSig;
+	if (chartData.beat.timeSig.contains(0))
+	{
+		currentTimeSig = chartData.beat.timeSig.at(0);
+	}
+	else
+	{
+		currentTimeSig = { .n = 4, .d = 4 };
+		chartData.warnings.push_back("Loaded KSH chart data must have time signature at zero pulse.");
+	}
 
 	const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
 
@@ -1508,17 +1516,17 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 				}
 
-				assert(params.contains("type"));
 				if (!params.contains("type"))
-				{
+                {
+					chartData.warnings.push_back(std::format("Audio effect '{}' is ignored as it does not contain 'type' parameter.", name));
 					continue;
-				}
+                }
 
 				const std::string type = params.at("type");
 				params.erase("type");
 				if (!s_audioEffectTypeTable.contains(type))
 				{
-					assert(false && "Unknown audio effect type");
+					chartData.warnings.push_back(std::format("Audio effect '{}' is ignored as '{}' is not a valid audio effect type", name, type));
 					continue;
 				}
 
@@ -1963,17 +1971,21 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		preparedManualTilt.publishManualTilt();
 	}
 
-#ifndef NDEBUG
 	// KSH file must end with the bar line "--" (except for user-defined audio effects), so there can never be a prepared button note here
 	for (const auto& preparedBTNote : preparedLongNoteArray.bt)
 	{
-		assert(!preparedBTNote.prepared());
+		if (preparedBTNote.prepared())
+		{
+			chartData.warnings.push_back("Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").");
+		}
 	}
 	for (const auto& preparedFXNote : preparedLongNoteArray.fx)
 	{
-		assert(!preparedFXNote.prepared());
+		if (preparedFXNote.prepared())
+		{
+			chartData.warnings.push_back("Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").");
+		}
 	}
-#endif
 
 	// The prepared laser section is published only when the laser lane is blank ("-"), so there can be unpublished laser sections here
 	for (auto& preparedFXSection : preparedLongNoteArray.laser)
@@ -2017,7 +2029,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			type = StrToAudioEffectType(audioEffectName);
 		}
 
-		assert(type != AudioEffectType::Unspecified || audioEffectName.empty());
+		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified);
+		{
+            chartData.warnings.push_back(std::format("Undefined audio effect '{}' is specified in audio.audio_effect.fx.long_event.", audioEffectName));
+        }
 
 		if (type == AudioEffectType::Unspecified)
 		{

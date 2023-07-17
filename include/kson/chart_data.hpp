@@ -23,6 +23,8 @@ namespace kson
 		MetaAudioInfo audio;
 
 		Error error = Error::None;
+
+		std::vector<std::string> warnings;
 	};
 
 	struct ChartData
@@ -42,5 +44,7 @@ namespace kson
 #endif
 
 		Error error = Error::None;
+
+		std::vector<std::string> warnings;
 	};
 }
