@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <array>
@@ -6,6 +7,7 @@
 #include <set>
 #include <map>
 #include <unordered_map>
+#include <stdexcept>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -53,6 +55,13 @@ namespace kson
 
 	template <typename T>
 	using ByMeasureIdx = std::map<std::int64_t, T>;
+
+	template <typename T>
+	struct DefKeyValuePair
+	{
+		std::string name;
+		T v;
+	};
 
 	struct GraphValue
 	{

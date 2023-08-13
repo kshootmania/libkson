@@ -394,10 +394,11 @@ namespace
 
 	void InsertFiltertype(ChartData& chartData, Pulse time, const std::string& value)
 	{
+		auto& audioEffectLaser = chartData.audio.audioEffect.laser;
 		if (s_kshFilterToKSONAudioEffectNameTable.contains(value))
 		{
 			std::string name(s_kshFilterToKSONAudioEffectNameTable.at(value));
-			if (name == "fx" && !chartData.audio.audioEffect.laser.def.contains(name))
+			if (name == "fx" && !audioEffectLaser.defContains(name))
 			{
 				if (chartData.audio.bgm.legacy.filenameF.empty())
 				{
@@ -405,28 +406,38 @@ namespace
 				}
 				else
 				{
-					chartData.audio.audioEffect.laser.def.emplace("fx", AudioEffectDef{
-						.type = AudioEffectType::SwitchAudio,
-						.v = {
-							{ "filename", chartData.audio.bgm.legacy.filenameF },
+					AudioEffectDefKVP kvp
+					{
+						.name = "fx",
+						.v = AudioEffectDef{
+							.type = AudioEffectType::SwitchAudio,
+							.v = {
+								{ "filename", chartData.audio.bgm.legacy.filenameF },
+							},
 						},
-					});
+					};
+					audioEffectLaser.def.push_back(std::move(kvp));
 				}
 			}
-			else if (name == "fx;bitcrusher" && !chartData.audio.audioEffect.laser.def.contains(name))
+			else if (name == "fx;bitcrusher" && !audioEffectLaser.defContains(name))
 			{
-				chartData.audio.audioEffect.laser.def.emplace("fx;bitcrusher", AudioEffectDef{
-					.type = AudioEffectType::Bitcrusher,
-				});
+				AudioEffectDefKVP kvp
+				{
+					.name = "fx;bitcrusher",
+					.v = AudioEffectDef{
+						.type = AudioEffectType::Bitcrusher,
+					},
+				};
+				audioEffectLaser.def.push_back(std::move(kvp));
 			}
 			if (!name.empty())
 			{
-				chartData.audio.audioEffect.laser.pulseEvent[name].insert(time);
+				audioEffectLaser.pulseEvent[name].insert(time);
 			}
 		}
 		else
 		{
-			chartData.audio.audioEffect.laser.pulseEvent[value].insert(time);
+			audioEffectLaser.pulseEvent[value].insert(time);
 		}
 	}
 
@@ -1541,10 +1552,14 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 
 				auto& def = isDefineFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
-				def.emplace(name, AudioEffectDef{
-					.type = s_audioEffectTypeTable.at(type),
-					.v = std::move(paramsKSON),
-				});
+				def.push_back(
+					AudioEffectDefKVP{
+						.name = name,
+						.v = AudioEffectDef{
+							.type = s_audioEffectTypeTable.at(type),
+							.v = std::move(paramsKSON),
+						},
+					});
 			}
 			continue;
 		}
@@ -2018,10 +2033,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	for (auto& [audioEffectName, lanes] : chartData.audio.audioEffect.fx.longEvent)
 	{
 		AudioEffectType type = AudioEffectType::Unspecified;
-		if (chartData.audio.audioEffect.fx.def.contains(audioEffectName))
+		if (chartData.audio.audioEffect.fx.defContains(audioEffectName))
 		{
 			// User-defined audio effects
-			type = chartData.audio.audioEffect.fx.def.at(audioEffectName).type;
+			type = chartData.audio.audioEffect.fx.defByName(audioEffectName).type;
 		}
 		else
 		{
@@ -2029,7 +2044,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			type = StrToAudioEffectType(audioEffectName);
 		}
 
-		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified);
+		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified)
 		{
             chartData.warnings.push_back(std::format("Undefined audio effect '{}' is specified in audio.audio_effect.fx.long_event.", audioEffectName));
         }

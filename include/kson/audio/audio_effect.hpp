@@ -34,19 +34,39 @@ namespace kson
 		AudioEffectParams v;
 	};
 
+	using AudioEffectDefKVP = DefKeyValuePair<AudioEffectDef>;
+
 	struct AudioEffectFXInfo
 	{
-		Dict<AudioEffectDef> def;
+		std::vector<AudioEffectDefKVP> def;
 		Dict<Dict<ByPulse<std::string>>> paramChange;
 		Dict<FXLane<AudioEffectParams>> longEvent;
+
+		// Note: This is inefficient, so be careful when using it
+		bool defContains(std::string_view name) const;
+
+		// Note: This is inefficient, so be careful when using it
+		const AudioEffectDef& defByName(std::string_view name) const;
+
+		Dict<AudioEffectDef> defAsDict() const;
 	};
 
 	struct AudioEffectLaserInfo
 	{
-		Dict<AudioEffectDef> def;
+		std::vector<AudioEffectDefKVP> def;
 		Dict<Dict<ByPulse<std::string>>> paramChange;
 		Dict<std::set<Pulse>> pulseEvent;
 		std::int32_t peakingFilterDelay = 0; // 0ms - 160ms
+
+		// Note: If you call this function frequently, it's recommended to first call defAsDict to get the dictionary and use it,
+		//       as this function uses linear search.
+		bool defContains(std::string_view name) const;
+
+		// Note: If you call this function frequently, it's recommended to first call defAsDict to get the dictionary and use it,
+		//       as this function uses linear search.
+		const AudioEffectDef& defByName(std::string_view name) const;
+
+		Dict<AudioEffectDef> defAsDict() const;
 	};
 
 	struct AudioEffectInfo

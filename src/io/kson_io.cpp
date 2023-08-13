@@ -415,21 +415,21 @@ namespace
 		}
 	}
 
-	void WriteAudioEffectDefDict(nlohmann::json& json, const char* key, const Dict<AudioEffectDef>& dict)
+	void WriteAudioEffectDef(nlohmann::json& json, const char* key, const std::vector<AudioEffectDefKVP>& def)
 	{
-		if (dict.empty())
+		if (def.empty())
 		{
 			return;
 		}
 
 		nlohmann::json& j = json[key];
-		for (const auto& [name, def] : dict)
+		for (const auto& kvp : def)
 		{
 			nlohmann::json defJSON = {
-				{ "type", AudioEffectTypeToStr(def.type) },
+				{ "type", AudioEffectTypeToStr(kvp.v.type) },
 			};
-			Write(defJSON, "v", def.v);
-			j.emplace(name, std::move(defJSON));
+			Write(defJSON, "v", kvp.v.v);
+			j.push_back(nlohmann::json::array({ kvp.name, std::move(defJSON) }));
 		}
 	}
 
@@ -652,7 +652,7 @@ namespace
 			nlohmann::json audioEffectJSON = nlohmann::json::object();
 			{
 				nlohmann::json fxJSON = nlohmann::json::object();
-				WriteAudioEffectDefDict(fxJSON, "def", d.audioEffect.fx.def);
+				WriteAudioEffectDef(fxJSON, "def", d.audioEffect.fx.def);
 				WriteAudioEffectParamChange(fxJSON, "param_change", d.audioEffect.fx.paramChange);
 				{
 					nlohmann::json longEventJSON = nlohmann::json::object();
@@ -688,7 +688,7 @@ namespace
 			}
 			{
 				nlohmann::json laserJSON = nlohmann::json::object();
-				WriteAudioEffectDefDict(laserJSON, "def", d.audioEffect.laser.def);
+				WriteAudioEffectDef(laserJSON, "def", d.audioEffect.laser.def);
 				WriteAudioEffectParamChange(laserJSON, "param_change", d.audioEffect.laser.paramChange);
 				{
 					nlohmann::json pulseEvent = nlohmann::json::object();
