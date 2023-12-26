@@ -22,7 +22,7 @@ namespace kson
 		MetaInfo meta;
 		MetaAudioInfo audio;
 
-		Error error = Error::None;
+		ErrorType error = ErrorType::None;
 
 		std::vector<std::string> warnings;
 	};
@@ -43,7 +43,7 @@ namespace kson
 		nlohmann::json impl = nlohmann::json::object();
 #endif
 
-		Error error = Error::None;
+		ErrorType error = ErrorType::None;
 
 		std::vector<std::string> warnings;
 	};

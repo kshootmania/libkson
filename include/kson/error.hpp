@@ -2,7 +2,7 @@
 
 namespace kson
 {
-	enum class Error : int
+	enum class ErrorType : int
 	{
 		None = 0,
 
@@ -18,5 +18,5 @@ namespace kson
 		UnknownError = 90000,
 	};
 
-	const char *GetErrorString(Error error);
+	const char *GetErrorString(ErrorType errorType);
 }

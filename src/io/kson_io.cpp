@@ -836,11 +836,11 @@ namespace
 	}
 }
 
-kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
+kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
 {
 	if (!stream.good())
 	{
-		return Error::GeneralIOError;
+		return ErrorType::GeneralIOError;
 	}
 
 	nlohmann::json json = nlohmann::json::object();
@@ -858,15 +858,15 @@ kson::Error kson::SaveKSONChartData(std::ostream& stream, const ChartData& chart
 	
 	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
 
-	return Error::None;
+	return ErrorType::None;
 }
 
-kson::Error kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
+kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
 {
 	std::ofstream ofs(filePath);
 	if (!ofs.good())
 	{
-		return Error::CouldNotOpenOutputFileStream;
+		return ErrorType::CouldNotOpenOutputFileStream;
 	}
 	return kson::SaveKSONChartData(ofs, chartData);
 }

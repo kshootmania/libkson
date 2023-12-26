@@ -1,22 +1,22 @@
 ﻿#include "kson/error.hpp"
 
-const char *kson::GetErrorString(kson::Error error)
+const char *kson::GetErrorString(kson::ErrorType errorType)
 {
-	switch (error)
+	switch (errorType)
 	{
-	case kson::Error::None:
+	case kson::ErrorType::None:
 		return "";
-	case kson::Error::GeneralIOError:
+	case kson::ErrorType::GeneralIOError:
 		return "IO error";
-	case kson::Error::FileNotFound:
+	case kson::ErrorType::FileNotFound:
 		return "File not found";
-	case kson::Error::CouldNotOpenInputFileStream:
+	case kson::ErrorType::CouldNotOpenInputFileStream:
 		return "Could not open input file stream";
-	case kson::Error::CouldNotOpenOutputFileStream:
+	case kson::ErrorType::CouldNotOpenOutputFileStream:
 		return "Could not open input file stream";
-	case kson::Error::GeneralChartFormatError:
+	case kson::ErrorType::GeneralChartFormatError:
 		return "Chart format error";
-	case kson::Error::EncodingError:
+	case kson::ErrorType::EncodingError:
 		return "Encoding error";
 	default:
 		return "Unknown error";

@@ -1124,7 +1124,7 @@ namespace
 	{
 		if (!stream.good())
 		{
-			return { .error = Error::GeneralIOError };
+			return { .error = ErrorType::GeneralIOError };
 		}
 
 		ChartDataType chartData;
@@ -1137,7 +1137,7 @@ namespace
 		// First option line must be "title="
 		if (stream.peek() != 't')
 		{
-			return { .error = Error::GeneralChartFormatError };
+			return { .error = ErrorType::GeneralChartFormatError };
 		}
 
 		// Read header lines and create meta data hash map
@@ -1183,7 +1183,7 @@ namespace
 			if (key.empty())
 			{
 				// Encoding error (the key must not be empty because IsOptionLine() is true)
-				return { .error = Error::EncodingError };
+				return { .error = ErrorType::EncodingError };
 			}
 			metaDataHashMap.insert_or_assign(key, value);
 		}
@@ -1191,13 +1191,13 @@ namespace
 		// .ksh files must have at least one bar line ("--")
 		if (!barLineExists)
 		{
-			return { .error = Error::GeneralChartFormatError };
+			return { .error = ErrorType::GeneralChartFormatError };
 		}
 
 		// .ksh files must have "title=" line
 		if (!metaDataHashMap.contains("title"))
 		{
-			return { .error = Error::GeneralChartFormatError };
+			return { .error = ErrorType::GeneralChartFormatError };
 		}
 
 		// Insert meta data to chartData
@@ -1350,13 +1350,13 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
-		return { .error = Error::FileNotFound };
+		return { .error = ErrorType::FileNotFound };
 	}
 
 	std::ifstream ifs(filePath, std::ios_base::binary);
 	if (!ifs.good())
 	{
-		return { .error = Error::CouldNotOpenInputFileStream };
+		return { .error = ErrorType::CouldNotOpenInputFileStream };
 	}
 
 	return LoadKSHMetaChartData(ifs);
@@ -1366,13 +1366,13 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 {
 	if (!stream.good())
 	{
-		return { .error = Error::GeneralIOError };
+		return { .error = ErrorType::GeneralIOError };
 	}
 
 	// Load chart meta data
 	bool isUTF8;
 	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8);
-	if (chartData.error != Error::None)
+	if (chartData.error != ErrorType::None)
 	{
 		return chartData;
 	}
@@ -1510,7 +1510,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					if (paramName.empty())
 					{
 						// Encoding error (the parameter name must not be empty)
-						return { .error = Error::EncodingError };
+						return { .error = ErrorType::EncodingError };
 					}
 					if (!value.empty())
 					{
@@ -1576,7 +1576,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			if (key.empty())
 			{
 				// Encoding error (the key must not be empty because IsOptionLine() is true)
-				return { .error = Error::EncodingError };
+				return { .error = ErrorType::EncodingError };
 			}
 
 			if (key == "beat")
@@ -2176,13 +2176,13 @@ ChartData kson::LoadKSHChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
-		return { .error = Error::FileNotFound };
+		return { .error = ErrorType::FileNotFound };
 	}
 
 	std::ifstream ifs(filePath, std::ios_base::binary);
 	if (!ifs.good())
 	{
-		return { .error = Error::CouldNotOpenInputFileStream };
+		return { .error = ErrorType::CouldNotOpenInputFileStream };
 	}
 
 	return LoadKSHChartData(ifs);
