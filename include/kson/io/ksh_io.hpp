@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "kson/common/common.hpp"
 #include "kson/chart_data.hpp"
 
 namespace kson

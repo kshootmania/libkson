@@ -1528,16 +1528,16 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 
 				if (!params.contains("type"))
-                {
-					chartData.warnings.push_back(std::format("Audio effect '{}' is ignored as it does not contain 'type' parameter.", name));
+				{
+					chartData.warnings.push_back("Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.");
 					continue;
-                }
+				}
 
 				const std::string type = params.at("type");
 				params.erase("type");
 				if (!s_audioEffectTypeTable.contains(type))
 				{
-					chartData.warnings.push_back(std::format("Audio effect '{}' is ignored as '{}' is not a valid audio effect type", name, type));
+					chartData.warnings.push_back("Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type");
 					continue;
 				}
 
@@ -2046,8 +2046,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified)
 		{
-            chartData.warnings.push_back(std::format("Undefined audio effect '{}' is specified in audio.audio_effect.fx.long_event.", audioEffectName));
-        }
+			chartData.warnings.push_back("Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.");
+		}
 
 		if (type == AudioEffectType::Unspecified)
 		{
