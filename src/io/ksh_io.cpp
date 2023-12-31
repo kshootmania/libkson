@@ -1136,7 +1136,7 @@ namespace
 		// First option line must be "title="
 		if (stream.peek() != 't')
 		{
-			return { .error = ErrorType::GeneralChartFormatError };
+			chartData.warnings.push_back("The option line \"title=...\" must be placed at the beginning of a KSH chart file.");
 		}
 
 		// Read header lines and create meta data hash map
