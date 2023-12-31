@@ -936,12 +936,18 @@ namespace
 			for (auto itr = m_values.cbegin(); itr != m_values.cend(); ++itr)
 			{
 				const auto& [ry, value] = *itr;
-				if (std::next(itr) != m_values.cend())
+				const auto nextItr = std::next(itr);
+				if (nextItr != m_values.cend())
 				{
-					const auto& [nextRy, nextValue] = *std::next(itr);
-					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold)
+					const auto& [nextRy, nextValue] = *nextItr;
+					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextValue.v, value.v))
 					{
 						convertedGraphSection.emplace(ry, GraphValue{ value.v, nextValue.v });
+						const auto nextNextItr = std::next(nextItr);
+						if (nextNextItr == m_values.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v, nextValue.v))
+						{
+							++itr;
+						}
 						continue;
 					}
 				}
