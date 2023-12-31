@@ -942,7 +942,6 @@ namespace
 					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold)
 					{
 						convertedGraphSection.emplace(ry, GraphValue{ value.v, nextValue.v });
-						++itr;
 						continue;
 					}
 				}
