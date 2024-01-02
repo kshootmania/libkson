@@ -1556,6 +1556,12 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 				}
 
+				// Name conversion for user-defined audio effects overwriting preset ones
+				if (s_kshFXToKSONAudioEffectNameTable.contains(name))
+				{
+					name = s_kshFXToKSONAudioEffectNameTable.at(name);
+				}
+
 				auto& def = isDefineFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
 				def.push_back(
 					AudioEffectDefKVP{
