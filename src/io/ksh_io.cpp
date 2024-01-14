@@ -1593,7 +1593,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			if (key == "beat")
 			{
 				currentTimeSig = ParseTimeSig(value);
-				chartData.beat.timeSig.emplace(currentMeasureIdx, currentTimeSig);
+				chartData.beat.timeSig.insert_or_assign(currentMeasureIdx, currentTimeSig);
 			}
 			else
 			{
