@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "kson/common/common.hpp"
+#include "kson/note/note_info.hpp"
 #include "kson/beat/beat_info.hpp"
 
 namespace kson
@@ -50,4 +51,8 @@ namespace kson
 	double TempoAt(Pulse pulse, const BeatInfo& beatInfo);
 
 	const TimeSig& TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+
+	kson::Pulse LastNoteEndY(const kson::NoteInfo& noteInfo);
+	kson::Pulse LastNoteEndYButtonLane(const kson::ByPulse<kson::Interval>& lane);
+	kson::Pulse LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>& lane);
 }

@@ -252,3 +252,63 @@ const kson::TimeSig& kson::TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, cons
 	const std::int64_t nearestTimeSigChangeMeasureIdx = itr->second;
 	return beatInfo.timeSig.at(nearestTimeSigChangeMeasureIdx);
 }
+
+kson::Pulse kson::LastNoteEndY(const kson::NoteInfo& noteInfo)
+{
+	auto maxPulse = kson::Pulse{ 0 };
+	for (const auto& lane : noteInfo.bt)
+	{
+		const kson::Pulse y = LastNoteEndYButtonLane(lane);
+		if (y > maxPulse)
+		{
+			maxPulse = y;
+		}
+	}
+	for (const auto& lane : noteInfo.fx)
+	{
+		const kson::Pulse y = LastNoteEndYButtonLane(lane);
+		if (y > maxPulse)
+		{
+			maxPulse = y;
+		}
+	}
+	for (const auto& lane : noteInfo.laser)
+	{
+		const kson::Pulse y = LastNoteEndYLaserLane(lane);
+		if (y > maxPulse)
+		{
+			maxPulse = y;
+		}
+	}
+	return maxPulse;
+}
+
+kson::Pulse kson::LastNoteEndYButtonLane(const kson::ByPulse<kson::Interval>& lane)
+{
+	if (lane.empty())
+	{
+		return kson::Pulse{ 0 };
+	}
+
+	const auto& [y, lastNote] = *lane.rbegin();
+
+	return y + lastNote.length;
+}
+
+kson::Pulse kson::LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>& lane)
+{
+	if (lane.empty())
+	{
+		return kson::Pulse{ 0 };
+	}
+
+	const auto& [y, lastSection] = *lane.rbegin();
+	if (lastSection.v.empty())
+	{
+		assert(false && "Laser section must not be empty");
+		return y;
+	}
+
+	const auto& [ry, lastPoint] = *lastSection.v.rbegin();
+	return y + ry;
+}
