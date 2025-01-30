@@ -17,9 +17,9 @@ void PrintHelp()
 		"  KSON file(s) are saved in the same folder with the extension \".kson\".\n";
 }
 
-void PrintError(kson::Error error)
+void PrintError(kson::ErrorType errorType)
 {
-	std::cerr << "Error: " << kson::GetErrorString(error) << '\n';
+	std::cerr << "Error: " << kson::GetErrorString(errorType) << '\n';
 }
 
 void DoConvert(const char *szInputFilePath)
@@ -28,7 +28,7 @@ void DoConvert(const char *szInputFilePath)
 	std::cout << szInputFilePath << '\n';
 	std::filesystem::path filePath(szInputFilePath);
 	const kson::ChartData chartData = kson::LoadKSHChartData(filePath.string());
-	if (chartData.error != kson::Error::None)
+	if (chartData.error != kson::ErrorType::None)
 	{
 		PrintError(chartData.error);
 		std::cout << std::endl;
@@ -38,8 +38,8 @@ void DoConvert(const char *szInputFilePath)
 	// Output
 	std::cout << "-> ";
 	filePath.replace_extension(".kson");
-	const kson::Error error = kson::SaveKSONChartData(filePath.string(), chartData);
-	if (error != kson::Error::None)
+	const kson::ErrorType error = kson::SaveKSONChartData(filePath.string(), chartData);
+	if (error != kson::ErrorType::None)
 	{
 		PrintError(error);
 		std::cout << std::endl;

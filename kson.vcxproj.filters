@@ -138,6 +138,12 @@
     <ClInclude Include="include\kson\compat\compat_info.hpp">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
+    <ClInclude Include="include\kson\kson.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\error.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\util\timing_utils.cpp">

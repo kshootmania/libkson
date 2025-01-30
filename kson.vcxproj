@@ -34,9 +34,11 @@
     <ClInclude Include="include\kson\compat\compat_info.hpp" />
     <ClInclude Include="include\kson\editor\editor_info.hpp" />
     <ClInclude Include="include\kson\encoding\encoding.hpp" />
+    <ClInclude Include="include\kson\error.hpp" />
     <ClInclude Include="include\kson\gauge\gauge_info.hpp" />
     <ClInclude Include="include\kson\io\ksh_io.hpp" />
     <ClInclude Include="include\kson\io\kson_io.hpp" />
+    <ClInclude Include="include\kson\kson.hpp" />
     <ClInclude Include="include\kson\meta\meta_info.hpp" />
     <ClInclude Include="include\kson\note\note_info.hpp" />
     <ClInclude Include="include\kson\util\graph_utils.hpp" />
