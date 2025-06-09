@@ -363,19 +363,21 @@ namespace
 	bool EliminateUTF8BOM(std::istream& stream)
 	{
 		bool isUTF8;
-		std::string firstLine;
-		std::getline(stream, firstLine, '\n');
-		if (firstLine.length() >= 3 &&
-			firstLine[0] == '\xEF' &&
-			firstLine[1] == '\xBB' &&
-			firstLine[2] == '\xBF')
+		char bom[3];
+		stream.read(bom, 3);
+		if (stream.gcount() == 3 &&
+			bom[0] == '\xEF' &&
+			bom[1] == '\xBB' &&
+			bom[2] == '\xBF')
 		{
 			isUTF8 = true;
-			stream.seekg(3, std::ios_base::beg);
+			// BOM found, stream position is already after BOM
 		}
 		else
 		{
 			isUTF8 = false;
+			// No BOM or incomplete read, reset to beginning
+			stream.clear();
 			stream.seekg(0, std::ios_base::beg);
 		}
 		return isUTF8;
