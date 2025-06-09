@@ -1,0 +1,47 @@
+cmake_minimum_required(VERSION 3.12)
+project(kson_tests)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Fetch Catch2
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v2.13.6
+)
+FetchContent_MakeAvailable(Catch2)
+
+# Test executable
+add_executable(kson_test
+    Main.cpp
+)
+
+# Include directories
+target_include_directories(kson_test PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# Link libraries
+target_link_libraries(kson_test 
+    PRIVATE 
+    kson
+    Catch2::Catch2
+)
+
+# Add platform-specific libraries
+if(NOT WIN32)
+    # Link iconv on non-Windows platforms
+    find_package(Iconv REQUIRED)
+    target_link_libraries(kson_test PRIVATE Iconv::Iconv)
+endif()
+
+# Enable CTest
+enable_testing()
+
+# Register tests with CTest
+list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/contrib)
+include(CTest)
+include(Catch)
+catch_discover_tests(kson_test)

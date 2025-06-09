@@ -3,6 +3,7 @@ project(kson CXX)
 
 option(KSON_BUILD_SHARED "Build shared library" OFF)
 option(KSON_BUILD_TOOL_KSH2KSON "Build ksh2kson tool" OFF)
+option(KSON_BUILD_TESTS "Build tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -27,4 +28,9 @@ endif()
 if(KSON_BUILD_TOOL_KSH2KSON)
     add_executable(ksh2kson ${PROJECT_SOURCE_DIR}/tool/ksh2kson.cpp)
     target_link_libraries(ksh2kson kson)
+endif()
+
+if(KSON_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
