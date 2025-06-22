@@ -12,6 +12,7 @@ namespace kson
 		CouldNotOpenOutputFileStream = 10003,
 
 		GeneralChartFormatError = 20000,
+		KSONParseError = 20001,
 
 		EncodingError = 30000,
 

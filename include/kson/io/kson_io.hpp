@@ -7,5 +7,9 @@ namespace kson
 	ErrorType SaveKSONChartData(std::ostream& stream, const ChartData& chartData);
 
 	ErrorType SaveKSONChartData(const std::string& filePath, const ChartData& chartData);
+
+	ChartData LoadKSONChartData(std::istream& stream);
+
+	ChartData LoadKSONChartData(const std::string& filePath);
 }
 #endif

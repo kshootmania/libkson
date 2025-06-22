@@ -68,6 +68,8 @@ namespace kson
 		double v = 0.0;
 		double vf = 0.0;
 
+		GraphValue() = default;
+
 		/*implicit*/ GraphValue(double v)
 			: v(v)
 			, vf(v)
