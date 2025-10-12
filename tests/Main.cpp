@@ -6,6 +6,7 @@
 #include <kson/io/kson_io.hpp>
 #include <kson/util/timing_utils.hpp>
 #include <kson/util/graph_utils.hpp>
+#include <kson/third_party/nlohmann/json.hpp>
 
 TEST_CASE("Basic Chart Data", "[chart]") {
     SECTION("Empty ChartData initialization") {
@@ -851,6 +852,147 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
         REQUIRE(chart.beat.scrollSpeed.at(0).v == Approx(1.0));
         REQUIRE(chart.beat.scrollSpeed.at(2400).v == Approx(3.0));
         REQUIRE(chart.beat.scrollSpeed.at(4800).v == Approx(0.75));
+    }
+}
+
+TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]") {
+    auto testRoundTrip = [](const std::string& filename) {
+        auto chart1 = kson::LoadKSHChartData(filename);
+        REQUIRE(chart1.error == kson::ErrorType::None);
+        
+        std::ostringstream oss1;
+        auto saveResult1 = kson::SaveKSONChartData(oss1, chart1);
+        REQUIRE(saveResult1 == kson::ErrorType::None);
+        std::string ksonString1 = oss1.str();
+        REQUIRE(!ksonString1.empty());
+        
+        std::istringstream iss1(ksonString1);
+        auto chart2 = kson::LoadKSONChartData(iss1);
+        REQUIRE(chart2.error == kson::ErrorType::None);
+        
+        std::ostringstream oss2;
+        auto saveResult2 = kson::SaveKSONChartData(oss2, chart2);
+        REQUIRE(saveResult2 == kson::ErrorType::None);
+        std::string ksonString2 = oss2.str();
+        REQUIRE(!ksonString2.empty());
+        
+        nlohmann::json json1 = nlohmann::json::parse(ksonString1);
+        nlohmann::json json2 = nlohmann::json::parse(ksonString2);
+        
+        REQUIRE(json1["version"] == json2["version"]);
+        REQUIRE(json1["meta"] == json2["meta"]);
+        REQUIRE(json1["beat"] == json2["beat"]);
+        REQUIRE(json1["gauge"] == json2["gauge"]);
+        REQUIRE(json1["note"] == json2["note"]);
+        REQUIRE(json1["audio"] == json2["audio"]);
+        REQUIRE(json1["camera"] == json2["camera"]);
+        REQUIRE(json1["bg"] == json2["bg"]);
+        
+        if (json1.contains("editor") && json2.contains("editor")) {
+            REQUIRE(json1["editor"] == json2["editor"]);
+        }
+        if (json1.contains("compat") && json2.contains("compat")) {
+            REQUIRE(json1["compat"] == json2["compat"]);
+        }
+        if (json1.contains("impl") && json2.contains("impl")) {
+            REQUIRE(json1["impl"] == json2["impl"]);
+        }
+    };
+    
+    SECTION("Gram[LT]") {
+        testRoundTrip("assets/Gram_lt.ksh");
+    }
+    
+    SECTION("Gram[CH]") {
+        testRoundTrip("assets/Gram_ch.ksh");
+    }
+    
+    SECTION("Gram[EX]") {
+        testRoundTrip("assets/Gram_ex.ksh");
+    }
+    
+    SECTION("Gram[IN]") {
+        testRoundTrip("assets/Gram_in.ksh");
+    }
+}
+
+TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_songs]") {
+    auto testRoundTrip = [](const std::string& filename) {
+        auto chart1 = kson::LoadKSHChartData(filename);
+        REQUIRE(chart1.error == kson::ErrorType::None);
+        
+        std::ostringstream oss1;
+        auto saveResult1 = kson::SaveKSONChartData(oss1, chart1);
+        REQUIRE(saveResult1 == kson::ErrorType::None);
+        std::string ksonString1 = oss1.str();
+        REQUIRE(!ksonString1.empty());
+        
+        std::istringstream iss1(ksonString1);
+        auto chart2 = kson::LoadKSONChartData(iss1);
+        REQUIRE(chart2.error == kson::ErrorType::None);
+        
+        std::ostringstream oss2;
+        auto saveResult2 = kson::SaveKSONChartData(oss2, chart2);
+        REQUIRE(saveResult2 == kson::ErrorType::None);
+        std::string ksonString2 = oss2.str();
+        REQUIRE(!ksonString2.empty());
+        
+        nlohmann::json json1 = nlohmann::json::parse(ksonString1);
+        nlohmann::json json2 = nlohmann::json::parse(ksonString2);
+        
+        REQUIRE(json1["version"] == json2["version"]);
+        REQUIRE(json1["meta"] == json2["meta"]);
+        REQUIRE(json1["beat"] == json2["beat"]);
+        REQUIRE(json1["gauge"] == json2["gauge"]);
+        REQUIRE(json1["note"] == json2["note"]);
+        REQUIRE(json1["audio"] == json2["audio"]);
+        REQUIRE(json1["camera"] == json2["camera"]);
+        REQUIRE(json1["bg"] == json2["bg"]);
+        
+        if (json1.contains("editor") && json2.contains("editor")) {
+            REQUIRE(json1["editor"] == json2["editor"]);
+        }
+        if (json1.contains("compat") && json2.contains("compat")) {
+            REQUIRE(json1["compat"] == json2["compat"]);
+        }
+        if (json1.contains("impl") && json2.contains("impl")) {
+            REQUIRE(json1["impl"] == json2["impl"]);
+        }
+    };
+    
+    std::ifstream songsCheck("../../../kshootmania/App/songs");
+    if (!songsCheck.good()) {
+        WARN("songs directory not found, skipping all songs test");
+        return;
+    }
+    
+    SECTION("All KSH files in songs directory") {
+        std::vector<std::string> kshFiles;
+        std::string searchCmd = "find \"../../../kshootmania/App/songs\" -name \"*.ksh\" 2>/dev/null";
+        FILE* pipe = popen(searchCmd.c_str(), "r");
+        if (pipe) {
+            char buffer[1024];
+            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                std::string filename = buffer;
+                if (!filename.empty() && filename.back() == '\n') {
+                    filename.pop_back();
+                }
+                if (!filename.empty()) {
+                    kshFiles.push_back(filename);
+                }
+            }
+            pclose(pipe);
+        }
+        
+        if (kshFiles.empty()) {
+            WARN("No KSH files found in songs directory");
+            return;
+        }
+        
+        for (const auto& file : kshFiles) {
+            INFO("Testing file: " << file);
+            testRoundTrip(file);
+        }
     }
 }
 
