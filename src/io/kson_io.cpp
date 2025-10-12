@@ -614,7 +614,7 @@ namespace
 						}
 						chipEventJSON.emplace(filename, std::move(lanesJSON));
 					}
-					Write(keySoundJSON, "chip_event", std::move(chipEventJSON));
+					Write(fxJSON, "chip_event", std::move(chipEventJSON));
 				}
 				Write(keySoundJSON, "fx", std::move(fxJSON));
 			}
@@ -749,7 +749,7 @@ namespace
 						WriteCamPatternInvokeSwingByPulse(slamEventJSON, "swing", d.cam.pattern.laser.slamEvent.swing);
 						Write(laserJSON, "slam_event", std::move(slamEventJSON));
 					}
-					Write(camJSON, "laser", std::move(laserJSON));
+					Write(patternJSON, "laser", std::move(laserJSON));
 				}
 				Write(camJSON, "pattern", std::move(patternJSON));
 			}
