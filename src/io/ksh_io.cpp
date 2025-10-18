@@ -268,6 +268,7 @@ namespace
 	{
 		{ "attackTime", "attack_time" },
 		{ "bandwidth", "bandwidth" },
+		{ "chunkSize", "chunk_size" },
 		{ "delay", "delay" },
 		{ "depth", "depth" },
 		{ "feedback", "feedback" },
@@ -280,6 +281,7 @@ namespace
 		{ "holdTime", "hold_time" },
 		{ "loFreq", "freq_1" }, // renamed
 		{ "mix", "mix" },
+		{ "overWrap", "overlap" }, // renamed
 		{ "period", "period" },
 		{ "pitch", "pitch" },
 		{ "Q", "q" },
@@ -1551,7 +1553,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				AudioEffectParams paramsKSON;
 				for (const auto& [paramName, value] : params)
 				{
-					// Note: Parameters deleted in the KSON format (e.g., "hiCutGain"/"chunkSize"/"overWrap") are just ignored.
+					// Note: Parameters deleted in the KSON format (e.g., "hiCutGain") are just ignored.
 					if (s_audioEffectParamNameTable.contains(paramName))
 					{
 						paramsKSON.emplace(s_audioEffectParamNameTable.at(paramName), value);
