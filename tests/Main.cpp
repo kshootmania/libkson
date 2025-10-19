@@ -1,4 +1,4 @@
-#define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
 
 #include <kson/kson.hpp>
@@ -7,6 +7,21 @@
 #include <kson/util/timing_utils.hpp>
 #include <kson/util/graph_utils.hpp>
 #include <kson/third_party/nlohmann/json.hpp>
+
+#include <filesystem>
+
+namespace {
+    std::string g_assetsDir;
+}
+
+int main(int argc, char* argv[]) {
+    // Get the executable directory and construct the path to the assets directory
+    std::filesystem::path exePath = argv[0];
+    std::filesystem::path exeDir = exePath.parent_path();
+    g_assetsDir = (exeDir / "assets").string();
+
+    return Catch::Session().run(argc, argv);
+}
 
 TEST_CASE("Basic Chart Data", "[chart]") {
     SECTION("Empty ChartData initialization") {
@@ -182,7 +197,7 @@ TEST_CASE("Note Data", "[note]") {
 TEST_CASE("KSON Loading", "[kson_io]") {
     SECTION("Load valid KSON from string") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "meta": {
                 "title": "Test Song",
                 "artist": "Test Artist",
@@ -253,7 +268,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with minimal data") {
         std::string ksonData = R"({
-            "version": "0.8.0"
+            "version": "0.9.0-beta1"
         })";
         
         std::istringstream stream(ksonData);
@@ -271,7 +286,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with difficulty string") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "meta": {
                 "difficulty": "Maximum"
             }
@@ -286,7 +301,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with difficulty index") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "meta": {
                 "difficulty": 3
             }
@@ -301,7 +316,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Invalid JSON") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "meta": {
                 "title": "Unclosed
         })";
@@ -315,7 +330,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Type error in JSON") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "meta": {
                 "level": "not a number"
             }
@@ -334,7 +349,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         {
             std::ofstream ofs(testFile);
             ofs << R"({
-                "version": "0.8.0",
+                "version": "0.9.0-beta1",
                 "meta": {
                     "title": "File Test"
                 }
@@ -429,7 +444,7 @@ TEST_CASE("KSON Round-trip", "[kson_io]") {
 TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     SECTION("Load audio effects") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -547,7 +562,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("Load key sounds") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "audio": {
                 "key_sound": {
                     "fx": {
@@ -609,7 +624,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("All audio effect types") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -662,7 +677,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("Audio effect parameter values as strings") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -724,7 +739,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
 TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     SECTION("Default scroll_speed") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "beat": {
                 "bpm": [[0, 120]]
             }
@@ -742,7 +757,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("Simple scroll_speed values") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -768,7 +783,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("scroll_speed with GraphValue arrays") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -805,7 +820,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("Empty scroll_speed array") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": []
@@ -821,7 +836,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("scroll_speed with gaps (sparse points)") {
         std::string ksonData = R"({
-            "version": "0.8.0",
+            "version": "0.9.0-beta1",
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -858,6 +873,15 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
 TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
+
+        if (chart1.error != kson::ErrorType::None) {
+            std::cerr << "Error loading KSH file: " << filename << std::endl;
+            std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
+            std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
+            for (const auto& warning : chart1.warnings) {
+                std::cerr << "  - " << warning << std::endl;
+            }
+        }
         REQUIRE(chart1.error == kson::ErrorType::None);
         
         std::ostringstream oss1;
@@ -900,25 +924,34 @@ TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]
     };
     
     SECTION("Gram[LT]") {
-        testRoundTrip("assets/Gram_lt.ksh");
+        testRoundTrip(g_assetsDir + "/Gram_lt.ksh");
     }
-    
+
     SECTION("Gram[CH]") {
-        testRoundTrip("assets/Gram_ch.ksh");
+        testRoundTrip(g_assetsDir + "/Gram_ch.ksh");
     }
-    
+
     SECTION("Gram[EX]") {
-        testRoundTrip("assets/Gram_ex.ksh");
+        testRoundTrip(g_assetsDir + "/Gram_ex.ksh");
     }
-    
+
     SECTION("Gram[IN]") {
-        testRoundTrip("assets/Gram_in.ksh");
+        testRoundTrip(g_assetsDir + "/Gram_in.ksh");
     }
 }
 
 TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_songs]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
+
+        if (chart1.error != kson::ErrorType::None) {
+            std::cerr << "Error loading KSH file: " << filename << std::endl;
+            std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
+            std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
+            for (const auto& warning : chart1.warnings) {
+                std::cerr << "  - " << warning << std::endl;
+            }
+        }
         REQUIRE(chart1.error == kson::ErrorType::None);
         
         std::ostringstream oss1;
@@ -960,8 +993,8 @@ TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_
         }
     };
     
-    std::ifstream songsCheck("../../../kshootmania/App/songs");
-    if (!songsCheck.good()) {
+    std::filesystem::path songsPath = "../../../kshootmania/App/songs";
+    if (!std::filesystem::exists(songsPath) || !std::filesystem::is_directory(songsPath)) {
         WARN("songs directory not found, skipping all songs test");
         return;
     }

@@ -6,16 +6,16 @@ namespace kson
 {
 	struct CamGraphs
 	{
-		Graph zoom; // "zoom_bottom"
-		Graph shiftX; // "zoom_side"
-		Graph rotationX; // "zoom_top"
+		Graph zoomBottom; // "zoom_bottom"
+		Graph zoomSide; // "zoom_side"
+		Graph zoomTop; // "zoom_top"
 		Graph rotationZ; // Rotation degree
 		Graph centerSplit; // "center_split"
 	};
 
 	struct CamPatternInvokeSwingValue
 	{
-		double scale = 1.0;
+		double scale = 250.0;
 		std::int32_t repeat = 1;
 		std::int32_t decayOrder = 0;
 	};

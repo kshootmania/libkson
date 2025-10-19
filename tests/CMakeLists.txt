@@ -19,7 +19,7 @@ add_executable(kson_test
 )
 
 # Include directories
-target_include_directories(kson_test PRIVATE 
+target_include_directories(kson_test PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
@@ -48,4 +48,6 @@ enable_testing()
 list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/contrib)
 include(CTest)
 include(Catch)
-catch_discover_tests(kson_test)
+catch_discover_tests(kson_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)

@@ -653,8 +653,6 @@ namespace
 			ParseNumeric<std::int32_t>(params[3]));
 	}
 
-	constexpr std::int32_t kKSHToKSONSwingScaleDenominator = 60;
-
 	struct PreparedLaneSpin
 	{
 		enum class Type
@@ -1002,7 +1000,7 @@ namespace
 										.d = d,
 										.length = laneSpin.duration,
 										.v = {
-											.scale = static_cast<double>(laneSpin.swingAmplitude) / kKSHToKSONSwingScaleDenominator,
+											.scale = static_cast<double>(laneSpin.swingAmplitude),
 											.repeat = laneSpin.swingRepeat,
 											.decayOrder = laneSpin.swingDecayOrder,
 										},
@@ -1655,25 +1653,25 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				else if (key == "zoom_top")
 				{
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.rotationX.contains(time)))
+					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomTop.contains(time)))
 					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationX, time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomTop, time, dValue);
 					}
 				}
 				else if (key == "zoom_bottom")
 				{
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoom.contains(time)))
+					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomBottom.contains(time)))
 					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoom, time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomBottom, time, dValue);
 					}
 				}
 				else if (key == "zoom_side")
 				{
 					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.shiftX.contains(time)))
+					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomSide.contains(time)))
 					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.shiftX, time, dValue);
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomSide, time, dValue);
 					}
 				}
 				else if (key == "center_split")

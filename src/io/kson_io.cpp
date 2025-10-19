@@ -484,7 +484,7 @@ namespace
 		{
 			nlohmann::json vJSON = nlohmann::json::object();
 			{
-				Write(vJSON, "scale", invoke.v.scale, 1.0);
+				Write(vJSON, "scale", invoke.v.scale, 250.0);
 				Write(vJSON, "repeat", invoke.v.repeat, 1);
 				Write(vJSON, "decay_order", invoke.v.decayOrder, 0);
 			}
@@ -731,9 +731,9 @@ namespace
 			nlohmann::json camJSON = nlohmann::json::object();
 			{
 				nlohmann::json bodyJSON = nlohmann::json::object();
-				WriteGraph(bodyJSON, "zoom", d.cam.body.zoom, 0.0);
-				WriteGraph(bodyJSON, "shift_x", d.cam.body.shiftX, 0.0);
-				WriteGraph(bodyJSON, "rotation_x", d.cam.body.rotationX, 0.0);
+				WriteGraph(bodyJSON, "zoom_bottom", d.cam.body.zoomBottom, 0.0);
+				WriteGraph(bodyJSON, "zoom_side", d.cam.body.zoomSide, 0.0);
+				WriteGraph(bodyJSON, "zoom_top", d.cam.body.zoomTop, 0.0);
 				WriteGraph(bodyJSON, "rotation_z", d.cam.body.rotationZ, 0.0);
 				WriteGraph(bodyJSON, "center_split", d.cam.body.centerSplit, 0.0);
 				Write(camJSON, "body", bodyJSON);
@@ -1544,13 +1544,13 @@ namespace
 	CamGraphs ParseCamGraphs(const nlohmann::json& j, ChartData& chartData)
 	{
 		CamGraphs graphs;
-		
-		if (j.contains("zoom")) graphs.zoom = ParseGraph(j["zoom"], chartData);
-		if (j.contains("shift_x")) graphs.shiftX = ParseGraph(j["shift_x"], chartData);
-		if (j.contains("rotation_x")) graphs.rotationX = ParseGraph(j["rotation_x"], chartData);
+
+		if (j.contains("zoom_bottom")) graphs.zoomBottom = ParseGraph(j["zoom_bottom"], chartData);
+		if (j.contains("zoom_side")) graphs.zoomSide = ParseGraph(j["zoom_side"], chartData);
+		if (j.contains("zoom_top")) graphs.zoomTop = ParseGraph(j["zoom_top"], chartData);
 		if (j.contains("rotation_z")) graphs.rotationZ = ParseGraph(j["rotation_z"], chartData);
 		if (j.contains("center_split")) graphs.centerSplit = ParseGraph(j["center_split"], chartData);
-		
+
 		return graphs;
 	}
 
@@ -1824,7 +1824,7 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 	}
 
 	nlohmann::json json = nlohmann::json::object();
-	Write(json, "version", "0.8.0");
+	Write(json, "version", kKSONFormatVersion);
 	Write(json, "meta", ToJSON(chartData.meta));
 	Write(json, "beat", ToJSON(chartData.beat));
 	Write(json, "gauge", ToJSON(chartData.gauge));
