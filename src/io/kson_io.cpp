@@ -1630,10 +1630,11 @@ namespace
 								if (item.is_array() && item.size() >= 3)
 								{
 									Pulse y = item[0].get<Pulse>();
-									CamPatternInvokeSpin spin;
-									spin.d = item[1].get<int>();
-									spin.length = item[2].get<Pulse>();
-									camera.cam.pattern.laser.slamEvent.spin[y] = spin;
+									camera.cam.pattern.laser.slamEvent.spin[y] = CamPatternInvokeSpin
+									{
+										.d = item[1].get<std::int32_t>(),
+										.length = item[2].get<RelPulse>(),
+									};
 								}
 							}
 						}
@@ -1645,10 +1646,11 @@ namespace
 								if (item.is_array() && item.size() >= 3)
 								{
 									Pulse y = item[0].get<Pulse>();
-									CamPatternInvokeSpin halfSpin;
-									halfSpin.d = item[1].get<int>();
-									halfSpin.length = item[2].get<Pulse>();
-									camera.cam.pattern.laser.slamEvent.halfSpin[y] = halfSpin;
+									camera.cam.pattern.laser.slamEvent.halfSpin[y] = CamPatternInvokeSpin
+									{
+										.d = item[1].get<std::int32_t>(),
+										.length = item[2].get<RelPulse>(),
+									};
 								}
 							}
 						}
@@ -1661,8 +1663,8 @@ namespace
 								{
 									Pulse y = item[0].get<Pulse>();
 									CamPatternInvokeSwing swing;
-									swing.d = item[1].get<int>();
-									swing.length = item[2].get<Pulse>();
+									swing.d = item[1].get<std::int32_t>();
+									swing.length = item[2].get<RelPulse>();
 									if (item.size() >= 4 && item[3].is_object())
 									{
 										if (item[3].contains("scale"))
@@ -1671,14 +1673,14 @@ namespace
 										}
 										if (item[3].contains("repeat"))
 										{
-											swing.v.repeat = item[3]["repeat"].get<Pulse>();
+											swing.v.repeat = item[3]["repeat"].get<std::int32_t>();
 										}
 										if (item[3].contains("decay_order"))
 										{
-											swing.v.decayOrder = item[3]["decay_order"].get<Pulse>();
+											swing.v.decayOrder = item[3]["decay_order"].get<std::int32_t>();
 										}
 									}
-									camera.cam.pattern.laser.slamEvent.swing[y] = swing;
+									camera.cam.pattern.laser.slamEvent.swing[y] = std::move(swing);
 								}
 							}
 						}
