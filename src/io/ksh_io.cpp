@@ -277,6 +277,7 @@ namespace
 		{ "freq", "freq" },
 		{ "freqMax", "freq_max" },
 		{ "gain", "gain" },
+		{ "hiCutGain", "hi_cut_gain" },
 		{ "hiFreq", "freq_2" }, // renamed
 		{ "holdTime", "hold_time" },
 		{ "loFreq", "freq_1" }, // renamed
@@ -1551,7 +1552,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				AudioEffectParams paramsKSON;
 				for (const auto& [paramName, value] : params)
 				{
-					// Note: Parameters deleted in the KSON format (e.g., "hiCutGain") are just ignored.
 					if (s_audioEffectParamNameTable.contains(paramName))
 					{
 						paramsKSON.emplace(s_audioEffectParamNameTable.at(paramName), value);
