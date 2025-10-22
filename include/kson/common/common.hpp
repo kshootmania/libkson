@@ -29,6 +29,9 @@ namespace kson
 	constexpr Pulse kResolution = 240;
 	constexpr Pulse kResolution4 = kResolution * 4;
 
+	// Curve subdivision interval for pre-conversion
+	constexpr Pulse kCurveSubdivisionInterval = kResolution / 16;
+
 	// The difference between Pulse and RelPulse is only for annotation
 	static_assert(std::is_same_v<Pulse, RelPulse>);
 
@@ -83,16 +86,62 @@ namespace kson
 		}
 	};
 
+	struct GraphCurveValue
+	{
+		double a = 0.0; // x-coordinate of the curve control point (0.0-1.0)
+		double b = 0.0; // y-coordinate of the curve control point (0.0-1.0)
+
+		GraphCurveValue() = default;
+
+		GraphCurveValue(double a, double b)
+			: a(a)
+			, b(b)
+		{
+		}
+
+		// Returns true if this represents a linear interpolation (no curve)
+		bool isLinear() const
+		{
+			return a == 0.0 && b == 0.0;
+		}
+	};
+
+	struct GraphPoint
+	{
+		GraphValue v;
+		GraphCurveValue curve; // Default {0.0, 0.0} means linear interpolation
+
+		GraphPoint() = default;
+
+		/*implicit*/ GraphPoint(double value)
+			: v(value)
+			, curve()
+		{
+		}
+
+		GraphPoint(const GraphValue& v)
+			: v(v)
+			, curve()
+		{
+		}
+
+		GraphPoint(const GraphValue& v, const GraphCurveValue& curve)
+			: v(v)
+			, curve(curve)
+		{
+		}
+	};
+
 	struct Interval
 	{
 		RelPulse length = 0;
 	};
 
-	using Graph = ByPulse<GraphValue>;
+	using Graph = ByPulse<GraphPoint>;
 
 	struct GraphSection
 	{
-		ByRelPulse<GraphValue> v;
+		ByRelPulse<GraphPoint> v;
 	};
 
 	template <typename T>

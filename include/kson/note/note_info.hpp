@@ -8,7 +8,7 @@ namespace kson
 
 	struct LaserSection
 	{
-		ByRelPulse<GraphValue> v; // Laser points
+		ByRelPulse<GraphPoint> v; // Laser points
 
 		std::int32_t w = kLaserXScale1x; // 1-2, sets whether the laser section is 2x-widen or not
 

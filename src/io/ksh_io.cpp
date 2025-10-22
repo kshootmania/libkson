@@ -450,7 +450,7 @@ namespace
 	{
 		if (graph.contains(time))
 		{
-			graph.at(time).vf = v;
+			graph.at(time).v.vf = v;
 		}
 		else
 		{
@@ -818,7 +818,7 @@ namespace
 	protected:
 		bool m_prepared = false;
 		Pulse m_time = 0;
-		ByRelPulse<GraphValue> m_values;
+		ByRelPulse<GraphPoint> m_values;
 		ChartData* m_pTargetChartData = nullptr;
 
 	public:
@@ -857,7 +857,7 @@ namespace
 
 			if (m_values.contains(relativeTime))
 			{
-				m_values.at(relativeTime).vf = value;
+				m_values.at(relativeTime).v.vf = value;
 			}
 			else
 			{
@@ -935,19 +935,19 @@ namespace
 
 			// Convert a 32th or shorter laser segment to a laser slam
 			const Pulse laserSlamThreshold = kResolution4 / 32;
-			ByRelPulse<GraphValue> convertedGraphSection;
+			ByRelPulse<GraphPoint> convertedGraphSection;
 			for (auto itr = m_values.cbegin(); itr != m_values.cend(); ++itr)
 			{
-				const auto& [ry, value] = *itr;
+				const auto& [ry, point] = *itr;
 				const auto nextItr = std::next(itr);
 				if (nextItr != m_values.cend())
 				{
-					const auto& [nextRy, nextValue] = *nextItr;
-					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextValue.v, value.v))
+					const auto& [nextRy, nextPoint] = *nextItr;
+					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
 					{
-						convertedGraphSection.emplace(ry, GraphValue{ value.v, nextValue.v });
+						convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
 						const auto nextNextItr = std::next(nextItr);
-						if (nextNextItr == m_values.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v, nextValue.v))
+						if (nextNextItr == m_values.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.v))
 						{
 							++itr;
 						}
@@ -955,7 +955,7 @@ namespace
 					}
 				}
 
-				convertedGraphSection.emplace(ry, value);
+				convertedGraphSection.emplace(ry, point);
 			}
 
 			// Publish prepared laser section
@@ -2192,10 +2192,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		constexpr double kToLegacyScale = 14.0 / 10.0;
 		for (auto& [y, section] : chartData.camera.tilt.manual)
 		{
-			for (auto& [ry, v] : section.v)
+			for (auto& [ry, point] : section.v)
 			{
-				v.v *= kToLegacyScale;
-				v.vf *= kToLegacyScale;
+				point.v.v *= kToLegacyScale;
+				point.v.vf *= kToLegacyScale;
 			}
 		}
 	}

@@ -130,8 +130,8 @@ TEST_CASE("Timing Utilities", "[timing]") {
 
 TEST_CASE("Graph Utilities", "[graph]") {
     SECTION("Graph section value") {
-        kson::ByPulse<kson::GraphValue> graph;
-        
+        kson::Graph graph;
+
         // Linear interpolation
         graph.emplace(0, 0.0);
         graph.emplace(480, 1.0);
@@ -262,8 +262,8 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         
         REQUIRE(chart.note.laser[0].size() == 1);
         REQUIRE(chart.note.laser[0].at(0).v.size() == 2);
-        REQUIRE(chart.note.laser[0].at(0).v.at(0).v == Approx(0.0));
-        REQUIRE(chart.note.laser[0].at(0).v.at(480).v == Approx(1.0));
+        REQUIRE(chart.note.laser[0].at(0).v.at(0).v.v == Approx(0.0));
+        REQUIRE(chart.note.laser[0].at(0).v.at(480).v.v == Approx(1.0));
         REQUIRE(chart.note.laser[0].at(0).w == kson::kLaserXScale1x);
     }
     
@@ -392,8 +392,8 @@ TEST_CASE("KSON Round-trip", "[kson_io]") {
         original.note.fx[0][480] = kson::Interval{240};
         
         original.note.laser[0][0] = kson::LaserSection();
-        original.note.laser[0][0].v[0] = kson::GraphValue{0.5};
-        original.note.laser[0][0].v[240] = kson::GraphValue{1.0};
+        original.note.laser[0][0].v[0] = kson::GraphPoint(kson::GraphValue{0.5});
+        original.note.laser[0][0].v[240] = kson::GraphPoint(kson::GraphValue{1.0});
         original.note.laser[0][0].w = kson::kLaserXScale2x;
         
         // Save to string
@@ -436,8 +436,8 @@ TEST_CASE("KSON Round-trip", "[kson_io]") {
         // Compare laser
         REQUIRE(loaded.note.laser[0].size() == original.note.laser[0].size());
         REQUIRE(loaded.note.laser[0].at(0).v.size() == original.note.laser[0].at(0).v.size());
-        REQUIRE(loaded.note.laser[0].at(0).v.at(0).v == Approx(original.note.laser[0].at(0).v.at(0).v));
-        REQUIRE(loaded.note.laser[0].at(0).v.at(240).v == Approx(original.note.laser[0].at(0).v.at(240).v));
+        REQUIRE(loaded.note.laser[0].at(0).v.at(0).v.v == Approx(original.note.laser[0].at(0).v.at(0).v.v));
+        REQUIRE(loaded.note.laser[0].at(0).v.at(240).v.v == Approx(original.note.laser[0].at(0).v.at(240).v.v));
         REQUIRE(loaded.note.laser[0].at(0).w == original.note.laser[0].at(0).w);
     }
 }
@@ -752,8 +752,8 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
         REQUIRE(chart.error == kson::ErrorType::None);
         REQUIRE(chart.beat.scrollSpeed.size() == 1);
         REQUIRE(chart.beat.scrollSpeed.count(0) == 1);
-        REQUIRE(chart.beat.scrollSpeed.at(0).v == Approx(1.0));
-        REQUIRE(chart.beat.scrollSpeed.at(0).vf == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.vf == Approx(1.0));
     }
     
     SECTION("Simple scroll_speed values") {
@@ -774,12 +774,12 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
         
         REQUIRE(chart.error == kson::ErrorType::None);
         REQUIRE(chart.beat.scrollSpeed.size() == 3);
-        REQUIRE(chart.beat.scrollSpeed.at(0).v == Approx(1.0));
-        REQUIRE(chart.beat.scrollSpeed.at(0).vf == Approx(1.0));
-        REQUIRE(chart.beat.scrollSpeed.at(960).v == Approx(2.0));
-        REQUIRE(chart.beat.scrollSpeed.at(960).vf == Approx(2.0));
-        REQUIRE(chart.beat.scrollSpeed.at(1920).v == Approx(0.5));
-        REQUIRE(chart.beat.scrollSpeed.at(1920).vf == Approx(0.5));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.vf == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(960).v.v == Approx(2.0));
+        REQUIRE(chart.beat.scrollSpeed.at(960).v.vf == Approx(2.0));
+        REQUIRE(chart.beat.scrollSpeed.at(1920).v.v == Approx(0.5));
+        REQUIRE(chart.beat.scrollSpeed.at(1920).v.vf == Approx(0.5));
     }
     
     SECTION("scroll_speed with GraphValue arrays") {
@@ -803,20 +803,20 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
         REQUIRE(chart.beat.scrollSpeed.size() == 4);
         
         // First point with different v and vf
-        REQUIRE(chart.beat.scrollSpeed.at(0).v == Approx(1.0));
-        REQUIRE(chart.beat.scrollSpeed.at(0).vf == Approx(1.5));
-        
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.vf == Approx(1.5));
+
         // Second point with single value (v and vf should be the same)
-        REQUIRE(chart.beat.scrollSpeed.at(480).v == Approx(2.0));
-        REQUIRE(chart.beat.scrollSpeed.at(480).vf == Approx(2.0));
-        
+        REQUIRE(chart.beat.scrollSpeed.at(480).v.v == Approx(2.0));
+        REQUIRE(chart.beat.scrollSpeed.at(480).v.vf == Approx(2.0));
+
         // Third point with different v and vf
-        REQUIRE(chart.beat.scrollSpeed.at(960).v == Approx(3.0));
-        REQUIRE(chart.beat.scrollSpeed.at(960).vf == Approx(1.0));
-        
+        REQUIRE(chart.beat.scrollSpeed.at(960).v.v == Approx(3.0));
+        REQUIRE(chart.beat.scrollSpeed.at(960).v.vf == Approx(1.0));
+
         // Fourth point with same v and vf
-        REQUIRE(chart.beat.scrollSpeed.at(1440).v == Approx(0.5));
-        REQUIRE(chart.beat.scrollSpeed.at(1440).vf == Approx(0.5));
+        REQUIRE(chart.beat.scrollSpeed.at(1440).v.v == Approx(0.5));
+        REQUIRE(chart.beat.scrollSpeed.at(1440).v.vf == Approx(0.5));
     }
     
     SECTION("Empty scroll_speed array") {
@@ -865,9 +865,9 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
         REQUIRE(chart.beat.scrollSpeed.count(3360) == 0);
         
         // Verify values
-        REQUIRE(chart.beat.scrollSpeed.at(0).v == Approx(1.0));
-        REQUIRE(chart.beat.scrollSpeed.at(2400).v == Approx(3.0));
-        REQUIRE(chart.beat.scrollSpeed.at(4800).v == Approx(0.75));
+        REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+        REQUIRE(chart.beat.scrollSpeed.at(2400).v.v == Approx(3.0));
+        REQUIRE(chart.beat.scrollSpeed.at(4800).v.v == Approx(0.75));
     }
 }
 

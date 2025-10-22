@@ -5,3 +5,4 @@
 #include "io/kson_io.hpp"
 #include "util/timing_utils.hpp"
 #include "util/graph_utils.hpp"
+#include "util/graph_curve.hpp"

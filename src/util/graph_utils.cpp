@@ -1,4 +1,5 @@
 ﻿#include "kson/util/graph_utils.hpp"
+#include "kson/util/graph_curve.hpp"
 
 double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 {
@@ -10,28 +11,32 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	auto itr = graph.upper_bound(pulse);
 	if (itr == graph.end())
 	{
-		return graph.rbegin()->second.vf;
+		return graph.rbegin()->second.v.vf;
 	}
 	if (itr != graph.begin())
 	{
 		--itr;
 	}
 
-	const auto& [pulse1, value1] = *itr;
+	const auto& [pulse1, point1] = *itr;
 	if (pulse < pulse1)
 	{
-		return value1.v;
+		return point1.v.v;
 	}
 
 	const auto nextItr = std::next(itr);
 	if (nextItr == graph.end())
 	{
-		return value1.vf;
+		return point1.v.vf;
 	}
 
-	const auto& [pulse2, value2] = *nextItr;
+	const auto& [pulse2, point2] = *nextItr;
 	assert(pulse1 <= pulse && pulse < pulse2);
 
 	const double lerpRate = static_cast<double>(pulse - pulse1) / static_cast<double>(pulse2 - pulse1);
-	return std::lerp(value1.vf, value2.v, lerpRate);
+
+	// Apply curve if present
+	const double curveValue = EvaluateCurve(point1.curve, lerpRate);
+
+	return std::lerp(point1.v.vf, point2.v.v, curveValue);
 }

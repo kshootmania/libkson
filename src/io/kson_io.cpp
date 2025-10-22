@@ -177,15 +177,36 @@ namespace
 		}
 	}
 
-	void WriteGraphPoint(nlohmann::json& graphJSON, Pulse y, const GraphValue& v) // Note: y could be ry
+	void WriteGraphPoint(nlohmann::json& graphJSON, Pulse y, const GraphPoint& point) // Note: y could be ry
 	{
-		if (AlmostEquals(v.v, v.vf))
+		const bool hasCurve = !point.curve.isLinear();
+		const bool hasGraphValue = !AlmostEquals(point.v.v, point.v.vf);
+
+		if (!hasCurve)
 		{
-			graphJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(v.v) }));
+			// No curve: [y, v] or [y, [v, vf]]
+			if (hasGraphValue)
+			{
+				graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ RemoveFloatingPointError(point.v.v), RemoveFloatingPointError(point.v.vf) }) }));
+			}
+			else
+			{
+				graphJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(point.v.v) }));
+			}
 		}
 		else
 		{
-			graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ RemoveFloatingPointError(v.v), RemoveFloatingPointError(v.vf) }) }));
+			// With curve: [y, v, [a, b]] or [y, [v, vf], [a, b]]
+			nlohmann::json curveArray = nlohmann::json::array({ RemoveFloatingPointError(point.curve.a), RemoveFloatingPointError(point.curve.b) });
+
+			if (hasGraphValue)
+			{
+				graphJSON.push_back(nlohmann::json::array({ y, nlohmann::json::array({ RemoveFloatingPointError(point.v.v), RemoveFloatingPointError(point.v.vf) }), curveArray }));
+			}
+			else
+			{
+				graphJSON.push_back(nlohmann::json::array({ y, RemoveFloatingPointError(point.v.v), curveArray }));
+			}
 		}
 	}
 
@@ -375,9 +396,9 @@ namespace
 	void WriteGraph(nlohmann::json& json, const char* key, const Graph& graph, double defaultValue)
 	{
 		bool allDefaultOrEmpty = true;
-		for (const auto& [y, v] : graph)
+		for (const auto& [y, point] : graph)
 		{
-			if (!AlmostEquals(v.v, defaultValue) || !AlmostEquals(v.vf, defaultValue))
+			if (!AlmostEquals(point.v.v, defaultValue) || !AlmostEquals(point.v.vf, defaultValue))
 			{
 				allDefaultOrEmpty = false;
 				break;
@@ -874,6 +895,33 @@ namespace
 		}
 	}
 
+	GraphPoint ParseGraphPoint(const nlohmann::json& j, ChartData& chartData)
+	{
+		// Parse v (GraphValue)
+		GraphValue v{ 0.0 };
+		if (j.is_number())
+		{
+			v = GraphValue{ j.get<double>() };
+		}
+		else if (j.is_array() && j.size() >= 2)
+		{
+			v = GraphValue{ j[0].get<double>(), j[1].get<double>() };
+		}
+		else
+		{
+			chartData.warnings.push_back("Invalid graph value format");
+		}
+
+		// Parse curve (GraphCurveValue) if present (3rd element)
+		GraphCurveValue curve{ 0.0, 0.0 };
+		if (j.is_array() && j.size() >= 3 && j[2].is_array() && j[2].size() >= 2)
+		{
+			curve = GraphCurveValue{ j[2][0].get<double>(), j[2][1].get<double>() };
+		}
+
+		return GraphPoint{ v, curve };
+	}
+
 	template<typename T>
 	ByPulse<T> ParseByPulse(const nlohmann::json& j, ChartData& chartData)
 	{
@@ -912,8 +960,8 @@ namespace
 			if (item.is_array() && item.size() >= 2)
 			{
 				Pulse pulse = item[0].get<Pulse>();
-				GraphValue value = ParseGraphValue(item[1], chartData);
-				result[pulse] = value;
+				GraphPoint point = ParseGraphPoint(item[1], chartData);
+				result[pulse] = point;
 			}
 			else
 			{
@@ -1096,8 +1144,8 @@ namespace
 						if (point.is_array() && point.size() >= 2)
 						{
 							RelPulse ry = point[0].get<RelPulse>();
-							GraphValue value = ParseGraphValue(point[1], chartData);
-							section.v[ry] = value;
+							GraphPoint graphPoint = ParseGraphPoint(point[1], chartData);
+							section.v[ry] = graphPoint;
 						}
 					}
 				}
@@ -1583,8 +1631,8 @@ namespace
 							if (point.is_array() && point.size() >= 2)
 							{
 								RelPulse ry = point[0].get<RelPulse>();
-								GraphValue value = ParseGraphValue(point[1], chartData);
-								section.v[ry] = value;
+								GraphPoint graphPoint = ParseGraphPoint(point[1], chartData);
+								section.v[ry] = graphPoint;
 							}
 						}
 						tilt.manual[y] = section;

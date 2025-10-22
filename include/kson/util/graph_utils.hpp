@@ -86,7 +86,7 @@ namespace kson
 	}
 
 	template <class GS>
-	std::optional<GraphValue> GraphPointAt(const ByPulse<GS>& graphSections, Pulse pulse)
+	std::optional<GraphPoint> GraphPointAt(const ByPulse<GS>& graphSections, Pulse pulse)
 	{
 		if (graphSections.empty())
 		{
