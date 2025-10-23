@@ -13,13 +13,14 @@
 
 namespace {
     std::string g_assetsDir;
+    std::filesystem::path g_exeDir;
 }
 
 int main(int argc, char* argv[]) {
     // Get the executable directory and construct the path to the assets directory
     std::filesystem::path exePath = argv[0];
-    std::filesystem::path exeDir = exePath.parent_path();
-    g_assetsDir = (exeDir / "assets").string();
+    g_exeDir = exePath.parent_path();
+    g_assetsDir = (g_exeDir / "assets").string();
 
     return Catch::Session().run(argc, argv);
 }
@@ -1064,15 +1065,16 @@ TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_
         }
     };
     
-    std::filesystem::path songsPath = "../../../kshootmania/App/songs";
+    std::filesystem::path songsPath = g_exeDir / "../../../kshootmania/App/songs";
+    songsPath = std::filesystem::weakly_canonical(songsPath);
     if (!std::filesystem::exists(songsPath) || !std::filesystem::is_directory(songsPath)) {
         WARN("songs directory not found, skipping all songs test");
         return;
     }
-    
+
     SECTION("All KSH files in songs directory") {
         std::vector<std::string> kshFiles;
-        std::string searchCmd = "find \"../../../kshootmania/App/songs\" -name \"*.ksh\" 2>/dev/null";
+        std::string searchCmd = "find \"" + songsPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
         FILE* pipe = popen(searchCmd.c_str(), "r");
         if (pipe) {
             char buffer[1024];
