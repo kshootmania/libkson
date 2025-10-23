@@ -11,5 +11,7 @@ namespace kson
 		ByMeasureIdx<TimeSig> timeSig;
 
 		Graph scrollSpeed;
+
+		ByPulse<RelPulse> stop;
 	};
 }

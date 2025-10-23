@@ -1738,23 +1738,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "stop")
 				{
-					if (relScrollSpeeds.contains(time))
+					const RelPulse length = KSHLengthToRelPulse(value);
+					if (length > 0)
 					{
-						relScrollSpeeds.at(time) -= 1;
-					}
-					else
-					{
-						relScrollSpeeds.emplace(time, -1);
-					}
-
-					const Pulse endTime = time + KSHLengthToRelPulse(value);
-					if (relScrollSpeeds.contains(endTime))
-					{
-						relScrollSpeeds.at(endTime) += 1;
-					}
-					else
-					{
-						relScrollSpeeds.emplace(endTime, 1);
+						chartData.beat.stop[time] = length;
 					}
 				}
 				else if (key == "zoom_top")

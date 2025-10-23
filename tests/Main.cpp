@@ -871,6 +871,76 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     }
 }
 
+TEST_CASE("KSON BeatInfo stop", "[kson_io][beat]") {
+	SECTION("No stop") {
+		std::string ksonData = R"({
+			"version": "0.9.0-beta2",
+			"beat": {
+				"bpm": [[0, 120]]
+			}
+		})";
+
+		std::istringstream stream(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(stream);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.beat.stop.empty());
+	}
+
+	SECTION("Simple stop values") {
+		std::string ksonData = R"({
+			"version": "0.9.0-beta2",
+			"beat": {
+				"bpm": [[0, 120]],
+				"stop": [
+					[960, 480],
+					[1920, 240]
+				]
+			}
+		})";
+
+		std::istringstream stream(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(stream);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.beat.stop.size() == 2);
+		REQUIRE(chart.beat.stop.at(960) == 480);
+		REQUIRE(chart.beat.stop.at(1920) == 240);
+	}
+
+	SECTION("Empty stop array") {
+		std::string ksonData = R"({
+			"version": "0.9.0-beta2",
+			"beat": {
+				"bpm": [[0, 120]],
+				"stop": []
+			}
+		})";
+
+		std::istringstream stream(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(stream);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.beat.stop.empty());
+	}
+
+	SECTION("Stop serialization") {
+		kson::ChartData chart;
+		chart.beat.bpm[0] = 120.0;
+		chart.beat.scrollSpeed[0] = kson::GraphValue{1.0};
+		chart.beat.stop[960] = 480;
+		chart.beat.stop[2400] = 240;
+
+		std::ostringstream stream;
+		kson::SaveKSONChartData(stream, chart);
+
+		std::string result = stream.str();
+		REQUIRE(result.find("\"stop\"") != std::string::npos);
+		REQUIRE(result.find("[960,480]") != std::string::npos);
+		REQUIRE(result.find("[2400,240]") != std::string::npos);
+	}
+}
+
 TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);

@@ -554,6 +554,7 @@ namespace
 		WriteByPulse(j, "bpm", d.bpm);
 		WriteTimeSigByMeasureIdx(j, "time_sig", d.timeSig);
 		WriteGraph(j, "scroll_speed", d.scrollSpeed);
+		WriteByPulse(j, "stop", d.stop);
 		return j;
 	}
 
@@ -1078,6 +1079,12 @@ namespace
 		{
 			// Apply default value [[0, 1.0]]
 			beat.scrollSpeed[0] = GraphValue{1.0, 1.0};
+		}
+
+		// Parse stop
+		if (j.contains("stop"))
+		{
+			beat.stop = ParseByPulse<RelPulse>(j["stop"], chartData);
 		}
 
 		return beat;
