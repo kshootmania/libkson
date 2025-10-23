@@ -458,6 +458,88 @@ namespace
 		}
 	}
 
+	std::optional<GraphCurveValue> ParseCurveValue(const std::string& value)
+	{
+		// Parse "a;b" format (e.g., "0.5;0.5" -> {a:0.5, b:0.5})
+		const auto separatorPos = value.find(';');
+		if (separatorPos == std::string::npos)
+		{
+			return std::nullopt;
+		}
+
+		const double a = ParseNumeric<double>(value.substr(0, separatorPos));
+		const double b = ParseNumeric<double>(value.substr(separatorPos + 1));
+
+		return GraphCurveValue{ a, b };
+	}
+
+	void ApplyBufferedCurvesToGraph(
+		const std::string& paramName,
+		Graph& graph,
+		const std::unordered_map<std::string, ByPulse<GraphCurveValue>>& bufferedCurves)
+	{
+		if (!bufferedCurves.contains(paramName))
+		{
+			return;
+		}
+
+		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
+		{
+			if (graph.contains(pulse))
+			{
+				graph.at(pulse).curve = curve;
+			}
+		}
+	}
+
+	void ApplyBufferedCurvesToGraphSection(
+		const std::string& paramName,
+		ByPulse<GraphSection>& graphSections,
+		const std::unordered_map<std::string, ByPulse<GraphCurveValue>>& bufferedCurves)
+	{
+		if (!bufferedCurves.contains(paramName))
+		{
+			return;
+		}
+
+		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
+		{
+			for (auto& [sectionPulse, section] : graphSections)
+			{
+				const RelPulse relPulse = pulse - sectionPulse;
+				if (relPulse >= 0 && section.v.contains(relPulse))
+				{
+					section.v.at(relPulse).curve = curve;
+				}
+			}
+		}
+	}
+
+	void ApplyBufferedCurvesToLaser(
+		std::size_t laneIdx,
+		const std::unordered_map<std::string, ByPulse<GraphCurveValue>>& bufferedCurves,
+		ChartData& chartData)
+	{
+		const std::string paramName = (laneIdx == 0) ? "laser_l" : "laser_r";
+
+		if (!bufferedCurves.contains(paramName))
+		{
+			return;
+		}
+
+		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
+		{
+			for (auto& [sectionPulse, section] : chartData.note.laser[laneIdx])
+			{
+				const RelPulse relPulse = pulse - sectionPulse;
+				if (relPulse >= 0 && section.v.contains(relPulse))
+				{
+					section.v.at(relPulse).curve = curve;
+				}
+			}
+		}
+	}
+
 	// TODO: refactor
 	class AbstractPreparedLongNote
 	{
@@ -1423,6 +1505,9 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	// GraphSections buffers
 	PreparedGraphSection preparedManualTilt(&chartData);
 
+	// Curve values buffer (key: parameter name, value: pulse -> curve)
+	std::unordered_map<std::string, ByPulse<GraphCurveValue>> bufferedCurves;
+
 	// Note option buffers (key: chart line index)
 	std::array<std::unordered_set<std::size_t>, kNumLaserLanesSZ> currentMeasureLaserXScale2x;
 	std::array<std::unordered_map<std::size_t, std::string>, kNumFXLanesSZ> currentMeasureFXAudioEffectStrs; // "fx-l=" or "fx-r=" in KSH
@@ -1626,6 +1711,19 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			for (const auto& [lineIdx, key, value] : optionLines)
 			{
 				const Pulse time = currentPulse + lineIdx * oneLinePulse;
+
+				// Check for _curve suffix
+				if (key.ends_with("_curve"))
+				{
+					const std::string paramName = key.substr(0, key.size() - 6);
+					const auto curveValue = ParseCurveValue(value);
+					if (curveValue.has_value())
+					{
+						bufferedCurves[paramName][time] = curveValue.value();
+					}
+					continue;
+				}
+
 				if (key == "t")
 				{
 					if (chartData.beat.bpm.empty()) [[unlikely]]
@@ -1915,6 +2013,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						{
 						case '-': // Empty
 							preparedLaserSectionRef.publishLaserNote();
+							ApplyBufferedCurvesToLaser(laneIdx, bufferedCurves, chartData);
 							preparedLaserSectionRef.clear();
 							break;
 						case ':': // Connection
@@ -1978,6 +2077,19 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				chartData.compat.kshUnknown.line.emplace(time, value);
 			}
 
+			// Publish preparedManualTilt
+			if (preparedManualTilt.prepared())
+			{
+				preparedManualTilt.publishManualTilt();
+			}
+
+			// Apply buffered curves to graphs
+			ApplyBufferedCurvesToGraph("zoom_top", chartData.camera.cam.body.zoomTop, bufferedCurves);
+			ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
+			ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
+			ApplyBufferedCurvesToGraph("center_split", chartData.camera.cam.body.centerSplit, bufferedCurves);
+			ApplyBufferedCurvesToGraphSection("tilt", chartData.camera.tilt.manual, bufferedCurves);
+
 			chartLines.clear();
 			optionLines.clear();
 			commentLines.clear();
@@ -2038,6 +2150,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	{
 		preparedFXSection.publishLaserNote();
 	}
+
+	// Apply buffered curves to lasers
+	ApplyBufferedCurvesToLaser(0, bufferedCurves, chartData);
+	ApplyBufferedCurvesToLaser(1, bufferedCurves, chartData);
 
 	// Convert scroll speeds
 	{

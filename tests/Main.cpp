@@ -1097,3 +1097,290 @@ pfiltergain=100
     REQUIRE(std::abs(std::stod(lpfQ.at(kMeasurePulse * 2)) - 9.3) < 0.001);
 }
 
+TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
+    constexpr kson::Pulse kMeasurePulse = kson::kResolution4;
+
+    SECTION("Curve before parameter (all parameters in one chart)") {
+        std::stringstream ss;
+        ss << "title=Curve Test\n";
+        ss << "artist=Test\n";
+        ss << "effect=Test\n";
+        ss << "jacket=\n";
+        ss << "illustrator=\n";
+        ss << "difficulty=challenge\n";
+        ss << "level=1\n";
+        ss << "t=120\n";
+        ss << "ver=170\n";
+        ss << "--\n";
+        // Measure 0: curve before parameter
+        ss << "zoom_top_curve=0.3;0.7\n";
+        ss << "zoom_top=100\n";
+        ss << "0000|00|--\n";
+        ss << "zoom_bottom_curve=0.4;0.6\n";
+        ss << "zoom_bottom=50\n";
+        ss << "0000|00|--\n";
+        ss << "zoom_side_curve=0.5;0.5\n";
+        ss << "zoom_side=-25\n";
+        ss << "0000|00|--\n";
+        ss << "center_split_curve=0.2;0.8\n";
+        ss << "center_split=200\n";
+        ss << "0000|00|--\n";
+        ss << "tilt_curve=0.1;0.9\n";
+        ss << "tilt=0.1\n";
+        ss << "0000|00|--\n";
+        ss << "laser_l_curve=0.6;0.4\n";
+        ss << "laser_r_curve=0.7;0.3\n";
+        ss << "0000|00|0o\n";
+        ss << "0000|00|::\n";
+        ss << "0000|00|o0\n";
+        ss << "--\n";
+
+        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        REQUIRE(chart.error == kson::ErrorType::None);
+
+        // Check zoom_top at pulse 0
+        REQUIRE(chart.camera.cam.body.zoomTop.contains(0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).v.v == Approx(100.0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.a == Approx(0.3));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.b == Approx(0.7));
+
+        // Check zoom_bottom at pulse 150 (1/8 measure, since there are 8 lines)
+        REQUIRE(chart.camera.cam.body.zoomBottom.contains(kMeasurePulse / 8));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).v.v == Approx(50.0));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).curve.a == Approx(0.4));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).curve.b == Approx(0.6));
+
+        // Check zoom_side at pulse 300 (2/8 measure)
+        REQUIRE(chart.camera.cam.body.zoomSide.contains(kMeasurePulse / 4));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).v.v == Approx(-25.0));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).curve.a == Approx(0.5));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).curve.b == Approx(0.5));
+
+        // Check center_split at pulse 450 (3/8 measure)
+        REQUIRE(chart.camera.cam.body.centerSplit.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        // Check tilt (manual) - it's a GraphSection, so check section at pulse 600 (4/8 = 1/2 measure)
+        REQUIRE(chart.camera.tilt.manual.contains(kMeasurePulse / 2));
+        const auto& tiltSection = chart.camera.tilt.manual.at(kMeasurePulse / 2);
+        REQUIRE(tiltSection.v.contains(0));
+        REQUIRE(tiltSection.v.at(0).v.v == Approx(0.1));
+        REQUIRE(tiltSection.v.at(0).curve.a == Approx(0.1));
+        REQUIRE(tiltSection.v.at(0).curve.b == Approx(0.9));
+
+        // Check laser L at pulse 600 (5/8 measure) - starts at '0' (0.0), moves to 'o' (1.0)
+        REQUIRE(chart.note.laser[0].contains(kMeasurePulse * 5 / 8));
+        const auto& laserL = chart.note.laser[0].at(kMeasurePulse * 5 / 8);
+        REQUIRE(laserL.v.contains(0));
+        REQUIRE(laserL.v.at(0).v.v == Approx(0.0)); // '0' = 0/50 = 0.0
+        REQUIRE(laserL.v.at(0).curve.a == Approx(0.6));
+        REQUIRE(laserL.v.at(0).curve.b == Approx(0.4));
+        // Second point at relative pulse 240 (2 lines later: line 5 -> line 7)
+        REQUIRE(laserL.v.contains(240));
+        REQUIRE(laserL.v.at(240).v.v == Approx(1.0)); // 'o' = 50/50 = 1.0
+
+        // Check laser R at pulse 600 (5/8 measure) - starts at 'o' (1.0), moves to '0' (0.0)
+        REQUIRE(chart.note.laser[1].contains(kMeasurePulse * 5 / 8));
+        const auto& laserR = chart.note.laser[1].at(kMeasurePulse * 5 / 8);
+        REQUIRE(laserR.v.contains(0));
+        REQUIRE(laserR.v.at(0).v.v == Approx(1.0)); // 'o' = 50/50 = 1.0
+        REQUIRE(laserR.v.at(0).curve.a == Approx(0.7));
+        REQUIRE(laserR.v.at(0).curve.b == Approx(0.3));
+        // Second point at relative pulse 240 (2 lines later)
+        REQUIRE(laserR.v.contains(240));
+        REQUIRE(laserR.v.at(240).v.v == Approx(0.0)); // '0' = 0/50 = 0.0
+    }
+
+    SECTION("Curve after parameter (all parameters in one chart)") {
+        std::stringstream ss;
+        ss << "title=Curve Test\n";
+        ss << "artist=Test\n";
+        ss << "effect=Test\n";
+        ss << "jacket=\n";
+        ss << "illustrator=\n";
+        ss << "difficulty=challenge\n";
+        ss << "level=1\n";
+        ss << "t=120\n";
+        ss << "ver=170\n";
+        ss << "--\n";
+        // Measure 0: parameter before curve
+        ss << "zoom_top=100\n";
+        ss << "zoom_top_curve=0.3;0.7\n";
+        ss << "0000|00|--\n";
+        ss << "zoom_bottom=50\n";
+        ss << "zoom_bottom_curve=0.4;0.6\n";
+        ss << "0000|00|--\n";
+        ss << "zoom_side=-25\n";
+        ss << "zoom_side_curve=0.5;0.5\n";
+        ss << "0000|00|--\n";
+        ss << "center_split=200\n";
+        ss << "center_split_curve=0.2;0.8\n";
+        ss << "0000|00|--\n";
+        ss << "tilt=0.1\n";
+        ss << "tilt_curve=0.1;0.9\n";
+        ss << "0000|00|--\n";
+        ss << "laser_l_curve=0.6;0.4\n";
+        ss << "laser_r_curve=0.7;0.3\n";
+        ss << "0000|00|0o\n";
+        ss << "0000|00|::\n";
+        ss << "0000|00|o0\n";
+        ss << "--\n";
+
+        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        REQUIRE(chart.error == kson::ErrorType::None);
+
+        // Check zoom_top at pulse 0 (should have curve even though curve line is after)
+        REQUIRE(chart.camera.cam.body.zoomTop.contains(0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).v.v == Approx(100.0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.a == Approx(0.3));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.b == Approx(0.7));
+
+        // Check zoom_bottom at pulse 150 (1/8 measure)
+        REQUIRE(chart.camera.cam.body.zoomBottom.contains(kMeasurePulse / 8));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).v.v == Approx(50.0));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).curve.a == Approx(0.4));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).curve.b == Approx(0.6));
+
+        // Check zoom_side at pulse 300 (2/8 measure)
+        REQUIRE(chart.camera.cam.body.zoomSide.contains(kMeasurePulse / 4));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).v.v == Approx(-25.0));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).curve.a == Approx(0.5));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse / 4).curve.b == Approx(0.5));
+
+        // Check center_split at pulse 450 (3/8 measure)
+        REQUIRE(chart.camera.cam.body.centerSplit.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
+        REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        // Check tilt at pulse 600 (4/8 = 1/2 measure)
+        REQUIRE(chart.camera.tilt.manual.contains(kMeasurePulse / 2));
+        const auto& tiltSection = chart.camera.tilt.manual.at(kMeasurePulse / 2);
+        REQUIRE(tiltSection.v.contains(0));
+        REQUIRE(tiltSection.v.at(0).v.v == Approx(0.1));
+        REQUIRE(tiltSection.v.at(0).curve.a == Approx(0.1));
+        REQUIRE(tiltSection.v.at(0).curve.b == Approx(0.9));
+
+        // Check laser L at pulse 600 (5/8 measure) - starts at '0', moves to 'o'
+        REQUIRE(chart.note.laser[0].contains(kMeasurePulse * 5 / 8));
+        const auto& laserL = chart.note.laser[0].at(kMeasurePulse * 5 / 8);
+        REQUIRE(laserL.v.contains(0));
+        REQUIRE(laserL.v.at(0).v.v == Approx(0.0));
+        REQUIRE(laserL.v.at(0).curve.a == Approx(0.6));
+        REQUIRE(laserL.v.at(0).curve.b == Approx(0.4));
+        REQUIRE(laserL.v.contains(240));
+        REQUIRE(laserL.v.at(240).v.v == Approx(1.0));
+
+        // Check laser R at pulse 600 (5/8 measure) - starts at 'o', moves to '0'
+        REQUIRE(chart.note.laser[1].contains(kMeasurePulse * 5 / 8));
+        const auto& laserR = chart.note.laser[1].at(kMeasurePulse * 5 / 8);
+        REQUIRE(laserR.v.contains(0));
+        REQUIRE(laserR.v.at(0).v.v == Approx(1.0));
+        REQUIRE(laserR.v.at(0).curve.a == Approx(0.7));
+        REQUIRE(laserR.v.at(0).curve.b == Approx(0.3));
+        REQUIRE(laserR.v.contains(240));
+        REQUIRE(laserR.v.at(240).v.v == Approx(0.0));
+    }
+
+    SECTION("Curve not applied to different pulse") {
+        std::stringstream ss;
+        ss << "title=Curve Test\n";
+        ss << "artist=Test\n";
+        ss << "effect=Test\n";
+        ss << "jacket=\n";
+        ss << "illustrator=\n";
+        ss << "difficulty=challenge\n";
+        ss << "level=1\n";
+        ss << "t=120\n";
+        ss << "ver=170\n";
+        ss << "--\n";
+        // Curve at different pulse should not be applied
+        ss << "zoom_top_curve=0.3;0.7\n"; // pulse 0
+        ss << "0000|00|--\n";
+        ss << "zoom_top=100\n"; // pulse 240 - different from curve
+        ss << "0000|00|--\n";
+        ss << "zoom_bottom=50\n"; // pulse 480
+        ss << "0000|00|--\n";
+        ss << "zoom_bottom_curve=0.4;0.6\n"; // pulse 720 - different from zoom_bottom
+        ss << "zoom_side_curve=0.5;0.5\n"; // pulse 720 - same as zoom_bottom_curve
+        ss << "0000|00|--\n";
+        ss << "--\n";
+        ss << "zoom_side=-25\n"; // pulse 1200 (measure 1, line 0) - different measure and different pulse
+        ss << "0000|00|--\n";
+        ss << "center_split_curve=0.2;0.8\n"; // pulse 1440
+        ss << "0000|00|--\n";
+        ss << "center_split=200\n"; // pulse 1680 - different from curve
+        ss << "0000|00|--\n";
+        ss << "tilt_curve=0.1;0.9\n"; // pulse 1920
+        ss << "laser_l_curve=0.6;0.4\n"; // pulse 1920
+        ss << "0000|00|0-\n";
+        ss << "0000|00|o-\n";
+        ss << "tilt=0.1\n"; // pulse 2400 - different from curve
+        ss << "laser_r_curve=0.7;0.3\n"; // pulse 2400
+        ss << "0000|00|-0\n";
+        ss << "0000|00|-o\n";
+        ss << "--\n";
+
+        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        REQUIRE(chart.error == kson::ErrorType::None);
+
+        // zoom_top at pulse 240 should NOT have curve (curve was at pulse 0)
+        REQUIRE(chart.camera.cam.body.zoomTop.contains(kMeasurePulse / 4));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(kMeasurePulse / 4).v.v == Approx(100.0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(kMeasurePulse / 4).curve.a == Approx(0.0));
+        REQUIRE(chart.camera.cam.body.zoomTop.at(kMeasurePulse / 4).curve.b == Approx(0.0));
+
+        // zoom_bottom at pulse 480 should NOT have curve (curve was at pulse 720)
+        REQUIRE(chart.camera.cam.body.zoomBottom.contains(kMeasurePulse / 2));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 2).v.v == Approx(50.0));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 2).curve.a == Approx(0.0));
+        REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 2).curve.b == Approx(0.0));
+
+        // zoom_side at pulse 1200 should NOT have curve (curve was at different pulse 720)
+        REQUIRE(chart.camera.cam.body.zoomSide.contains(kMeasurePulse));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse).v.v == Approx(-25.0));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse).curve.a == Approx(0.0));
+        REQUIRE(chart.camera.cam.body.zoomSide.at(kMeasurePulse).curve.b == Approx(0.0));
+
+        // center_split should NOT have curve (curve was at different pulse)
+        // Note: Pulse calculation depends on line distribution in the measure
+        const auto centerSplitItr = chart.camera.cam.body.centerSplit.begin();
+        REQUIRE(centerSplitItr != chart.camera.cam.body.centerSplit.end());
+        REQUIRE(centerSplitItr->second.v.v == Approx(200.0));
+        REQUIRE(centerSplitItr->second.curve.a == Approx(0.0));
+        REQUIRE(centerSplitItr->second.curve.b == Approx(0.0));
+
+        // tilt should NOT have curve (curve was at different pulse)
+        // Note: Pulse calculation depends on line distribution in the measure
+        REQUIRE(chart.camera.tilt.manual.size() == 1);
+        const auto& tiltSection = chart.camera.tilt.manual.begin()->second;
+        REQUIRE(tiltSection.v.contains(0));
+        REQUIRE(tiltSection.v.at(0).v.v == Approx(0.1));
+        REQUIRE(tiltSection.v.at(0).curve.a == Approx(0.0));
+        REQUIRE(tiltSection.v.at(0).curve.b == Approx(0.0));
+
+        // laser L should NOT have curve at second point (curve was only for first point)
+        // Note: Pulse calculation depends on line distribution in the measure
+        REQUIRE(chart.note.laser[0].size() == 1);
+        const auto& laserL = chart.note.laser[0].begin()->second;
+        // First point should have curve
+        REQUIRE(laserL.v.contains(0));
+        REQUIRE(laserL.v.at(0).curve.a == Approx(0.6));
+        REQUIRE(laserL.v.at(0).curve.b == Approx(0.4));
+        // Second point should NOT have curve
+        REQUIRE(laserL.v.size() >= 2);
+        const auto secondPointItr = std::next(laserL.v.begin());
+        REQUIRE(secondPointItr->second.curve.a == Approx(0.0));
+        REQUIRE(secondPointItr->second.curve.b == Approx(0.0));
+
+        // laser R should have curve (curve was at same pulse)
+        REQUIRE(chart.note.laser[1].size() == 1);
+        const auto& laserR = chart.note.laser[1].begin()->second;
+        REQUIRE(laserR.v.contains(0));
+        REQUIRE(laserR.v.at(0).curve.a == Approx(0.7));
+        REQUIRE(laserR.v.at(0).curve.b == Approx(0.3));
+    }
+}
+
