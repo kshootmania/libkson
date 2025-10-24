@@ -2000,7 +2000,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						{
 						case '-': // Empty
 							preparedLaserSectionRef.publishLaserNote();
-							ApplyBufferedCurvesToLaser(laneIdx, bufferedCurves, chartData);
 							preparedLaserSectionRef.clear();
 							break;
 						case ':': // Connection
@@ -2063,19 +2062,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				const Pulse time = currentPulse + lineIdx * oneLinePulse;
 				chartData.compat.kshUnknown.line.emplace(time, value);
 			}
-
-			// Publish preparedManualTilt
-			if (preparedManualTilt.prepared())
-			{
-				preparedManualTilt.publishManualTilt();
-			}
-
-			// Apply buffered curves to graphs
-			ApplyBufferedCurvesToGraph("zoom_top", chartData.camera.cam.body.zoomTop, bufferedCurves);
-			ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
-			ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
-			ApplyBufferedCurvesToGraph("center_split", chartData.camera.cam.body.centerSplit, bufferedCurves);
-			ApplyBufferedCurvesToGraphSection("tilt", chartData.camera.tilt.manual, bufferedCurves);
 
 			chartLines.clear();
 			optionLines.clear();
@@ -2141,6 +2127,13 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	// Apply buffered curves to lasers
 	ApplyBufferedCurvesToLaser(0, bufferedCurves, chartData);
 	ApplyBufferedCurvesToLaser(1, bufferedCurves, chartData);
+
+	// Apply buffered curves to graphs
+	ApplyBufferedCurvesToGraph("zoom_top", chartData.camera.cam.body.zoomTop, bufferedCurves);
+	ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
+	ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
+	ApplyBufferedCurvesToGraph("center_split", chartData.camera.cam.body.centerSplit, bufferedCurves);
+	ApplyBufferedCurvesToGraphSection("tilt", chartData.camera.tilt.manual, bufferedCurves);
 
 	// Convert scroll speeds
 	{
