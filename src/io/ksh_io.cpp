@@ -1776,6 +1776,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
 					}
 				}
+				else if (key == "scroll_speed")
+				{
+					const double dValue = ParseNumeric<double>(value);
+					InsertGraphPointOrAssignVf(chartData.beat.scrollSpeed, time, dValue);
+				}
 				else if (key == "tilt")
 				{
 					if (IsTiltValueManual(value))
@@ -2129,6 +2134,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	ApplyBufferedCurvesToLaser(1, bufferedCurves, chartData);
 
 	// Apply buffered curves to graphs
+	ApplyBufferedCurvesToGraph("scroll_speed", chartData.beat.scrollSpeed, bufferedCurves);
 	ApplyBufferedCurvesToGraph("zoom_top", chartData.camera.cam.body.zoomTop, bufferedCurves);
 	ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
 	ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);

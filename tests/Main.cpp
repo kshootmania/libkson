@@ -1196,6 +1196,8 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|--\n";
         ss << "center_split_curve=0.2;0.8\n";
         ss << "center_split=200\n";
+        ss << "scroll_speed_curve=0.3;0.6\n";
+        ss << "scroll_speed=1.5\n";
         ss << "0000|00|--\n";
         ss << "tilt_curve=0.1;0.9\n";
         ss << "tilt=0.1\n";
@@ -1216,7 +1218,7 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.a == Approx(0.3));
         REQUIRE(chart.camera.cam.body.zoomTop.at(0).curve.b == Approx(0.7));
 
-        // Check zoom_bottom at pulse 150 (1/8 measure, since there are 8 lines)
+        // Check zoom_bottom at pulse 150 (1/8 measure)
         REQUIRE(chart.camera.cam.body.zoomBottom.contains(kMeasurePulse / 8));
         REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).v.v == Approx(50.0));
         REQUIRE(chart.camera.cam.body.zoomBottom.at(kMeasurePulse / 8).curve.a == Approx(0.4));
@@ -1233,6 +1235,12 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        // Check scroll_speed at pulse 450 (3/8 measure) - same line as center_split
+        REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.5));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.3));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.6));
 
         // Check tilt (manual) - it's a GraphSection, so check section at pulse 600 (4/8 = 1/2 measure)
         REQUIRE(chart.camera.tilt.manual.contains(kMeasurePulse / 2));
@@ -1289,6 +1297,8 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|--\n";
         ss << "center_split=200\n";
         ss << "center_split_curve=0.2;0.8\n";
+        ss << "scroll_speed=1.5\n";
+        ss << "scroll_speed_curve=0.3;0.6\n";
         ss << "0000|00|--\n";
         ss << "tilt=0.1\n";
         ss << "tilt_curve=0.1;0.9\n";
@@ -1326,6 +1336,12 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        // Check scroll_speed at pulse 450 (3/8 measure) - same line as center_split (curve after parameter)
+        REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.5));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.3));
+        REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.6));
 
         // Check tilt at pulse 600 (4/8 = 1/2 measure)
         REQUIRE(chart.camera.tilt.manual.contains(kMeasurePulse / 2));
@@ -1454,5 +1470,98 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(laserR.v.at(0).curve.a == Approx(0.7));
         REQUIRE(laserR.v.at(0).curve.b == Approx(0.3));
     }
+}
+
+TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
+	constexpr kson::Pulse kMeasurePulse = kson::kResolution4;
+
+	SECTION("Simple scroll_speed changes") {
+		std::stringstream ss;
+		ss << "title=Scroll Speed Test\n";
+		ss << "artist=Test\n";
+		ss << "effect=Test\n";
+		ss << "jacket=nowprinting1\n";
+		ss << "illustrator=Test\n";
+		ss << "difficulty=challenge\n";
+		ss << "level=1\n";
+		ss << "t=120\n";
+		ss << "--\n";
+		ss << "0000|00|--\n";
+		ss << "scroll_speed=1.0\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+		ss << "scroll_speed=2.0\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+		ss << "scroll_speed=0.5\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+
+		kson::ChartData chart = kson::LoadKSHChartData(ss);
+		REQUIRE(chart.error == kson::ErrorType::None);
+
+		// Check scroll_speed values
+		REQUIRE(chart.beat.scrollSpeed.size() == 4);
+
+		// Initial value (pulse 0)
+		REQUIRE(chart.beat.scrollSpeed.contains(0));
+		REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+		REQUIRE(chart.beat.scrollSpeed.at(0).v.vf == Approx(1.0));
+
+		// First line in measure 0
+		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse / 4));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse / 4).v.v == Approx(1.0));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse / 4).v.vf == Approx(1.0));
+
+		// Measure 1
+		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse).v.v == Approx(2.0));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse).v.vf == Approx(2.0));
+
+		// Measure 2
+		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 2));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 2).v.v == Approx(0.5));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 2).v.vf == Approx(0.5));
+	}
+
+	SECTION("Immediate scroll_speed change") {
+		std::stringstream ss;
+		ss << "title=Scroll Speed Test\n";
+		ss << "artist=Test\n";
+		ss << "effect=Test\n";
+		ss << "jacket=nowprinting1\n";
+		ss << "illustrator=Test\n";
+		ss << "difficulty=challenge\n";
+		ss << "level=1\n";
+		ss << "t=120\n";
+		ss << "--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "scroll_speed=1.0\n";
+		ss << "scroll_speed=3.0\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+
+		kson::ChartData chart = kson::LoadKSHChartData(ss);
+		REQUIRE(chart.error == kson::ErrorType::None);
+
+		// Check immediate change at pulse 360 (3/8 measure)
+		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.0));
+		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.vf == Approx(3.0));
+	}
 }
 
