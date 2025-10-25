@@ -41,6 +41,7 @@
     <ClInclude Include="include\kson\kson.hpp" />
     <ClInclude Include="include\kson\meta\meta_info.hpp" />
     <ClInclude Include="include\kson\note\note_info.hpp" />
+    <ClInclude Include="include\kson\util\graph_curve.hpp" />
     <ClInclude Include="include\kson\util\graph_utils.hpp" />
     <ClInclude Include="include\kson\util\timing_utils.hpp" />
   </ItemGroup>
@@ -52,6 +53,7 @@
     <ClCompile Include="src\error.cpp" />
     <ClCompile Include="src\io\ksh_io.cpp" />
     <ClCompile Include="src\io\kson_io.cpp" />
+    <ClCompile Include="src\util\graph_curve.cpp" />
     <ClCompile Include="src\util\graph_utils.cpp" />
     <ClCompile Include="src\util\timing_utils.cpp" />
   </ItemGroup>
