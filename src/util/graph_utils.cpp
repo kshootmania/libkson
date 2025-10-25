@@ -1,5 +1,7 @@
 ﻿#include "kson/util/graph_utils.hpp"
 #include "kson/util/graph_curve.hpp"
+#include <algorithm>
+#include <vector>
 
 double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 {
@@ -39,4 +41,53 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	const double curveValue = EvaluateCurve(point1.curve, lerpRate);
 
 	return std::lerp(point1.v.vf, point2.v.v, curveValue);
+}
+
+kson::Graph kson::BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPulse<RelPulse>& stop)
+{
+	if (stop.empty())
+	{
+		return scrollSpeed;
+	}
+
+	Graph baseScrollSpeed = scrollSpeed;
+	if (baseScrollSpeed.empty())
+	{
+		baseScrollSpeed.emplace(0, GraphValue{ 1.0 });
+	}
+
+	std::vector<std::pair<Pulse, Pulse>> mergedStopRanges;
+	for (const auto& [stopY, stopLength] : stop)
+	{
+		const Pulse start = stopY;
+		const Pulse end = stopY + stopLength;
+
+		if (mergedStopRanges.empty() || mergedStopRanges.back().second < start)
+		{
+			mergedStopRanges.emplace_back(start, end);
+		}
+		else
+		{
+			mergedStopRanges.back().second = std::max(mergedStopRanges.back().second, end);
+		}
+	}
+
+	Graph result = baseScrollSpeed;
+
+	for (const auto& [stopStart, stopEnd] : mergedStopRanges)
+	{
+		const double speedBeforeStop = GraphValueAt(result, stopStart);
+		const double speedAfterStop = GraphValueAt(result, stopEnd);
+
+		auto it = result.upper_bound(stopStart);
+		while (it != result.end() && it->first < stopEnd)
+		{
+			it = result.erase(it);
+		}
+
+		result.insert_or_assign(stopStart, GraphValue{ speedBeforeStop, 0.0 });
+		result.insert_or_assign(stopEnd, GraphValue{ 0.0, speedAfterStop });
+	}
+
+	return result;
 }

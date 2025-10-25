@@ -7,6 +7,8 @@ namespace kson
 {
 	double GraphValueAt(const Graph& graph, Pulse pulse);
 
+	Graph BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPulse<RelPulse>& stop);
+
 	template <class GS>
 	typename ByPulse<GS>::const_iterator GraphSectionAt(const ByPulse<GS>& graphSections, Pulse pulse)
 #ifdef __cpp_concepts
