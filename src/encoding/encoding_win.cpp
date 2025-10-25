@@ -18,7 +18,16 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 	std::wstring wstr(requiredWstrSize, L'\0');
 	if (MultiByteToWideChar(kShiftJISCodePage, 0, shiftJISStr.data(), static_cast<int>(shiftJISStr.size()), wstr.data(), requiredWstrSize) == 0)
 	{
-		std::cerr << "MultiByteToWideChar error (GetLastError():" << GetLastError() << "). Input encoding may not be Shift-JIS.\n";
+		const DWORD lastError = GetLastError();
+
+		// Fallback to UTF-8 on conversion failure (e.g., UTF-8 without BOM)
+		if (lastError == ERROR_NO_UNICODE_TRANSLATION)
+		{
+			std::cerr << "Warning: MultiByteToWideChar error (GetLastError():" << lastError << "). Input encoding may not be Shift-JIS. Assuming UTF-8.\n";
+			return std::string(shiftJISStr);
+		}
+
+		std::cerr << "MultiByteToWideChar error (GetLastError():" << lastError << "). Input encoding may not be Shift-JIS.\n";
 		return std::string();
 	}
 

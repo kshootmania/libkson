@@ -24,6 +24,14 @@ std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 	{
 		const int errnoCopy = errno;
 		iconv_close(cd);
+
+		// Fallback to UTF-8 on conversion failure (e.g., UTF-8 without BOM)
+		if (errnoCopy == EILSEQ || errnoCopy == EINVAL)
+		{
+			std::cerr << "Warning: iconv error (errno:" << errnoCopy << "). Input encoding may not be Shift-JIS. Assuming UTF-8.\n";
+			return std::string(shiftJISStr);
+		}
+
 		std::cerr << "iconv error (errno:" << errnoCopy << "). Input encoding may not be Shift-JIS.\n";
 		return std::string();
 	}
