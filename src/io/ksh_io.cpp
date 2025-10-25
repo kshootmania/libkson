@@ -1089,6 +1089,9 @@ namespace
 										},
 									});
 								break;
+
+							default:
+								break;
 						}
 					}
 				}
