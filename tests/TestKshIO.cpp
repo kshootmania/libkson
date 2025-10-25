@@ -79,7 +79,7 @@ TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]
     }
 }
 
-TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_songs]") {
+TEST_CASE("KSON I/O round-trip (all songs)", "[.][ksh_io][kson_io][round_trip][all_songs]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
 
