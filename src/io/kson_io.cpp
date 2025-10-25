@@ -785,7 +785,6 @@ namespace
 		nlohmann::json j = nlohmann::json::object();
 		{
 			Write(j, "filename", d.filename, "");
-			Write(j, "offset", d.offset, 0);
 			nlohmann::json legacyJSON = nlohmann::json::object();
 			{
 				nlohmann::json bgJSON = nlohmann::json::array();
@@ -1790,15 +1789,14 @@ namespace
 	BGInfo ParseBGInfo(const nlohmann::json& j, ChartData& chartData)
 	{
 		BGInfo bg;
-		
+
 		bg.filename = GetWithDefault<std::string>(j, "filename", "");
-		bg.offset = GetWithDefault<std::int32_t>(j, "offset", 0);
-		
+
 		if (j.contains("legacy"))
 		{
 			bg.legacy = ParseLegacyBGInfo(j["legacy"], chartData);
 		}
-		
+
 		return bg;
 	}
 

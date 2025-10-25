@@ -36,8 +36,7 @@ namespace kson
 
 	struct BGInfo
 	{
-		std::string filename; // UTF-8 guaranteed
-		std::int32_t offset = 0;
+		std::string filename; // UTF-8 guaranteed; reserved for future extension and not used by KSM v2
 		LegacyBGInfo legacy;
 	};
 }
