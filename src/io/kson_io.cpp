@@ -1881,7 +1881,7 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 	}
 
 	nlohmann::json json = nlohmann::json::object();
-	Write(json, "version", kKSONFormatVersion);
+	Write(json, "format_version", kKSONFormatVersion);
 	Write(json, "meta", ToJSON(chartData.meta));
 	Write(json, "beat", ToJSON(chartData.beat));
 	Write(json, "gauge", ToJSON(chartData.gauge));
@@ -1922,7 +1922,22 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream)
 	{
 		nlohmann::json j;
 		stream >> j;
-		
+
+		// format_versionフィールドの必須チェック
+		if (!j.contains("format_version"))
+		{
+			chartData.error = ErrorType::KSONParseError;
+			chartData.warnings.push_back("Missing required field: format_version");
+			return chartData;
+		}
+
+		if (!j["format_version"].is_number_integer())
+		{
+			chartData.error = ErrorType::KSONParseError;
+			chartData.warnings.push_back("Invalid format_version: must be an integer");
+			return chartData;
+		}
+
 		// Parse each component
 		if (j.contains("meta"))
 		{

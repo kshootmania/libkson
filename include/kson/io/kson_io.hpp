@@ -4,7 +4,7 @@
 
 namespace kson
 {
-	inline constexpr const char* kKSONFormatVersion = "0.9.0-beta1";
+	inline constexpr std::int32_t kKSONFormatVersion = 1; // kson format version number (1 for kson 0.9.0)
 
 	ErrorType SaveKSONChartData(std::ostream& stream, const ChartData& chartData);
 

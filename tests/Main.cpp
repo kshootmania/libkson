@@ -199,7 +199,7 @@ TEST_CASE("Note Data", "[note]") {
 TEST_CASE("KSON Loading", "[kson_io]") {
     SECTION("Load valid KSON from string") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "meta": {
                 "title": "Test Song",
                 "artist": "Test Artist",
@@ -270,7 +270,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with minimal data") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1"
+            "format_version": 1
         })";
         
         std::istringstream stream(ksonData);
@@ -288,7 +288,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with difficulty string") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "meta": {
                 "difficulty": "Maximum"
             }
@@ -303,7 +303,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Load KSON with difficulty index") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "meta": {
                 "difficulty": 3
             }
@@ -318,7 +318,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Invalid JSON") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "meta": {
                 "title": "Unclosed
         })";
@@ -332,7 +332,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Type error in JSON") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "meta": {
                 "level": "not a number"
             }
@@ -351,7 +351,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         {
             std::ofstream ofs(testFile);
             ofs << R"({
-                "version": "0.9.0-beta1",
+                "format_version": 1,
                 "meta": {
                     "title": "File Test"
                 }
@@ -446,7 +446,7 @@ TEST_CASE("KSON Round-trip", "[kson_io]") {
 TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     SECTION("Load audio effects") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -564,7 +564,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("Load key sounds") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "audio": {
                 "key_sound": {
                     "fx": {
@@ -626,7 +626,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("All audio effect types") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -679,7 +679,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
     
     SECTION("Audio effect parameter values as strings") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "audio": {
                 "audio_effect": {
                     "fx": {
@@ -741,7 +741,7 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
 TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     SECTION("Default scroll_speed") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "beat": {
                 "bpm": [[0, 120]]
             }
@@ -759,7 +759,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("Simple scroll_speed values") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -785,7 +785,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("scroll_speed with GraphValue arrays") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -822,7 +822,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("Empty scroll_speed array") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": []
@@ -838,7 +838,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
     
     SECTION("scroll_speed with gaps (sparse points)") {
         std::string ksonData = R"({
-            "version": "0.9.0-beta1",
+            "format_version": 1,
             "beat": {
                 "bpm": [[0, 120]],
                 "scroll_speed": [
@@ -875,7 +875,7 @@ TEST_CASE("KSON BeatInfo scroll_speed", "[kson_io][beat]") {
 TEST_CASE("KSON BeatInfo stop", "[kson_io][beat]") {
 	SECTION("No stop") {
 		std::string ksonData = R"({
-			"version": "0.9.0-beta2",
+			"format_version": 1,
 			"beat": {
 				"bpm": [[0, 120]]
 			}
@@ -890,7 +890,7 @@ TEST_CASE("KSON BeatInfo stop", "[kson_io][beat]") {
 
 	SECTION("Simple stop values") {
 		std::string ksonData = R"({
-			"version": "0.9.0-beta2",
+			"format_version": 1,
 			"beat": {
 				"bpm": [[0, 120]],
 				"stop": [
@@ -911,7 +911,7 @@ TEST_CASE("KSON BeatInfo stop", "[kson_io][beat]") {
 
 	SECTION("Empty stop array") {
 		std::string ksonData = R"({
-			"version": "0.9.0-beta2",
+			"format_version": 1,
 			"beat": {
 				"bpm": [[0, 120]],
 				"stop": []
@@ -975,7 +975,7 @@ TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]
         nlohmann::json json1 = nlohmann::json::parse(ksonString1);
         nlohmann::json json2 = nlohmann::json::parse(ksonString2);
         
-        REQUIRE(json1["version"] == json2["version"]);
+        REQUIRE(json1["format_version"] == json2["format_version"]);
         REQUIRE(json1["meta"] == json2["meta"]);
         REQUIRE(json1["beat"] == json2["beat"]);
         REQUIRE(json1["gauge"] == json2["gauge"]);
@@ -1045,7 +1045,7 @@ TEST_CASE("KSON I/O round-trip (all songs)", "[ksh_io][kson_io][round_trip][all_
         nlohmann::json json1 = nlohmann::json::parse(ksonString1);
         nlohmann::json json2 = nlohmann::json::parse(ksonString2);
         
-        REQUIRE(json1["version"] == json2["version"]);
+        REQUIRE(json1["format_version"] == json2["format_version"]);
         REQUIRE(json1["meta"] == json2["meta"]);
         REQUIRE(json1["beat"] == json2["beat"]);
         REQUIRE(json1["gauge"] == json2["gauge"]);
@@ -1562,6 +1562,74 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
 		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.0));
 		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.vf == Approx(3.0));
+	}
+}
+
+TEST_CASE("KSON format_version validation", "[kson_io]") {
+	SECTION("Missing format_version field") {
+		std::string ksonData = R"({
+			"meta": {
+				"title": "Test",
+				"artist": "Test",
+				"chart_author": "Test",
+				"level": 1,
+				"disp_bpm": "120"
+			},
+			"beat": {
+				"bpm": [[0, 120.0]]
+			}
+		})";
+
+		std::istringstream iss(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(iss);
+
+		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
+		REQUIRE(chart.warnings.size() > 0);
+		REQUIRE(chart.warnings[0] == "Missing required field: format_version");
+	}
+
+	SECTION("Invalid format_version type (string)") {
+		std::string ksonData = R"({
+			"format_version": "1",
+			"meta": {
+				"title": "Test",
+				"artist": "Test",
+				"chart_author": "Test",
+				"level": 1,
+				"disp_bpm": "120"
+			},
+			"beat": {
+				"bpm": [[0, 120.0]]
+			}
+		})";
+
+		std::istringstream iss(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(iss);
+
+		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
+		REQUIRE(chart.warnings.size() > 0);
+		REQUIRE(chart.warnings[0] == "Invalid format_version: must be an integer");
+	}
+
+	SECTION("Valid format_version") {
+		std::string ksonData = R"({
+			"format_version": 1,
+			"meta": {
+				"title": "Test",
+				"artist": "Test",
+				"chart_author": "Test",
+				"level": 1,
+				"disp_bpm": "120"
+			},
+			"beat": {
+				"bpm": [[0, 120.0]]
+			}
+		})";
+
+		std::istringstream iss(ksonData);
+		kson::ChartData chart = kson::LoadKSONChartData(iss);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
 	}
 }
 
