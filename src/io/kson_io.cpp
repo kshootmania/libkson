@@ -898,25 +898,37 @@ namespace
 	GraphPoint ParseGraphPoint(const nlohmann::json& j, ChartData& chartData)
 	{
 		// Parse v (GraphValue)
-		GraphValue v{ 0.0 };
-		if (j.is_number())
-		{
-			v = GraphValue{ j.get<double>() };
-		}
-		else if (j.is_array() && j.size() >= 2)
-		{
-			v = GraphValue{ j[0].get<double>(), j[1].get<double>() };
-		}
-		else
-		{
-			chartData.warnings.push_back("Invalid graph value format");
-		}
+		GraphValue v = ParseGraphValue(j, chartData);
 
 		// Parse curve (GraphCurveValue) if present (3rd element)
 		GraphCurveValue curve{ 0.0, 0.0 };
 		if (j.is_array() && j.size() >= 3 && j[2].is_array() && j[2].size() >= 2)
 		{
 			curve = GraphCurveValue{ j[2][0].get<double>(), j[2][1].get<double>() };
+		}
+
+		return GraphPoint{ v, curve };
+	}
+
+	// Parse GraphPoint from an array item where item[valueIdx] is the value and item[curveIdx] is the curve
+	GraphPoint ParseGraphPointFromArrayItem(
+		const nlohmann::json& item,
+		std::size_t valueIdx,
+		std::size_t curveIdx,
+		ChartData& chartData)
+	{
+		// Parse v (GraphValue)
+		GraphValue v{ 0.0 };
+		if (item.size() > valueIdx)
+		{
+			v = ParseGraphValue(item[valueIdx], chartData);
+		}
+
+		// Parse curve (GraphCurveValue) if present
+		GraphCurveValue curve{ 0.0, 0.0 };
+		if (item.size() > curveIdx && item[curveIdx].is_array() && item[curveIdx].size() >= 2)
+		{
+			curve = GraphCurveValue{ item[curveIdx][0].get<double>(), item[curveIdx][1].get<double>() };
 		}
 
 		return GraphPoint{ v, curve };
@@ -960,7 +972,7 @@ namespace
 			if (item.is_array() && item.size() >= 2)
 			{
 				Pulse pulse = item[0].get<Pulse>();
-				GraphPoint point = ParseGraphPoint(item[1], chartData);
+				GraphPoint point = ParseGraphPointFromArrayItem(item, 1, 2, chartData);
 				result[pulse] = point;
 			}
 			else
@@ -1150,7 +1162,7 @@ namespace
 						if (point.is_array() && point.size() >= 2)
 						{
 							RelPulse ry = point[0].get<RelPulse>();
-							GraphPoint graphPoint = ParseGraphPoint(point[1], chartData);
+							GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, chartData);
 							section.v[ry] = graphPoint;
 						}
 					}
@@ -1637,7 +1649,7 @@ namespace
 							if (point.is_array() && point.size() >= 2)
 							{
 								RelPulse ry = point[0].get<RelPulse>();
-								GraphPoint graphPoint = ParseGraphPoint(point[1], chartData);
+								GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, chartData);
 								section.v[ry] = graphPoint;
 							}
 						}
