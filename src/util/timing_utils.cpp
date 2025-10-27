@@ -312,3 +312,70 @@ kson::Pulse kson::LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>&
 	const auto& [ry, lastPoint] = *lastSection.v.rbegin();
 	return y + ry;
 }
+
+double kson::GetModeBPM(const BeatInfo& beatInfo)
+{
+	constexpr double kErrorBPM = 120.0;
+
+	if (beatInfo.bpm.empty())
+	{
+		assert(false && "beatInfo.bpm is empty");
+		return kErrorBPM;
+	}
+
+	if (beatInfo.bpm.size() == 1U)
+	{
+		return beatInfo.bpm.begin()->second;
+	}
+
+	// Calculate total pulse duration for each BPM value
+	std::unordered_map<std::int32_t, RelPulse> bpmTotalPulses;
+	Pulse prevY = Pulse{ 0 };
+	std::optional<std::int32_t> prevBPMInt;
+	for (const auto& [y, bpm] : beatInfo.bpm)
+	{
+		if (y < prevY)
+		{
+			assert(false && "y must be larger than or equal to prevY in beatInfo.bpm");
+			return kErrorBPM;
+		}
+		if (prevBPMInt.has_value())
+		{
+			bpmTotalPulses[prevBPMInt.value()] += y - prevY;
+		}
+
+		prevY = y;
+		prevBPMInt = static_cast<std::int32_t>(bpm);
+	}
+
+	if (bpmTotalPulses.empty())
+	{
+		// Only one BPM change exists
+		if (prevBPMInt.has_value())
+		{
+			return static_cast<double>(prevBPMInt.value());
+		}
+		assert(false && "bpmTotalPulses must not be empty");
+		return kErrorBPM;
+	}
+
+	// Find BPM with largest total pulse duration
+	const auto itr = std::max_element(
+		bpmTotalPulses.begin(),
+		bpmTotalPulses.end(),
+		[](const auto& a, const auto& b) { return a.second < b.second; });
+
+	if (itr == bpmTotalPulses.end())
+	{
+		assert(false && "max_element must not return end iterator");
+		return kErrorBPM;
+	}
+
+	const auto& [modeBPM, modeBPMTotalPulse] = *itr;
+	return static_cast<double>(modeBPM);
+}
+
+double kson::GetEffectiveStdBPM(const ChartData& chartData)
+{
+	return chartData.meta.stdBPM > 0.0 ? chartData.meta.stdBPM : GetModeBPM(chartData.beat);
+}

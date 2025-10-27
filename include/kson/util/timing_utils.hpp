@@ -2,6 +2,7 @@
 #include "kson/common/common.hpp"
 #include "kson/note/note_info.hpp"
 #include "kson/beat/beat_info.hpp"
+#include "kson/chart_data.hpp"
 
 namespace kson
 {
@@ -51,6 +52,10 @@ namespace kson
 	double TempoAt(Pulse pulse, const BeatInfo& beatInfo);
 
 	const TimeSig& TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
+
+	double GetModeBPM(const BeatInfo& beatInfo);
+
+	double GetEffectiveStdBPM(const ChartData& chartData);
 
 	kson::Pulse LastNoteEndY(const kson::NoteInfo& noteInfo);
 	kson::Pulse LastNoteEndYButtonLane(const kson::ByPulse<kson::Interval>& lane);
