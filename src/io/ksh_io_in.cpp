@@ -32,9 +32,10 @@ namespace
 	constexpr std::size_t kZoomMaxCharLegacy = 4;       // ver <  1.67
 	constexpr std::size_t kZoomMaxChar = std::string::npos; // ver >= 1.67
 
-	// Maximum value of center_split / manual tilt
+	// Maximum value of center_split, manual tilt, rotation_deg
 	constexpr double kCenterSplitAbsMax = 65535.0;
 	constexpr double kManualTiltAbsMax = 1000.0;
+	constexpr double kRotationDegAbsMax = 65535.0;
 
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
@@ -1488,7 +1489,7 @@ namespace
 				const auto layerOptionArray = Split<3>(layerStr, layerSeparator);
 				chartData.bg.legacy.layer.filename = layerOptionArray[0];
 				chartData.bg.legacy.layer.duration = ParseNumeric<std::int32_t>(layerOptionArray[1]);
-				const std::int32_t rotationFlags = ParseNumeric<std::int32_t>(layerOptionArray[1], kRotationFlagTilt | kRotationFlagSpin);
+				const std::int32_t rotationFlags = ParseNumeric<std::int32_t>(layerOptionArray[2], kRotationFlagTilt | kRotationFlagSpin);
 				chartData.bg.legacy.layer.rotation = {
 					.tilt = ((rotationFlags & kRotationFlagTilt) != 0),
 					.spin = ((rotationFlags & kRotationFlagSpin) != 0),
@@ -1860,7 +1861,10 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				else if (key == "rotation_deg")
 				{
 					const double dValue = ParseNumeric<double>(value);
-					InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);
+					if (std::abs(dValue) <= kRotationDegAbsMax)
+					{
+						InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);
+					}
 				}
 				else if (key == "tilt")
 				{
@@ -1954,7 +1958,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					const auto strPair = Split<2>(value, ';');
 					currentMeasureFXKeySounds[isL ? 0 : 1].insert_or_assign(lineIdx, BufKeySound{
 						.name = strPair[0],
-						.vol = ParseNumeric<std::int32_t>(strPair[1], 50),
+						.vol = ParseNumeric<std::int32_t>(strPair[1], 100),
 					});
 				}
 				else if (key == "filtertype")

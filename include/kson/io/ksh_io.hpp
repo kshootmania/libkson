@@ -11,4 +11,8 @@ namespace kson
 	ChartData LoadKSHChartData(std::istream& stream);
 
 	ChartData LoadKSHChartData(const std::string& filePath);
+
+	bool SaveKSHChartData(std::ostream& stream, const ChartData& chartData);
+
+	bool SaveKSHChartData(const std::string& filePath, const ChartData& chartData);
 }

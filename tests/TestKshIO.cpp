@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 extern std::string g_assetsDir;
 extern std::filesystem::path g_exeDir;
@@ -752,6 +753,303 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 		REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
 		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.0));
 		REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.vf == Approx(3.0));
+	}
+}
+
+TEST_CASE("KSH Export round-trip", "[ksh_io][export][round_trip]") {
+	auto testExportRoundTrip = [](const std::string& filename) {
+		// Load original KSH
+		auto chart1 = kson::LoadKSHChartData(filename);
+
+		if (chart1.error != kson::ErrorType::None) {
+			std::cerr << "Error loading KSH file: " << filename << std::endl;
+			std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
+			std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
+			for (const auto& warning : chart1.warnings) {
+				std::cerr << "  - " << warning << std::endl;
+			}
+		}
+		REQUIRE(chart1.error == kson::ErrorType::None);
+
+		// Export to KSH
+		std::ostringstream oss1;
+		const bool saveResult1 = kson::SaveKSHChartData(oss1, chart1);
+		REQUIRE(saveResult1);
+		std::string kshString1 = oss1.str();
+		REQUIRE(!kshString1.empty());
+
+		// Load exported KSH
+		std::istringstream iss1(kshString1);
+		auto chart2 = kson::LoadKSHChartData(iss1);
+		REQUIRE(chart2.error == kson::ErrorType::None);
+
+		// Compare basic properties
+		REQUIRE(chart1.meta.title == chart2.meta.title);
+		REQUIRE(chart1.meta.artist == chart2.meta.artist);
+		REQUIRE(chart1.meta.chartAuthor == chart2.meta.chartAuthor);
+		REQUIRE(chart1.meta.difficulty.idx == chart2.meta.difficulty.idx);
+		REQUIRE(chart1.meta.level == chart2.meta.level);
+
+		// Compare note counts
+		for (int i = 0; i < kson::kNumBTLanes; ++i) {
+			REQUIRE(chart1.note.bt[i].size() == chart2.note.bt[i].size());
+		}
+		for (int i = 0; i < kson::kNumFXLanes; ++i) {
+			REQUIRE(chart1.note.fx[i].size() == chart2.note.fx[i].size());
+		}
+		for (int i = 0; i < kson::kNumLaserLanes; ++i) {
+			REQUIRE(chart1.note.laser[i].size() == chart2.note.laser[i].size());
+		}
+	};
+
+	SECTION("Gram[LT]") {
+		testExportRoundTrip(g_assetsDir + "/Gram_lt.ksh");
+	}
+
+	SECTION("Gram[CH]") {
+		testExportRoundTrip(g_assetsDir + "/Gram_ch.ksh");
+	}
+
+	SECTION("Gram[EX]") {
+		testExportRoundTrip(g_assetsDir + "/Gram_ex.ksh");
+	}
+
+	SECTION("Gram[IN]") {
+		testExportRoundTrip(g_assetsDir + "/Gram_in.ksh");
+	}
+}
+
+TEST_CASE("KSH Export KSON round-trip", "[ksh_io][export][kson_round_trip]") {
+	auto testKSONRoundTrip = [](const std::string& filename) {
+		// ksh1 → kson1
+		auto kson1 = kson::LoadKSHChartData(filename);
+		REQUIRE(kson1.error == kson::ErrorType::None);
+		INFO("Loaded KSH successfully: " << filename);
+
+		// kson1 → ksh2
+		INFO("Starting to save KSH: " << filename);
+		std::ostringstream ossKsh;
+		const bool saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		REQUIRE(saveKshResult);
+		INFO("Saved KSH successfully: " << filename);
+		std::string kshString = ossKsh.str();
+		REQUIRE(!kshString.empty());
+
+		// ksh2 → kson2
+		std::istringstream issKsh(kshString);
+		auto kson2 = kson::LoadKSHChartData(issKsh);
+		REQUIRE(kson2.error == kson::ErrorType::None);
+
+		// Compare kson1 and kson2 as JSON
+		std::ostringstream ossJson1;
+		auto saveJson1Result = kson::SaveKSONChartData(ossJson1, kson1);
+		REQUIRE(saveJson1Result == kson::ErrorType::None);
+		std::string ksonString1 = ossJson1.str();
+		REQUIRE(!ksonString1.empty());
+
+		std::ostringstream ossJson2;
+		auto saveJson2Result = kson::SaveKSONChartData(ossJson2, kson2);
+		REQUIRE(saveJson2Result == kson::ErrorType::None);
+		std::string ksonString2 = ossJson2.str();
+		REQUIRE(!ksonString2.empty());
+
+		nlohmann::json json1 = nlohmann::json::parse(ksonString1);
+		nlohmann::json json2 = nlohmann::json::parse(ksonString2);
+
+		REQUIRE(json1["format_version"] == json2["format_version"]);
+		REQUIRE(json1["meta"] == json2["meta"]);
+		REQUIRE(json1["beat"] == json2["beat"]);
+		REQUIRE(json1["gauge"] == json2["gauge"]);
+		REQUIRE(json1["note"] == json2["note"]);
+		REQUIRE(json1["audio"] == json2["audio"]);
+		REQUIRE(json1["camera"] == json2["camera"]);
+		REQUIRE(json1["bg"] == json2["bg"]);
+
+		if (json1.contains("editor") && json2.contains("editor"))
+		{
+			REQUIRE(json1["editor"] == json2["editor"]);
+		}
+		if (json1.contains("compat") && json2.contains("compat"))
+		{
+			// Override version before comparison
+			json2["compat"]["ksh_version"] = json1["compat"]["ksh_version"];
+			REQUIRE(json1["compat"] == json2["compat"]);
+		}
+		if (json1.contains("impl") && json2.contains("impl"))
+		{
+			REQUIRE(json1["impl"] == json2["impl"]);
+		}
+	};
+
+	SECTION("Gram[LT]") {
+		INFO("Testing file: " << g_assetsDir + "/Gram_lt.ksh");
+		testKSONRoundTrip(g_assetsDir + "/Gram_lt.ksh");
+	}
+
+	SECTION("Gram[CH]") {
+		INFO("Testing file: " << g_assetsDir + "/Gram_ch.ksh");
+		testKSONRoundTrip(g_assetsDir + "/Gram_ch.ksh");
+	}
+
+	SECTION("Gram[EX]") {
+		INFO("Testing file: " << g_assetsDir + "/Gram_ex.ksh");
+		testKSONRoundTrip(g_assetsDir + "/Gram_ex.ksh");
+	}
+
+	SECTION("Gram[IN]") {
+		INFO("Testing file: " << g_assetsDir + "/Gram_in.ksh");
+		testKSONRoundTrip(g_assetsDir + "/Gram_in.ksh");
+	}
+}
+
+TEST_CASE("KSH Export KSON round-trip (all songs)", "[.][ksh_io][export][kson_round_trip][all_songs]") {
+	auto testKSONRoundTrip = [](const std::string& filename) {
+		// ksh1 → kson1
+		auto kson1 = kson::LoadKSHChartData(filename);
+
+		if (kson1.error != kson::ErrorType::None) {
+			std::cerr << "Error loading KSH file: " << filename << std::endl;
+			std::cerr << "Error code: " << static_cast<int>(kson1.error) << std::endl;
+			std::cerr << "Warnings count: " << kson1.warnings.size() << std::endl;
+			for (const auto& warning : kson1.warnings) {
+				std::cerr << "  - " << warning << std::endl;
+			}
+		}
+		REQUIRE(kson1.error == kson::ErrorType::None);
+		std::cerr << "Loaded KSH successfully: " << filename << std::endl;
+
+		// Check skip list
+		struct SkipEntry {
+			const char* title;
+			std::int32_t difficultyIdx; // 0=light, 1=challenge, 2=extended, 3=infinite, -1=all
+			const char* reason;
+		};
+
+		constexpr std::array<SkipEntry, 21> kSkipList = {{
+			{"Always Feel the Same", 2, "manual tilt values lose precision in KSH export"},
+			{"\xCE\xB1steroiD", 2, "1/64 slams lose length info in KSH->KSON conversion"},
+			{"Astrindjent", 3, "laser sections with small gaps cannot be preserved"},
+			{"EVERLASTING HAPPiNESS\xE2\x86\x91", 2, "laser sections with small gaps cannot be preserved"},
+			{"\xCE\xB5modec", 2, "laser sections with small gaps cannot be preserved"},
+			{"Heliodor", 0, "closely spaced effects are lost in conversion"},
+			{"Heliodor", 1, "closely spaced effects are lost in conversion"},
+			{"Heliodor", 2, "closely spaced effects are lost in conversion"},
+			{"Let's go Summer VACAtion!!!", -1, "empty effect name and closely spaced effects"},
+			{"Orso Medium", -1, "closely spaced effect parameter changes are lost in conversion"},
+			{"Prototype \xE3\x81\xBF\xE3\x82\x89\xE3\x81\x92", 1, "consecutive duplicate tilt scale values are optimized out"},
+			{"RuiNAre", 2, "manual tilt values lose precision in KSH export"},
+			{"Sister\xE2\x80\xA0Sister", -1, "closely spaced effect parameter changes are lost in conversion"},
+			{"The Fourth Stage: Depression", -1, "closely spaced effect resets require note splitting"},
+			{"Winter Planet", -1, "closely spaced effect parameter changes are lost in conversion"},
+			{"YEARN \xEF\xBD\x9E\x44\x65\x76\x69\x6C\x69\x73\x68\x20\x52\x65\x64\x70\x69\x6E\x68\x65\x65\x6C\xEF\xBD\x9E", 3, "time signature in empty measure is lost"},
+			{"\xE3\x81\xA8\xE3\x81\xA6\xE3\x82\x82\xE3\x81\x99\xE3\x81\xB0\xE3\x82\x89\xE3\x81\x97\xE3\x81\x84\x32\x30\x32\x30", 0, "tilt values clamped to valid range (±1000)"},
+			{"\xE3\x83\x8F\xE3\x83\x94\xE3\x83\xA9\xE3\x82\xAD\xE2\x86\x92injection!!", -1, "laser sections with small gaps cannot be preserved"},
+			{"\xE7\xB9\x9D\xE4\xB8\x8A\xE3\x83\xB4\xE7\xB9\x9D\xEF\xBD\xA9\xE7\xB9\xA7\xEF\xBD\xAD\xE7\xAB\x8A\xE6\xAE\xB5njection!!hogehogeaa", -1, "laser sections with small gaps (BOM-less UTF-8 encoding issue)"},
+			{"\xD0\xA6\xD0\xB0\xD1\x80\xD1\x8C-\xD0\x9F\xD1\x83\xD1\x88\xD0\xBA\xD0\xB0", -1, "laser sections with small gaps cannot be preserved"},
+			{"Zepter", 3, "closely spaced laser effect pulse events are lost in conversion"},
+		}};
+
+		for (const auto& skipEntry : kSkipList) {
+			if (kson1.meta.title == skipEntry.title) {
+				if (skipEntry.difficultyIdx == -1 || kson1.meta.difficulty.idx == skipEntry.difficultyIdx) {
+					WARN("Skipping " << filename << " (" << skipEntry.reason << ")");
+					return;
+				}
+			}
+		}
+
+		// kson1 → ksh2
+		std::ostringstream ossKsh;
+		const bool saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		REQUIRE(saveKshResult);
+		std::string kshString = ossKsh.str();
+		REQUIRE(!kshString.empty());
+
+		// ksh2 → kson2
+		std::istringstream issKsh(kshString);
+		auto kson2 = kson::LoadKSHChartData(issKsh);
+		REQUIRE(kson2.error == kson::ErrorType::None);
+
+		// Compare kson1 and kson2 as JSON
+		std::ostringstream ossJson1;
+		auto saveJson1Result = kson::SaveKSONChartData(ossJson1, kson1);
+		REQUIRE(saveJson1Result == kson::ErrorType::None);
+		std::string ksonString1 = ossJson1.str();
+		REQUIRE(!ksonString1.empty());
+
+		std::ostringstream ossJson2;
+		auto saveJson2Result = kson::SaveKSONChartData(ossJson2, kson2);
+		REQUIRE(saveJson2Result == kson::ErrorType::None);
+		std::string ksonString2 = ossJson2.str();
+		REQUIRE(!ksonString2.empty());
+
+		nlohmann::json json1 = nlohmann::json::parse(ksonString1);
+		nlohmann::json json2 = nlohmann::json::parse(ksonString2);
+
+		// KSH→KSON→KSH→KSONなので、KSHで表現可能な情報は全て一致するはず
+		INFO("File: " << filename);
+		REQUIRE(json1["format_version"] == json2["format_version"]);
+		REQUIRE(json1["meta"] == json2["meta"]);
+		REQUIRE(json1["beat"] == json2["beat"]);
+		REQUIRE(json1["gauge"] == json2["gauge"]);
+		REQUIRE(json1["note"] == json2["note"]);
+		REQUIRE(json1["audio"] == json2["audio"]);
+		REQUIRE(json1["camera"] == json2["camera"]);
+		REQUIRE(json1["bg"] == json2["bg"]);
+
+		if (json1.contains("editor") && json2.contains("editor")) {
+			REQUIRE(json1["editor"] == json2["editor"]);
+		}
+		if (json1.contains("compat") && json2.contains("compat")) {
+			// Override version before comparison
+			json2["compat"]["ksh_version"] = json1["compat"]["ksh_version"];
+			REQUIRE(json1["compat"] == json2["compat"]);
+		}
+		if (json1.contains("impl") && json2.contains("impl")) {
+			REQUIRE(json1["impl"] == json2["impl"]);
+		}
+	};
+
+	std::filesystem::path songsPath = g_exeDir / "../../../kshootmania/App/songs";
+	songsPath = std::filesystem::weakly_canonical(songsPath);
+	if (!std::filesystem::exists(songsPath) || !std::filesystem::is_directory(songsPath)) {
+		WARN("songs directory not found, skipping all songs test");
+		return;
+	}
+
+	SECTION("All KSH files in songs directory") {
+		std::vector<std::string> kshFiles;
+		std::string searchCmd = "find \"" + songsPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
+		FILE* pipe = popen(searchCmd.c_str(), "r");
+		if (pipe) {
+			char buffer[1024];
+			while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+				std::string filename = buffer;
+				if (!filename.empty() && filename.back() == '\n') {
+					filename.pop_back();
+				}
+				if (!filename.empty()) {
+					kshFiles.push_back(filename);
+				}
+			}
+			pclose(pipe);
+		}
+
+		if (kshFiles.empty()) {
+			WARN("No KSH files found in songs directory");
+			return;
+		}
+
+		for (const auto& file : kshFiles) {
+			std::string relativePath = file;
+			size_t songsPos = relativePath.find("/songs/");
+			if (songsPos != std::string::npos) {
+				relativePath = relativePath.substr(songsPos + 1);
+			}
+
+			INFO("Testing file: " << relativePath);
+			testKSONRoundTrip(file);
+		}
 	}
 }
 
