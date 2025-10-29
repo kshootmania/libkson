@@ -289,6 +289,26 @@ namespace
 			maxPulse = std::max(maxPulse, chartData.beat.bpm.rbegin()->first);
 		}
 
+		// Time signature changes
+		if (!chartData.beat.timeSig.empty())
+		{
+			const std::int64_t lastMeasureIdx = chartData.beat.timeSig.rbegin()->first;
+			Pulse pulseAtLastTimeSig = 0;
+			for (std::int64_t idx = 0; idx <= lastMeasureIdx; ++idx)
+			{
+				const TimeSig ts = ValueAtOrDefault(chartData.beat.timeSig, idx, TimeSig{ 4, 4 });
+				if (idx == lastMeasureIdx)
+				{
+					break;
+				}
+				if (ts.d != 0)
+				{
+					pulseAtLastTimeSig += kResolution4 * ts.n / ts.d;
+				}
+			}
+			maxPulse = std::max(maxPulse, pulseAtLastTimeSig);
+		}
+
 		// Stops
 		if (!chartData.beat.stop.empty())
 		{
@@ -431,12 +451,6 @@ namespace
 		if (!chartData.compat.kshUnknown.line.empty())
 		{
 			maxPulse = std::max(maxPulse, chartData.compat.kshUnknown.line.rbegin()->first);
-		}
-
-		// Round up to next measure
-		if (maxPulse % kResolution4 != 0)
-		{
-			maxPulse = ((maxPulse / kResolution4) + 1) * kResolution4;
 		}
 
 		return maxPulse;
@@ -1690,8 +1704,15 @@ namespace
 				updateGCD(pulse);
 				updateGCD(pulse + interval.length);
 
-				// Long BT notes require doubled resolution to show endpoints
-				if (interval.length > 0)
+				// Long BT notes starting in this measure require doubled resolution
+				if (interval.length > 0 && pulse >= measureStart && pulse < measureEnd)
+				{
+					shouldDoubleResolution = true;
+				}
+
+				// Long BT notes ending in this measure require doubled resolution
+				const Pulse endPulse = pulse + interval.length;
+				if (interval.length > 0 && endPulse >= measureStart && endPulse < measureEnd)
 				{
 					shouldDoubleResolution = true;
 				}
@@ -1706,8 +1727,15 @@ namespace
 				updateGCD(pulse);
 				updateGCD(pulse + interval.length);
 
-				// Long FX notes require doubled resolution to show endpoints
-				if (interval.length > 0)
+				// Long FX notes starting in this measure require doubled resolution
+				if (interval.length > 0 && pulse >= measureStart && pulse < measureEnd)
+				{
+					shouldDoubleResolution = true;
+				}
+
+				// Long FX notes ending in this measure require doubled resolution
+				const Pulse endPulse = pulse + interval.length;
+				if (interval.length > 0 && endPulse >= measureStart && endPulse < measureEnd)
 				{
 					shouldDoubleResolution = true;
 				}
@@ -1719,44 +1747,27 @@ namespace
 		{
 			for (const auto& seg : laserSegments[laneIdx])
 			{
-				updateGCD(seg.startPulse); // Segment start
-				updateGCD(seg.startPulse + seg.length); // Segment end
-
-				// Any laser requires doubled resolution
-				shouldDoubleResolution = true;
+				updateGCD(seg.startPulse);
+				updateGCD(seg.startPulse + seg.length);
 			}
 
-			// Also include gaps between KSON laser sections in GCD calculation
-			Pulse prevSectionEnd = 0;
 			for (const auto& [sectionStart, section] : chartData.note.laser[laneIdx])
 			{
-				// Calculate section end
 				Pulse sectionEnd = sectionStart;
-				for (const auto& [relPulse, point] : section.v)
+				if (!section.v.empty())
 				{
-					sectionEnd = std::max(sectionEnd, sectionStart + relPulse);
+					sectionEnd = sectionStart + section.v.rbegin()->first;
 				}
 
-				// Skip sections outside this measure
-				if (sectionStart >= measureEnd)
+				if (sectionStart >= measureStart && sectionStart < measureEnd)
 				{
-					break;
-				}
-				if (sectionEnd < measureStart)
-				{
-					prevSectionEnd = sectionEnd;
-					continue;
+					shouldDoubleResolution = true;
 				}
 
-				// Include gap between sections in GCD calculation
-				if (prevSectionEnd >= measureStart && prevSectionEnd < measureEnd &&
-					sectionStart > prevSectionEnd && sectionStart >= measureStart)
+				if (sectionEnd >= measureStart && sectionEnd < measureEnd)
 				{
-					const Pulse gap = sectionStart - prevSectionEnd;
-					gcd = std::gcd(gcd, gap);
+					shouldDoubleResolution = true;
 				}
-
-				prevSectionEnd = sectionEnd;
 			}
 		}
 
@@ -1922,18 +1933,11 @@ namespace
 		// Calculate base division
 		std::int32_t division = static_cast<std::int32_t>(measureLength / gcd);
 
-		// Double resolution if needed (to ensure long note endpoints are visible)
-		// But only if the doubled division would still divide the measure evenly
-		if (shouldDoubleResolution && division < measureLength)
+		if (division < measureLength)
 		{
-			const std::int32_t doubledDivision = division * 2;
-			if (measureLength % doubledDivision == 0)
-			{
-				division = doubledDivision;
-			}
+			division *= (1 + (shouldDoubleResolution ? 1 : 0));
 		}
 
-		// If not divisible, use full measure length
 		if (measureLength % division != 0)
 		{
 			division = static_cast<std::int32_t>(measureLength);
