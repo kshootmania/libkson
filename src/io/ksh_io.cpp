@@ -540,38 +540,24 @@ namespace
 		}
 	}
 
-	// TODO: refactor
-	class AbstractPreparedLongNote
+	template<typename T>
+	class PreparedInserter
 	{
-	protected:
+	private:
 		bool m_prepared = false;
-
-		Pulse m_time = 0;
-
-		RelPulse m_length = 0;
-
-		ChartData* m_pTargetChartData = nullptr; // TODO: this is troublesome
-
-		std::size_t m_targetLaneIdx = 0;
+		Pulse m_startTime = 0;
+		T m_data;
 
 	public:
-		AbstractPreparedLongNote() = default;
+		PreparedInserter() = default;
 
-		AbstractPreparedLongNote(ChartData* pTargetChartData, std::size_t targetLaneIdx)
-			: m_pTargetChartData(pTargetChartData)
-			, m_targetLaneIdx(targetLaneIdx)
-		{
-		}
-
-		virtual ~AbstractPreparedLongNote() = 0;
-
-		void prepare(Pulse time)
+		void prepare(Pulse time, T initialData = T{})
 		{
 			if (!m_prepared)
 			{
 				m_prepared = true;
-				m_time = time;
-				m_length = 0;
+				m_startTime = time;
+				m_data = std::move(initialData);
 			}
 		}
 
@@ -580,100 +566,213 @@ namespace
 			return m_prepared;
 		}
 
-		void extendLength(RelPulse relPulse)
+		Pulse startTime() const
 		{
-			m_length += relPulse;
+			return m_startTime;
 		}
 
-		virtual void clear()
+		T& data()
+		{
+			return m_data;
+		}
+
+		const T& data() const
+		{
+			return m_data;
+		}
+
+		std::optional<std::pair<Pulse, T>> publish()
+		{
+			if (!m_prepared)
+			{
+				return std::nullopt;
+			}
+
+			auto result = std::make_pair(m_startTime, std::move(m_data));
+			clear();
+			return result;
+		}
+
+		void clear()
 		{
 			m_prepared = false;
-			m_time = 0;
-			m_length = 0;
+			m_startTime = 0;
+			m_data = T{};
 		}
 	};
 
-	AbstractPreparedLongNote::~AbstractPreparedLongNote() = default;
-
-	class PreparedLongBTNote : public AbstractPreparedLongNote
+	struct LongNoteData
 	{
+		RelPulse length = 0;
+
+		void extendLength(RelPulse relPulse)
+		{
+			length += relPulse;
+		}
+	};
+
+	struct LongFXNoteData
+	{
+		RelPulse length = 0;
+		std::optional<std::string> audioEffectStr;
+		std::optional<std::string> audioEffectParamStr;
+		bool isLegacyChar = false;
+
+		void extendLength(RelPulse relPulse)
+		{
+			length += relPulse;
+		}
+	};
+
+	struct GraphSectionData
+	{
+		ByRelPulse<GraphPoint> points;
+
+		void addPoint(RelPulse relTime, double value)
+		{
+			if (points.contains(relTime))
+			{
+				points.at(relTime).v.vf = value;
+			}
+			else
+			{
+				points.emplace(relTime, GraphPoint{ value });
+			}
+		}
+	};
+
+	struct PreparedLaneSpin;
+
+	struct LaserSectionData
+	{
+		ByRelPulse<GraphPoint> points;
+		bool wide = false;
+		ByRelPulse<PreparedLaneSpin> laneSpins;
+
+		void addPoint(RelPulse relTime, double value)
+		{
+			if (points.contains(relTime))
+			{
+				points.at(relTime).v.vf = value;
+			}
+			else
+			{
+				points.emplace(relTime, GraphPoint{ value });
+			}
+		}
+	};
+
+	class PreparedLongBTNote
+	{
+	private:
+		PreparedInserter<LongNoteData> m_inserter;
+		ChartData* m_pTargetChartData = nullptr;
+		std::size_t m_targetLaneIdx = 0;
+
 	public:
 		PreparedLongBTNote() = default;
 
 		PreparedLongBTNote(ChartData* pTargetChartData, std::size_t targetLaneIdx)
-			: AbstractPreparedLongNote(pTargetChartData, targetLaneIdx)
+			: m_pTargetChartData(pTargetChartData)
+			, m_targetLaneIdx(targetLaneIdx)
 		{
 		}
-
-		virtual ~PreparedLongBTNote() = default;
-
-		void publishLongBTNote()
-		{
-			if (!m_prepared)
-			{
-				return;
-			}
-
-			m_pTargetChartData->note.bt[m_targetLaneIdx].emplace(m_time, Interval{ .length = m_length });
-
-			clear();
-		}
-	};
-
-	class PreparedLongFXNote : public AbstractPreparedLongNote // TODO: remove this bad inheritance
-	{
-	private:
-		std::optional<std::string> m_audioEffectStr;
-		std::optional<std::string> m_audioEffectParamStr;
-		bool m_isLegacyChar = false;
-
-	public:
-		PreparedLongFXNote() = default; // TODO: this is troublesome
-
-		PreparedLongFXNote(ChartData* pTargetChartData, std::size_t targetLaneIdx)
-			: AbstractPreparedLongNote(pTargetChartData, targetLaneIdx)
-		{
-		}
-
-		virtual ~PreparedLongFXNote() = default;
 
 		void prepare(Pulse time)
 		{
-			if (m_isLegacyChar)
+			m_inserter.prepare(time);
+		}
+
+		bool prepared() const
+		{
+			return m_inserter.prepared();
+		}
+
+		void extendLength(RelPulse relPulse)
+		{
+			m_inserter.data().extendLength(relPulse);
+		}
+
+		void publishLongBTNote()
+		{
+			if (auto result = m_inserter.publish())
+			{
+				const auto& [time, data] = *result;
+				m_pTargetChartData->note.bt[m_targetLaneIdx].emplace(time, Interval{ .length = data.length });
+			}
+		}
+
+		void clear()
+		{
+			m_inserter.clear();
+		}
+	};
+
+	class PreparedLongFXNote
+	{
+	private:
+		PreparedInserter<LongFXNoteData> m_inserter;
+		ChartData* m_pTargetChartData = nullptr;
+		std::size_t m_targetLaneIdx = 0;
+
+	public:
+		PreparedLongFXNote() = default;
+
+		PreparedLongFXNote(ChartData* pTargetChartData, std::size_t targetLaneIdx)
+			: m_pTargetChartData(pTargetChartData)
+			, m_targetLaneIdx(targetLaneIdx)
+		{
+		}
+
+		void prepare(Pulse time)
+		{
+			if (m_inserter.prepared() && m_inserter.data().isLegacyChar)
 			{
 				prepare(time, "", "", false); // If the long note starts with a legacy character (e.g., "F" = Flanger), insert no audio effect when it changes to "1"
 				return;
 			}
 
-			AbstractPreparedLongNote::prepare(time);
+			m_inserter.prepare(time);
 		}
 
 		// audioEffectStr: FX audio effect string ("fx-l=" or "fx-r=" in .ksh, e.g., "Retrigger;16", "Echo;8;70")
 		// audioEffectParamStr: Legacy FX audio effect parameters ("fx-l_param1=" or "fx-r_param1=" in .ksh)
 		void prepare(Pulse time, std::string_view audioEffectStr, std::string_view audioEffectParamStr, bool isLegacyChar)
 		{
-			if ((audioEffectStr != m_audioEffectStr || audioEffectParamStr != m_audioEffectParamStr) && (!audioEffectStr.empty() || m_prepared))
+			if (!m_inserter.prepared())
+			{
+				m_inserter.prepare(time);
+			}
+
+			auto& data = m_inserter.data();
+
+			if ((audioEffectStr != data.audioEffectStr || audioEffectParamStr != data.audioEffectParamStr) && (!audioEffectStr.empty() || m_inserter.prepared()))
 			{
 				publishLongFXAudioEffectEvent(time, audioEffectStr, audioEffectParamStr);
 			}
-			m_audioEffectStr = audioEffectStr;
-			m_audioEffectParamStr = audioEffectParamStr;
-			m_isLegacyChar = isLegacyChar;
 
-			AbstractPreparedLongNote::prepare(time);
+			data.audioEffectStr = audioEffectStr;
+			data.audioEffectParamStr = audioEffectParamStr;
+			data.isLegacyChar = isLegacyChar;
+		}
+
+		bool prepared() const
+		{
+			return m_inserter.prepared();
+		}
+
+		void extendLength(RelPulse relPulse)
+		{
+			m_inserter.data().extendLength(relPulse);
 		}
 
 		void publishLongFXNote()
 		{
-			if (!m_prepared)
+			if (auto result = m_inserter.publish())
 			{
-				return;
+				const auto& [time, data] = *result;
+				m_pTargetChartData->note.fx[m_targetLaneIdx].emplace(time, Interval{ .length = data.length });
 			}
-
-			// Publish prepared long FX note
-			m_pTargetChartData->note.fx[m_targetLaneIdx].emplace(m_time, Interval{ .length = m_length });
-
-			clear();
 		}
 
 		void publishLongFXAudioEffectEvent(Pulse time, std::string_view audioEffectStr, std::string_view audioEffectParamStr)
@@ -699,12 +798,9 @@ namespace
 			});
 		}
 
-		virtual void clear() override
+		void clear()
 		{
-			m_audioEffectStr = std::nullopt;
-			m_audioEffectParamStr = std::nullopt;
-			m_isLegacyChar = false;
-			AbstractPreparedLongNote::clear();
+			m_inserter.clear();
 		}
 	};
 
@@ -897,10 +993,8 @@ namespace
 
 	class PreparedGraphSection
 	{
-	protected:
-		bool m_prepared = false;
-		Pulse m_time = 0;
-		ByRelPulse<GraphPoint> m_values;
+	private:
+		PreparedInserter<GraphSectionData> m_inserter;
 		ChartData* m_pTargetChartData = nullptr;
 
 	public:
@@ -911,211 +1005,190 @@ namespace
 		{
 		}
 
-		virtual ~PreparedGraphSection() = default;
-
 		void prepare(Pulse time)
 		{
-			if (!m_prepared)
-			{
-				m_prepared = true;
-				m_time = time;
-				m_values.clear();
-			}
+			m_inserter.prepare(time);
 		}
 
 		bool prepared() const
 		{
-			return m_prepared;
+			return m_inserter.prepared();
 		}
 
 		void addGraphPoint(Pulse time, double value)
 		{
-			const RelPulse relativeTime = time - m_time;
-
-			if (relativeTime < 0)
+			const RelPulse relTime = time - m_inserter.startTime();
+			if (relTime >= 0)
 			{
-				return;
-			}
-
-			if (m_values.contains(relativeTime))
-			{
-				m_values.at(relativeTime).v.vf = value;
-			}
-			else
-			{
-				m_values.emplace(relativeTime, value);
+				m_inserter.data().addPoint(relTime, value);
 			}
 		}
 
 		void publishManualTilt()
 		{
-			if (!m_prepared)
+			if (auto result = m_inserter.publish())
 			{
-				return;
+				const auto& [time, data] = *result;
+				m_pTargetChartData->camera.tilt.manual.emplace(time, GraphSection{ .v = data.points });
 			}
-
-			m_pTargetChartData->camera.tilt.manual.emplace(
-				m_time,
-				GraphSection{ .v = m_values });
-
-			clear();
 		}
 
-		virtual void clear()
+		void clear()
 		{
-			m_prepared = false;
-			m_time = 0;
-			m_values.clear();
+			m_inserter.clear();
 		}
 	};
 
-	class PreparedLaserSection : public PreparedGraphSection // TODO: remove this bad inheritance
+	class PreparedLaserSection
 	{
 	private:
+		PreparedInserter<LaserSectionData> m_inserter;
+		ChartData* m_pTargetChartData = nullptr;
 		std::size_t m_targetLaneIdx = 0;
-		bool m_wide = false;
-		ByRelPulse<PreparedLaneSpin> m_preparedLaneSpins;
-		std::string m_keySound;
 
 	public:
 		PreparedLaserSection() = default;
 
 		PreparedLaserSection(ChartData* pTargetChartData, std::size_t targetLaneIdx)
-			: PreparedGraphSection(pTargetChartData)
+			: m_pTargetChartData(pTargetChartData)
 			, m_targetLaneIdx(targetLaneIdx)
 		{
 		}
 
-		virtual ~PreparedLaserSection() = default;
-
-		void publishManualTilt() = delete;
-
-		void prepare(Pulse) = delete;
-
 		void prepare(Pulse time, bool wide)
 		{
-			if (!m_prepared)
+			if (!m_inserter.prepared())
 			{
-				PreparedGraphSection::prepare(time);
-				m_wide = wide;
+				LaserSectionData initialData;
+				initialData.wide = wide;
+				m_inserter.prepare(time, std::move(initialData));
 			}
 		}
 
-		void publishLaserNote()
+		bool prepared() const
 		{
-			if (!m_prepared)
-			{
-				return;
-			}
-
-			if (m_values.size() < 2)
-			{
-				assert(false && "Laser section must have at least two points");
-				clear();
-				return;
-			}
-
-			// Convert a 32th or shorter laser segment to a laser slam
-			const Pulse laserSlamThreshold = kResolution4 / 32;
-			ByRelPulse<GraphPoint> convertedGraphSection;
-			for (auto itr = m_values.cbegin(); itr != m_values.cend(); ++itr)
-			{
-				const auto& [ry, point] = *itr;
-				const auto nextItr = std::next(itr);
-				if (nextItr != m_values.cend())
-				{
-					const auto& [nextRy, nextPoint] = *nextItr;
-					if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
-					{
-						convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
-						const auto nextNextItr = std::next(nextItr);
-						if (nextNextItr == m_values.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.v))
-						{
-							++itr;
-						}
-						continue;
-					}
-				}
-
-				convertedGraphSection.emplace(ry, point);
-			}
-
-			// Publish prepared laser section
-			auto& targetLane = m_pTargetChartData->note.laser[m_targetLaneIdx];
-			const auto [_, inserted] = targetLane.emplace(
-				m_time,
-				LaserSection{
-					.v = convertedGraphSection,
-					.w = m_wide ? kLaserXScale2x : kLaserXScale1x,
-				});
-
-			if (inserted)
-			{
-				// Publish prepared lane spin
-				for (const auto& [relPulse, laneSpin] : m_preparedLaneSpins)
-				{
-					if (m_values.contains(relPulse) && laneSpin.isValid())
-					{
-						assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
-						const std::int32_t d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1;
-						switch (laneSpin.type)
-						{
-							case PreparedLaneSpin::Type::kNormal:
-								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.spin.emplace(
-									m_time + relPulse,
-									CamPatternInvokeSpin{
-										.d = d,
-										.length = laneSpin.duration,
-									});
-								break;
-							case PreparedLaneSpin::Type::kHalf:
-								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
-									m_time + relPulse,
-									CamPatternInvokeSpin{
-										.d = d,
-										.length = laneSpin.duration,
-									});
-								break;
-							case PreparedLaneSpin::Type::kSwing:
-								m_pTargetChartData->camera.cam.pattern.laser.slamEvent.swing.emplace(
-									m_time + relPulse,
-									CamPatternInvokeSwing{
-										.d = d,
-										.length = laneSpin.duration,
-										.v = {
-											.scale = static_cast<double>(laneSpin.swingAmplitude),
-											.repeat = laneSpin.swingRepeat,
-											.decayOrder = laneSpin.swingDecayOrder,
-										},
-									});
-								break;
-
-							default:
-								break;
-						}
-					}
-				}
-			}
-
-			clear();
+			return m_inserter.prepared();
 		}
 
-		virtual void clear() override
+		void addGraphPoint(Pulse time, double value)
 		{
-			PreparedGraphSection::clear();
-
-			m_wide = false;
-			m_preparedLaneSpins.clear();
+			const RelPulse relTime = time - m_inserter.startTime();
+			if (relTime >= 0)
+			{
+				m_inserter.data().addPoint(relTime, value);
+			}
 		}
 
 		void addLaneSpin(Pulse time, const PreparedLaneSpin& laneSpin)
 		{
-			m_preparedLaneSpins.emplace(time - m_time, laneSpin);
+			const RelPulse relTime = time - m_inserter.startTime();
+			m_inserter.data().laneSpins.emplace(relTime, laneSpin);
 		}
 
 		bool wide() const
 		{
-			return m_wide;
+			return m_inserter.prepared() && m_inserter.data().wide;
+		}
+
+		void publishLaserNote()
+		{
+			if (auto result = m_inserter.publish())
+			{
+				const auto& [time, data] = *result;
+
+				if (data.points.size() < 2)
+				{
+					assert(false && "Laser section must have at least two points");
+					return;
+				}
+
+				// Convert a 32th or shorter laser segment to a laser slam
+				const Pulse laserSlamThreshold = kResolution4 / 32;
+				ByRelPulse<GraphPoint> convertedGraphSection;
+				for (auto itr = data.points.cbegin(); itr != data.points.cend(); ++itr)
+				{
+					const auto& [ry, point] = *itr;
+					const auto nextItr = std::next(itr);
+					if (nextItr != data.points.cend())
+					{
+						const auto& [nextRy, nextPoint] = *nextItr;
+						if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
+						{
+							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
+							const auto nextNextItr = std::next(nextItr);
+							if (nextNextItr == data.points.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.v))
+							{
+								++itr;
+							}
+							continue;
+						}
+					}
+
+					convertedGraphSection.emplace(ry, point);
+				}
+
+				// Publish prepared laser section
+				auto& targetLane = m_pTargetChartData->note.laser[m_targetLaneIdx];
+				const auto [_, inserted] = targetLane.emplace(
+					time,
+					LaserSection{
+						.v = convertedGraphSection,
+						.w = data.wide ? kLaserXScale2x : kLaserXScale1x,
+					});
+
+				if (inserted)
+				{
+					// Publish prepared lane spin
+					for (const auto& [relPulse, laneSpin] : data.laneSpins)
+					{
+						if (data.points.contains(relPulse) && laneSpin.isValid())
+						{
+							assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
+							const std::int32_t d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1;
+							switch (laneSpin.type)
+							{
+								case PreparedLaneSpin::Type::kNormal:
+									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.spin.emplace(
+										time + relPulse,
+										CamPatternInvokeSpin{
+											.d = d,
+											.length = laneSpin.duration,
+										});
+									break;
+								case PreparedLaneSpin::Type::kHalf:
+									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
+										time + relPulse,
+										CamPatternInvokeSpin{
+											.d = d,
+											.length = laneSpin.duration,
+										});
+									break;
+								case PreparedLaneSpin::Type::kSwing:
+									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.swing.emplace(
+										time + relPulse,
+										CamPatternInvokeSwing{
+											.d = d,
+											.length = laneSpin.duration,
+											.v = {
+												.scale = static_cast<double>(laneSpin.swingAmplitude),
+												.repeat = laneSpin.swingRepeat,
+												.decayOrder = laneSpin.swingDecayOrder,
+											},
+										});
+									break;
+
+								default:
+									break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		void clear()
+		{
+			m_inserter.clear();
 		}
 	};
 
