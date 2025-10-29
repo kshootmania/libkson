@@ -79,6 +79,150 @@ TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]
     }
 }
 
+TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][gram]") {
+	auto chart = kson::LoadKSONChartData(g_assetsDir + "/Gram_ex.kson");
+	REQUIRE(chart.error == kson::ErrorType::None);
+
+	SECTION("Metadata") {
+		REQUIRE(chart.meta.title == "Gram");
+		REQUIRE(chart.meta.artist == "Blast Smith");
+		REQUIRE(chart.meta.chartAuthor == "坂本龍馬");
+		REQUIRE(chart.meta.level == 16);
+		REQUIRE(chart.meta.difficulty.idx == 2);
+		REQUIRE(chart.meta.dispBPM == "191");
+		REQUIRE(chart.meta.information == "Schatz des Urtext");
+		REQUIRE(chart.meta.jacketAuthor == "Blast Smith");
+		REQUIRE(chart.meta.jacketFilename == "gram.jpg");
+	}
+
+	SECTION("BT note counts") {
+		auto countNotes = [](const kson::ByPulse<kson::Interval>& notes) -> std::pair<int, int> {
+			int chipNotes = 0, longNotes = 0;
+			for (const auto& [y, note] : notes) {
+				if (note.length == 0) {
+					++chipNotes;
+				} else {
+					++longNotes;
+				}
+			}
+			return {chipNotes, longNotes};
+		};
+
+		auto [bt0_chipNotes, bt0_longNotes] = countNotes(chart.note.bt[0]);
+		REQUIRE(bt0_chipNotes == 104);
+		REQUIRE(bt0_longNotes == 5);
+
+		auto [bt1_chipNotes, bt1_longNotes] = countNotes(chart.note.bt[1]);
+		REQUIRE(bt1_chipNotes == 199);
+		REQUIRE(bt1_longNotes == 3);
+
+		auto [bt2_chipNotes, bt2_longNotes] = countNotes(chart.note.bt[2]);
+		REQUIRE(bt2_chipNotes == 176);
+		REQUIRE(bt2_longNotes == 3);
+
+		auto [bt3_chipNotes, bt3_longNotes] = countNotes(chart.note.bt[3]);
+		REQUIRE(bt3_chipNotes == 111);
+		REQUIRE(bt3_longNotes == 6);
+	}
+
+	SECTION("FX note counts") {
+		auto countNotes = [](const kson::ByPulse<kson::Interval>& notes) -> std::pair<int, int> {
+			int chipNotes = 0, longNotes = 0;
+			for (const auto& [y, note] : notes) {
+				if (note.length == 0) {
+					++chipNotes;
+				} else {
+					++longNotes;
+				}
+			}
+			return {chipNotes, longNotes};
+		};
+
+		auto [fx0_chipNotes, fx0_longNotes] = countNotes(chart.note.fx[0]);
+		REQUIRE(fx0_chipNotes == 77);
+		REQUIRE(fx0_longNotes == 49);
+
+		auto [fx1_chipNotes, fx1_longNotes] = countNotes(chart.note.fx[1]);
+		REQUIRE(fx1_chipNotes == 65);
+		REQUIRE(fx1_longNotes == 43);
+	}
+
+	SECTION("Laser section counts") {
+		REQUIRE(chart.note.laser[0].size() == 45);
+		REQUIRE(chart.note.laser[1].size() == 44);
+
+		auto countWide = [](const kson::ByPulse<kson::LaserSection>& laser) -> int {
+			int count = 0;
+			for (const auto& [y, section] : laser) {
+				if (section.wide()) {
+					++count;
+				}
+			}
+			return count;
+		};
+
+		REQUIRE(countWide(chart.note.laser[0]) == 14);
+		REQUIRE(countWide(chart.note.laser[1]) == 15);
+	}
+
+	SECTION("Camera data") {
+		REQUIRE(chart.camera.cam.body.zoomBottom.size() == 72);
+		REQUIRE(chart.camera.cam.body.zoomTop.size() == 45);
+		REQUIRE(chart.camera.tilt.keep.size() == 8);
+		REQUIRE(chart.camera.tilt.scale.size() == 10);
+	}
+
+	SECTION("Audio effects") {
+		REQUIRE(chart.audio.audioEffect.fx.def.size() == 7);
+		REQUIRE(chart.audio.audioEffect.fx.longEvent.size() == 13);
+		REQUIRE(chart.audio.audioEffect.laser.def.size() == 2);
+		REQUIRE(chart.audio.audioEffect.laser.peakingFilterDelay == 40);
+	}
+
+	SECTION("Beat data") {
+		REQUIRE(chart.beat.bpm.size() == 1);
+		REQUIRE(chart.beat.bpm.contains(0));
+		REQUIRE(chart.beat.bpm.at(0) == Approx(191.0));
+
+		REQUIRE(chart.beat.timeSig.size() == 1);
+		REQUIRE(chart.beat.timeSig.contains(0));
+		REQUIRE(chart.beat.timeSig.at(0).n == 4);
+		REQUIRE(chart.beat.timeSig.at(0).d == 4);
+
+		REQUIRE(chart.beat.scrollSpeed.size() == 1);
+		REQUIRE(chart.beat.scrollSpeed.contains(0));
+		REQUIRE(chart.beat.scrollSpeed.at(0).v.v == Approx(1.0));
+	}
+
+	SECTION("Audio BGM") {
+		REQUIRE(chart.audio.bgm.filename == "Gram.ogg");
+		REQUIRE(chart.audio.bgm.preview.offset == 59050);
+		REQUIRE(chart.audio.bgm.preview.duration == 12573);
+	}
+
+	SECTION("Audio key sound") {
+		REQUIRE(chart.audio.keySound.laser.vol.size() == 6);
+		REQUIRE(chart.audio.keySound.laser.slamEvent.contains("down"));
+		REQUIRE(chart.audio.keySound.laser.slamEvent.at("down").size() == 1);
+	}
+
+	SECTION("Background") {
+		REQUIRE(chart.bg.legacy.bg.size() == 2); // 1 element in KSON, 2 in source code
+		REQUIRE(chart.bg.legacy.bg[0].filename == "cyber");
+		REQUIRE(chart.bg.legacy.bg[1].filename == "");
+		REQUIRE(chart.bg.legacy.layer.filename == "techno");
+	}
+
+	SECTION("Camera pattern") {
+		REQUIRE(chart.camera.cam.pattern.laser.slamEvent.spin.size() == 1);
+		REQUIRE(chart.camera.cam.pattern.laser.slamEvent.swing.size() == 1);
+	}
+
+	SECTION("Compat info") {
+		REQUIRE(chart.compat.kshVersion == "160");
+	}
+}
+
 TEST_CASE("KSON I/O round-trip (all songs)", "[.][ksh_io][kson_io][round_trip][all_songs]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
