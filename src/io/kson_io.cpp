@@ -1902,10 +1902,10 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 	Write(json, "editor", ToJSON(chartData.editor));
 	Write(json, "compat", ToJSON(chartData.compat));
 	Write(json, "impl", chartData.impl);
-	
+
 	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
 
-	return ErrorType::None;
+	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
 }
 
 kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
