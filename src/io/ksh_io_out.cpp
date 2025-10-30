@@ -1203,47 +1203,7 @@ namespace
 			stream << "stop=" << RelPulseToKSHLength(stopLength) << "\r\n";
 		}
 
-		// Check for laser audio effect annotations (chokkakuvol, chokkakuse, pfiltergain, filtertype)
-		if (chartData.audio.keySound.laser.vol.contains(pulse))
-		{
-			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.at(pulse) * 100));
-			if (chokkakuvol != state.currentChokkakuvol)
-			{
-				stream << "chokkakuvol=" << chokkakuvol << "\r\n";
-				state.currentChokkakuvol = chokkakuvol;
-			}
-		}
-
-		// Check for laser slam key sounds (chokkakuse)
-		if (!chartData.audio.keySound.laser.slamEvent.empty())
-		{
-			const auto& slamEvent = chartData.audio.keySound.laser.slamEvent;
-
-			// Check for down slam
-			if (slamEvent.contains("down") &&
-				std::find(slamEvent.at("down").begin(), slamEvent.at("down").end(), pulse) != slamEvent.at("down").end())
-			{
-				stream << "chokkakuse=down\r\n";
-			}
-			// Check for up slam
-			else if (slamEvent.contains("up") &&
-				std::find(slamEvent.at("up").begin(), slamEvent.at("up").end(), pulse) != slamEvent.at("up").end())
-			{
-				stream << "chokkakuse=up\r\n";
-			}
-			// Check for swing slam
-			else if (slamEvent.contains("swing") &&
-				std::find(slamEvent.at("swing").begin(), slamEvent.at("swing").end(), pulse) != slamEvent.at("swing").end())
-			{
-				stream << "chokkakuse=swing\r\n";
-			}
-			// Check for mute slam
-			else if (slamEvent.contains("mute") &&
-				std::find(slamEvent.at("mute").begin(), slamEvent.at("mute").end(), pulse) != slamEvent.at("mute").end())
-			{
-				stream << "chokkakuse=mute\r\n";
-			}
-		}
+		// Check for laser audio effect annotations (pfiltergain, filtertype, chokkakuse, chokkakuvol)
 
 		// Check for peaking filter gain changes
 		// Prioritize legacy.filter_gain if it has any elements
@@ -1331,6 +1291,48 @@ namespace
 				}
 			}
 		}
+
+		// Check for laser slam key sounds (chokkakuse)
+		if (!chartData.audio.keySound.laser.slamEvent.empty())
+		{
+			const auto& slamEvent = chartData.audio.keySound.laser.slamEvent;
+
+			// Check for down slam
+			if (slamEvent.contains("down") &&
+				std::find(slamEvent.at("down").begin(), slamEvent.at("down").end(), pulse) != slamEvent.at("down").end())
+			{
+				stream << "chokkakuse=down\r\n";
+			}
+			// Check for up slam
+			else if (slamEvent.contains("up") &&
+				std::find(slamEvent.at("up").begin(), slamEvent.at("up").end(), pulse) != slamEvent.at("up").end())
+			{
+				stream << "chokkakuse=up\r\n";
+			}
+			// Check for swing slam
+			else if (slamEvent.contains("swing") &&
+				std::find(slamEvent.at("swing").begin(), slamEvent.at("swing").end(), pulse) != slamEvent.at("swing").end())
+			{
+				stream << "chokkakuse=swing\r\n";
+			}
+			// Check for mute slam
+			else if (slamEvent.contains("mute") &&
+				std::find(slamEvent.at("mute").begin(), slamEvent.at("mute").end(), pulse) != slamEvent.at("mute").end())
+			{
+				stream << "chokkakuse=mute\r\n";
+			}
+		}
+
+		if (chartData.audio.keySound.laser.vol.contains(pulse))
+		{
+			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.at(pulse) * 100));
+			if (chokkakuvol != state.currentChokkakuvol)
+			{
+				stream << "chokkakuvol=" << chokkakuvol << "\r\n";
+				state.currentChokkakuvol = chokkakuvol;
+			}
+		}
+
 
 		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
 		{
