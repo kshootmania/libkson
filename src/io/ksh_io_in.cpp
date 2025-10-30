@@ -1454,15 +1454,7 @@ namespace
 				if (metaDataHashMap.contains("pfiltergain"))
 				{
 					const std::int32_t pfiltergainValue = PopInt<std::int32_t>(metaDataHashMap, "pfiltergain", 50);
-
-					// Set gain parameter for peaking_filter
-					chartData.audio.audioEffect.laser.paramChange["peaking_filter"]["gain"].emplace(0, std::to_string(pfiltergainValue) + "%");
-
-					// Convert to Q value for LPF/HPF (pfiltergain: 0->q=0.7, 50->q=5.0, 100->q=9.3)
-					const double qValue = std::lerp(0.7, 9.3, pfiltergainValue / 100.0);
-					const std::string qStr = std::to_string(qValue);
-					chartData.audio.audioEffect.laser.paramChange["high_pass_filter"]["q"].emplace(0, qStr);
-					chartData.audio.audioEffect.laser.paramChange["low_pass_filter"]["q"].emplace(0, qStr);
+					chartData.audio.audioEffect.laser.legacy.filterGain.emplace(0, pfiltergainValue / 100.0);
 				}
 				chartData.audio.audioEffect.laser.peakingFilterDelay = chartData.audio.bgm.legacy.filenameP.empty() ? PopInt<std::int32_t>(metaDataHashMap, "pfilterdelay", 40) : 0;
 			}
@@ -1925,15 +1917,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				else if (key == "pfiltergain")
 				{
 					const std::int32_t pfiltergainValue = ParseNumeric<std::int32_t>(value, 50);
-
-					// Set gain parameter for peaking_filter
-					chartData.audio.audioEffect.laser.paramChange["peaking_filter"]["gain"].emplace(time, std::to_string(pfiltergainValue) + "%");
-
-					// Convert to Q value for LPF/HPF (pfiltergain: 0->q=0.7, 50->q=5.0, 100->q=9.3)
-					const double qValue = std::lerp(0.7, 9.3, pfiltergainValue / 100.0);
-					const std::string qStr = std::to_string(qValue);
-					chartData.audio.audioEffect.laser.paramChange["high_pass_filter"]["q"].emplace(time, qStr);
-					chartData.audio.audioEffect.laser.paramChange["low_pass_filter"]["q"].emplace(time, qStr);
+					chartData.audio.audioEffect.laser.legacy.filterGain.emplace(time, pfiltergainValue / 100.0);
 				}
 				else if (key == "fx-l")
 				{

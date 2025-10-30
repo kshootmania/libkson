@@ -713,7 +713,14 @@ namespace
 		}
 
 		// Peaking filter gain (default: 50)
-		if (!audio.audioEffect.laser.paramChange.empty() &&
+		// Prioritize legacy.filter_gain if it has any elements
+		if (!audio.audioEffect.laser.legacy.filterGain.empty())
+		{
+			const double filterGain = audio.audioEffect.laser.legacy.filterGain.begin()->second;
+			const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
+			stream << "pfiltergain=" << pfiltergain << "\r\n";
+		}
+		else if (!audio.audioEffect.laser.paramChange.empty() &&
 			audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
 			audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
 			!audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").empty())
@@ -1239,7 +1246,29 @@ namespace
 		}
 
 		// Check for peaking filter gain changes
-		if (!chartData.audio.audioEffect.laser.paramChange.empty() &&
+		// Prioritize legacy.filter_gain if it has any elements
+		bool filterGainFound = false;
+		if (!chartData.audio.audioEffect.laser.legacy.filterGain.empty())
+		{
+			const auto it = std::find_if(
+				chartData.audio.audioEffect.laser.legacy.filterGain.begin(),
+				chartData.audio.audioEffect.laser.legacy.filterGain.end(),
+				[pulse](const auto& pair) { return pair.first == pulse; }
+			);
+			if (it != chartData.audio.audioEffect.laser.legacy.filterGain.end())
+			{
+				const double filterGain = it->second;
+				const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
+				if (pfiltergain != state.currentPfiltergain)
+				{
+					stream << "pfiltergain=" << pfiltergain << "\r\n";
+					state.currentPfiltergain = pfiltergain;
+				}
+				filterGainFound = true;
+			}
+		}
+		if (!filterGainFound &&
+			!chartData.audio.audioEffect.laser.paramChange.empty() &&
 			chartData.audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
 			chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
 			chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").contains(pulse))

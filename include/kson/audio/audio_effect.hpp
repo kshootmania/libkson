@@ -51,12 +51,18 @@ namespace kson
 		Dict<AudioEffectDef> defAsDict() const;
 	};
 
+	struct AudioEffectLaserLegacyInfo
+	{
+		ByPulse<double> filterGain; // "pfiltergain" in KSH format (scaled to 0.0-1.0)
+	};
+
 	struct AudioEffectLaserInfo
 	{
 		std::vector<AudioEffectDefKVP> def;
 		Dict<Dict<ByPulse<std::string>>> paramChange;
 		Dict<std::set<Pulse>> pulseEvent;
 		std::int32_t peakingFilterDelay = 0; // 0ms - 160ms
+		AudioEffectLaserLegacyInfo legacy;
 
 		// Note: If you call this function frequently, it's recommended to first call defAsDict to get the dictionary and use it,
 		//       as this function uses linear search.

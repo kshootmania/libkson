@@ -731,6 +731,11 @@ namespace
 					Write(laserJSON, "pulse_event", std::move(pulseEvent));
 				}
 				Write(laserJSON, "peaking_filter_delay", d.audioEffect.laser.peakingFilterDelay, 0);
+				{
+					nlohmann::json legacyJSON = nlohmann::json::object();
+					WriteByPulse(legacyJSON, "filter_gain", d.audioEffect.laser.legacy.filterGain, 0.5);
+					Write(laserJSON, "legacy", std::move(legacyJSON));
+				}
 				Write(audioEffectJSON, "laser", std::move(laserJSON));
 			}
 			Write(j, "audio_effect", std::move(audioEffectJSON));
@@ -1467,7 +1472,17 @@ namespace
 		
 		// Parse peaking_filter_delay
 		laser.peakingFilterDelay = GetWithDefault<std::int32_t>(j, "peaking_filter_delay", 0);
-		
+
+		// Parse legacy
+		if (j.contains("legacy") && j["legacy"].is_object())
+		{
+			const auto& legacyObj = j["legacy"];
+			if (legacyObj.contains("filter_gain") && legacyObj["filter_gain"].is_array())
+			{
+				laser.legacy.filterGain = ParseByPulse<double>(legacyObj["filter_gain"], chartData);
+			}
+		}
+
 		return laser;
 	}
 

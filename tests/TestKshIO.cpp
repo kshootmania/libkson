@@ -344,41 +344,21 @@ pfiltergain=100
 
     REQUIRE(chartData.error == kson::ErrorType::None);
 
-    // Check peaking_filter gain parameter
-    REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("peaking_filter"));
-    const auto& peakingParams = chartData.audio.audioEffect.laser.paramChange.at("peaking_filter");
-    REQUIRE(peakingParams.contains("gain"));
-    const auto& peakingGain = peakingParams.at("gain");
+    // Check legacy.filter_gain
+    REQUIRE(!chartData.audio.audioEffect.laser.legacy.filterGain.empty());
+    const auto& pfiltergain = chartData.audio.audioEffect.laser.legacy.filterGain;
 
-    // Check high_pass_filter q parameter
-    REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("high_pass_filter"));
-    const auto& hpfParams = chartData.audio.audioEffect.laser.paramChange.at("high_pass_filter");
-    REQUIRE(hpfParams.contains("q"));
-    const auto& hpfQ = hpfParams.at("q");
+    // pfiltergain=0 should convert to 0.0
+    REQUIRE(pfiltergain.contains(0));
+    REQUIRE(std::abs(pfiltergain.at(0) - 0.0) < 0.001);
 
-    // Check low_pass_filter q parameter
-    REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("low_pass_filter"));
-    const auto& lpfParams = chartData.audio.audioEffect.laser.paramChange.at("low_pass_filter");
-    REQUIRE(lpfParams.contains("q"));
-    const auto& lpfQ = lpfParams.at("q");
+    // pfiltergain=50 should convert to 0.5
+    REQUIRE(pfiltergain.contains(kson::kResolution4));
+    REQUIRE(std::abs(pfiltergain.at(kson::kResolution4) - 0.5) < 0.001);
 
-    // KSH: 1 measure = 192 * 4 = 768 pulse (4/4 time) -> KSON: 240 * 4 = 960 pulse
-    constexpr kson::Pulse kMeasurePulse = kson::kResolution4;  // 960
-
-    // pfiltergain=0 (pulse=0) should convert to q=0.7
-    REQUIRE(peakingGain.at(0) == "0%");
-    REQUIRE(std::abs(std::stod(hpfQ.at(0)) - 0.7) < 0.001);
-    REQUIRE(std::abs(std::stod(lpfQ.at(0)) - 0.7) < 0.001);
-
-    // pfiltergain=50 (pulse=960, measure 2) should convert to q=5.0
-    REQUIRE(peakingGain.at(kMeasurePulse) == "50%");
-    REQUIRE(std::abs(std::stod(hpfQ.at(kMeasurePulse)) - 5.0) < 0.001);
-    REQUIRE(std::abs(std::stod(lpfQ.at(kMeasurePulse)) - 5.0) < 0.001);
-
-    // pfiltergain=100 (pulse=1920, measure 3) should convert to q=9.3
-    REQUIRE(peakingGain.at(kMeasurePulse * 2) == "100%");
-    REQUIRE(std::abs(std::stod(hpfQ.at(kMeasurePulse * 2)) - 9.3) < 0.001);
-    REQUIRE(std::abs(std::stod(lpfQ.at(kMeasurePulse * 2)) - 9.3) < 0.001);
+    // pfiltergain=100 should convert to 1.0
+    REQUIRE(pfiltergain.contains(kson::kResolution4 * 2));
+    REQUIRE(std::abs(pfiltergain.at(kson::kResolution4 * 2) - 1.0) < 0.001);
 }
 
 TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
