@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.11)
 project(kson CXX)
 
 option(KSON_BUILD_SHARED "Build shared library" OFF)
-option(KSON_BUILD_TOOL_KSH2KSON "Build ksh2kson tool" OFF)
+option(KSON_BUILD_TOOL_KSH2KSON "Build ksh2kson tool" ON)
 option(KSON_BUILD_TESTS "Build tests" ON)
 
 set(CMAKE_CXX_STANDARD 20)

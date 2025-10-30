@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <filesystem>
 #include "kson/kson.hpp"
 
@@ -7,14 +8,17 @@ enum ExitCode : int
 {
 	kExitSuccess = 0,
 	kExitNoArgument,
+	kExitError,
 };
 
 void PrintHelp()
 {
 	std::cerr <<
 		"ksh2kson chart converter\n"
-		"  Usage: ksh2kson [KSH file(s)...]\n"
-		"  KSON file(s) are saved in the same folder with the extension \".kson\".\n";
+		"  Usage:\n"
+		"    ksh2kson <input.ksh>         Convert file and output to stdout\n"
+		"    ksh2kson < input.ksh         Read from stdin and output to stdout\n"
+		"    cat input.ksh | ksh2kson     Read from pipe and output to stdout\n";
 }
 
 void PrintError(kson::ErrorType errorType)
@@ -22,55 +26,59 @@ void PrintError(kson::ErrorType errorType)
 	std::cerr << "Error: " << kson::GetErrorString(errorType) << '\n';
 }
 
-void DoConvert(const char *szInputFilePath)
+int DoConvert(std::istream& input)
 {
-	// Input
-	std::cout << szInputFilePath << '\n';
-	std::filesystem::path filePath(szInputFilePath);
-	const kson::ChartData chartData = kson::LoadKSHChartData(filePath.string());
+	const kson::ChartData chartData = kson::LoadKSHChartData(input);
 	if (chartData.error != kson::ErrorType::None)
 	{
 		PrintError(chartData.error);
-		std::cout << std::endl;
-		return;
+		return kExitError;
 	}
 
-	// Output
-	std::cout << "-> ";
-	filePath.replace_extension(".kson");
-	const kson::ErrorType error = kson::SaveKSONChartData(filePath.string(), chartData);
+	const kson::ErrorType error = kson::SaveKSONChartData(std::cout, chartData);
 	if (error != kson::ErrorType::None)
 	{
 		PrintError(error);
-		std::cout << std::endl;
-		return;
+		return kExitError;
 	}
-	std::cout << "Saved: " << filePath.string() << '\n' << std::endl;
+
+	return kExitSuccess;
 }
 
 int main(int argc, char *argv[])
 {
-	if (argc <= 1)
-	{
-		PrintHelp();
-		return kExitNoArgument;
-	}
-
 	try
 	{
-		for (int i = 1; i < argc; ++i)
+		if (argc == 1)
 		{
-			DoConvert(argv[i]);
+			// Read from stdin
+			return DoConvert(std::cin);
+		}
+		else if (argc == 2)
+		{
+			// Read from file
+			std::ifstream ifs{ argv[1] };
+			if (!ifs)
+			{
+				std::cerr << "Error: Cannot open file: " << argv[1] << '\n';
+				return kExitError;
+			}
+			return DoConvert(ifs);
+		}
+		else
+		{
+			PrintHelp();
+			return kExitNoArgument;
 		}
 	}
 	catch (const std::exception& e)
 	{
 		std::cerr << "Error: Uncaught exception '" << e.what() << "'\n";
+		return kExitError;
 	}
 	catch (...)
 	{
 		std::cerr << "Error: Uncaught exception (unknown)\n";
+		return kExitError;
 	}
-
-	return kExitSuccess;
 }
