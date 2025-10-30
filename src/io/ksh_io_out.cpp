@@ -65,6 +65,50 @@ namespace
 		{ "update_period", "updatePeriod" },
 	};
 
+	// KSON to KSH AudioEffectType name mapping (for #define_fx and #define_filter type=)
+	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHAudioEffectTypeName
+	{
+		{ "retrigger", "Retrigger" },
+		{ "gate", "Gate" },
+		{ "flanger", "Flanger" },
+		{ "pitch_shift", "PitchShift" },
+		{ "bitcrusher", "BitCrusher" },
+		{ "phaser", "Phaser" },
+		{ "wobble", "Wobble" },
+		{ "tapestop", "TapeStop" },
+		{ "echo", "Echo" },
+		{ "sidechain", "SideChain" },
+		{ "switch_audio", "SwitchAudio" },
+		{ "high_pass_filter", "HighPassFilter" },
+		{ "low_pass_filter", "LowPassFilter" },
+		{ "peaking_filter", "PeakingFilter" },
+	};
+
+	// KSON to KSH preset FX effect name mapping (for fx-l/fx-r)
+	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHPresetFXEffectName
+	{
+		{ "retrigger", "Retrigger" },
+		{ "gate", "Gate" },
+		{ "flanger", "Flanger" },
+		{ "pitch_shift", "PitchShift" },
+		{ "bitcrusher", "BitCrusher" },
+		{ "phaser", "Phaser" },
+		{ "wobble", "Wobble" },
+		{ "tapestop", "TapeStop" },
+		{ "echo", "Echo" },
+		{ "sidechain", "SideChain" },
+		{ "switch_audio", "SwitchAudio" },
+	};
+
+	// KSON to KSH preset laser filter name mapping (for filtertype= and filter:)
+	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHPresetFilterName
+	{
+		{ "peaking_filter", "peak" },
+		{ "low_pass_filter", "lpf1" },
+		{ "high_pass_filter", "hpf1" },
+		{ "bitcrusher", "bitc" },
+	};
+
 	// Preset effect name to AudioEffectType mapping
 	const std::unordered_map<std::string_view, AudioEffectType> kPresetEffectTypeMap
 	{
@@ -127,13 +171,16 @@ namespace
 		}
 	}
 
-	// Check if the effect name is a preset laser audio effect
-	bool IsPresetAudioEffectNameLaser(const std::string& effectName)
+	// Check if the KSON effect name is a preset laser audio effect
+	bool IsKSONPresetLaserFilterName(const std::string& effectName)
 	{
-		return effectName == "peaking_filter" ||
-			effectName == "high_pass_filter" ||
-			effectName == "low_pass_filter" ||
-			effectName == "bitcrusher";
+		return kKSONToKSHPresetFilterName.contains(effectName);
+	}
+
+	// Check if the KSON effect name is a preset FX effect
+	bool IsKSONPresetFXEffectName(const std::string& effectName)
+	{
+		return kKSONToKSHPresetFXEffectName.contains(effectName);
 	}
 
 	// Get tilt type string from scale and keep values
@@ -992,35 +1039,26 @@ namespace
 		return '-';
 	}
 
-	// Convert KSON audio effect name to KSH name (reverse of s_kshFXToKSONAudioEffectNameTable)
-	std::string KSONToKSHEffectName(const std::string& ksonName)
+	// Convert KSON preset FX effect name to KSH name
+	// Throws std::out_of_range if effectName is not a preset
+	std::string_view KSONPresetFXEffectNameToKSH(const std::string& effectName)
 	{
-		const std::unordered_map<std::string_view, std::string_view> ksonToKshPresetEffectName
-		{
-			{ "retrigger", "Retrigger" },
-			{ "gate", "Gate" },
-			{ "flanger", "Flanger" },
-			{ "pitch_shift", "PitchShift" },
-			{ "bitcrusher", "BitCrusher" },
-			{ "phaser", "Phaser" },
-			{ "wobble", "Wobble" },
-			{ "tapestop", "TapeStop" },
-			{ "echo", "Echo" },
-			{ "sidechain", "SideChain" },
-			{ "switch_audio", "SwitchAudio" },
-		};
+		return kKSONToKSHPresetFXEffectName.at(effectName);
+	}
 
-		if (ksonToKshPresetEffectName.contains(ksonName))
-		{
-			return std::string(ksonToKshPresetEffectName.at(ksonName));
-		}
-		return ksonName;
+	// Convert KSON preset laser filter name to KSH filter name
+	// Throws std::out_of_range if effectName is not a preset
+	std::string_view KSONPresetLaserFilterNameToKSH(const std::string& effectName)
+	{
+		return kKSONToKSHPresetFilterName.at(effectName);
 	}
 
 	// Generate KSH audio effect string from KSON long_event parameters
 	std::string GenerateKSHAudioEffectString(const ChartData& chartData, const std::string& effectName, const AudioEffectParams& params, bool isFX)
 	{
-		std::string result = KSONToKSHEffectName(effectName);
+		std::string result = IsKSONPresetFXEffectName(effectName)
+			? std::string{ KSONPresetFXEffectNameToKSH(effectName) }
+			: effectName;
 
 		const std::int32_t kAudioEffectParamUnspecified = -2147483648;
 		std::int32_t param1 = kAudioEffectParamUnspecified;
@@ -1251,7 +1289,7 @@ namespace
 			for (const auto& [effectName, pulses] : pulseEvent)
 			{
 				// Skip preset filters (already handled above)
-				if (!IsPresetAudioEffectNameLaser(effectName))
+				if (!IsKSONPresetLaserFilterName(effectName))
 				{
 					if (std::find(pulses.begin(), pulses.end(), pulse) != pulses.end())
 					{
@@ -1336,10 +1374,13 @@ namespace
 					if (pulseValueMap.contains(pulse))
 					{
 						const std::string& value = pulseValueMap.at(pulse);
+						const std::string_view kshEffectName = IsKSONPresetLaserFilterName(effectName)
+							? KSONPresetLaserFilterNameToKSH(effectName)
+							: std::string_view{ effectName };
 						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string(kKSONToKSHParamName.at(paramName))
+							? std::string{ kKSONToKSHParamName.at(paramName) }
 							: paramName;
-						stream << "filter:" << effectName << ":" << kshParamName << "=" << value << "\r\n";
+						stream << "filter:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
 					}
 				}
 			}
@@ -2048,21 +2089,6 @@ namespace
 	// Write audio effect definitions (#define_fx and #define_filter)
 	void WriteAudioEffectDefinitions(std::ostream& stream, const ChartData& chartData)
 	{
-		const std::unordered_map<std::string_view, std::string_view> ksonToKshEffectType
-		{
-			{ "retrigger", "Retrigger" },
-			{ "gate", "Gate" },
-			{ "flanger", "Flanger" },
-			{ "pitch_shift", "PitchShift" },
-			{ "bitcrusher", "BitCrusher" },
-			{ "phaser", "Phaser" },
-			{ "wobble", "Wobble" },
-			{ "tapestop", "TapeStop" },
-			{ "echo", "Echo" },
-			{ "sidechain", "SideChain" },
-			{ "switch_audio", "SwitchAudio" },
-		};
-
 		// Write #define_fx
 		if (!chartData.audio.audioEffect.fx.def.empty())
 		{
@@ -2070,9 +2096,9 @@ namespace
 			{
 				stream << "#define_fx " << name << " type=";
 				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (ksonToKshEffectType.contains(typeStr))
+				if (kKSONToKSHAudioEffectTypeName.contains(typeStr))
 				{
-					stream << ksonToKshEffectType.at(typeStr);
+					stream << kKSONToKSHAudioEffectTypeName.at(typeStr);
 				}
 				else
 				{
@@ -2103,9 +2129,9 @@ namespace
 			{
 				stream << "#define_filter " << name << " type=";
 				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (ksonToKshEffectType.contains(typeStr))
+				if (kKSONToKSHAudioEffectTypeName.contains(typeStr))
 				{
-					stream << ksonToKshEffectType.at(typeStr);
+					stream << kKSONToKSHAudioEffectTypeName.at(typeStr);
 				}
 				else
 				{

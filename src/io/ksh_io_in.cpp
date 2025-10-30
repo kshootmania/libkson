@@ -1990,7 +1990,12 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						auto& paramChange = isFX ? chartData.audio.audioEffect.fx.paramChange : chartData.audio.audioEffect.laser.paramChange;
 						if (s_audioEffectParamNameTable.contains(a[kParamNameIdx]))
 						{
-							paramChange[a[kAudioEffectNameIdx]][std::string(s_audioEffectParamNameTable.at(a[kParamNameIdx]))].insert_or_assign(time, value);
+							const std::string effectName = isFX
+								? std::string{ a[kAudioEffectNameIdx] }
+								: (s_kshFilterToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+									? std::string{ s_kshFilterToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+									: std::string{ a[kAudioEffectNameIdx] });
+							paramChange[effectName][std::string{ s_audioEffectParamNameTable.at(a[kParamNameIdx]) }].insert_or_assign(time, value);
 						}
 					}
 				}
