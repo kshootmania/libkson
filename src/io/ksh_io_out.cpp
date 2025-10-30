@@ -1332,43 +1332,115 @@ namespace
 			}
 		}
 
+		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomBottom.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_bottom=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_bottom=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_bottom_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
+
+		if (chartData.camera.cam.body.zoomSide.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomSide.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_side=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_side=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_side_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
+		if (chartData.camera.cam.body.zoomTop.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomTop.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_top=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_top=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_top_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
 		// Check for FX audio effect annotations (fx-l, fx-r)
+		// Output in lane order (fx-l before fx-r) to match v1 behavior
 		if (!chartData.audio.audioEffect.fx.longEvent.empty())
 		{
-			for (const auto& [effectName, laneEvents] : chartData.audio.audioEffect.fx.longEvent)
+			for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
 			{
-				// Empty effect name represents "effect off"
-				if (effectName.empty())
+				for (const auto& [effectName, laneEvents] : chartData.audio.audioEffect.fx.longEvent)
 				{
-					// Output fx-l= or fx-r= to clear the effect
-					for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+					if (!laneEvents[laneIdx].contains(pulse))
 					{
-						if (laneEvents[laneIdx].contains(pulse))
-						{
-							stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=\r\n";
-							state.currentFXAudioEffects[laneIdx].clear();
-						}
+						continue;
 					}
-					continue;
-				}
 
-				for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
-				{
-					if (laneEvents[laneIdx].contains(pulse))
+					// Empty effect name represents "effect off"
+					if (effectName.empty())
 					{
-						const auto& params = laneEvents[laneIdx].at(pulse);
-						const std::string audioEffectStr = GenerateKSHAudioEffectString(chartData, effectName, params, true);
+						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=\r\n";
+						state.currentFXAudioEffects[laneIdx].clear();
+						break;
+					}
 
-						// Check if this pulse is the start of an FX long note
-						const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
-							chartData.note.fx[laneIdx].at(pulse).length > 0;
+					const auto& params = laneEvents[laneIdx].at(pulse);
+					const std::string audioEffectStr = GenerateKSHAudioEffectString(chartData, effectName, params, true);
 
-						// Output fx-l/fx-r
-						if (audioEffectStr != state.currentFXAudioEffects[laneIdx] || isNoteStart)
-						{
-							stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
-							state.currentFXAudioEffects[laneIdx] = audioEffectStr;
-						}
+					// Check if this pulse is the start of an FX long note
+					const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
+						chartData.note.fx[laneIdx].at(pulse).length > 0;
+
+					// Output fx-l/fx-r
+					if (audioEffectStr != state.currentFXAudioEffects[laneIdx] || isNoteStart)
+					{
+						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
+						state.currentFXAudioEffects[laneIdx] = audioEffectStr;
+						break;
 					}
 				}
 			}
@@ -1417,81 +1489,6 @@ namespace
 				}
 			}
 		}
-
-		if (chartData.camera.cam.body.zoomTop.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomTop.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_top=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_top=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_top_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomBottom.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_bottom=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_bottom=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_bottom_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
-		if (chartData.camera.cam.body.zoomSide.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomSide.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_side=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_side=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_side_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
 		if (chartData.camera.cam.body.centerSplit.contains(pulse))
 		{
 			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
