@@ -773,8 +773,8 @@ TEST_CASE("KSH Export round-trip", "[ksh_io][export][round_trip]") {
 
 		// Export to KSH
 		std::ostringstream oss1;
-		const bool saveResult1 = kson::SaveKSHChartData(oss1, chart1);
-		REQUIRE(saveResult1);
+		const kson::ErrorType saveResult1 = kson::SaveKSHChartData(oss1, chart1);
+		REQUIRE(saveResult1 == kson::ErrorType::None);
 		std::string kshString1 = oss1.str();
 		REQUIRE(!kshString1.empty());
 
@@ -829,8 +829,8 @@ TEST_CASE("KSH Export KSON round-trip", "[ksh_io][export][kson_round_trip]") {
 		// kson1 → ksh2
 		INFO("Starting to save KSH: " << filename);
 		std::ostringstream ossKsh;
-		const bool saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
-		REQUIRE(saveKshResult);
+		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		REQUIRE(saveKshResult == kson::ErrorType::None);
 		INFO("Saved KSH successfully: " << filename);
 		std::string kshString = ossKsh.str();
 		REQUIRE(!kshString.empty());
@@ -960,8 +960,8 @@ TEST_CASE("KSH Export KSON round-trip (all songs)", "[.][ksh_io][export][kson_ro
 
 		// kson1 → ksh2
 		std::ostringstream ossKsh;
-		const bool saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
-		REQUIRE(saveKshResult);
+		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		REQUIRE(saveKshResult == kson::ErrorType::None);
 		std::string kshString = ossKsh.str();
 		REQUIRE(!kshString.empty());
 
@@ -1070,8 +1070,8 @@ TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
 	chartData.audio.audioEffect.fx.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
 
 	std::ostringstream oss;
-	const bool result = kson::SaveKSHChartData(oss, chartData);
-	REQUIRE(result);
+	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshContent = oss.str();
 	INFO("KSH output:\n" << kshContent);
@@ -1142,8 +1142,8 @@ TEST_CASE("KSH preset laser filter param_change export", "[ksh_io]")
 	chartData.audio.audioEffect.laser.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
 
 	std::ostringstream oss;
-	const bool result = kson::SaveKSHChartData(oss, chartData);
-	REQUIRE(result);
+	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshContent = oss.str();
 	INFO("KSH output:\n" << kshContent);

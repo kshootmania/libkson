@@ -2160,11 +2160,11 @@ namespace
 	}
 }
 
-bool kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData)
+kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData)
 {
 	if (!stream.good())
 	{
-		return false;
+		return ErrorType::GeneralIOError;
 	}
 
 	WriteBOM(stream);
@@ -2182,18 +2182,18 @@ bool kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData)
 		std::cerr << "Warning: " << warning << std::endl;
 	}
 
-	return stream.good();
+	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
 }
 
-bool kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData)
+kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData)
 {
 	std::ofstream ofs(filePath, std::ios_base::binary);
 	if (!ofs.good())
 	{
-		return false;
+		return ErrorType::GeneralIOError;
 	}
 
-	const bool result = SaveKSHChartData(ofs, chartData);
+	const ErrorType result = SaveKSHChartData(ofs, chartData);
 	ofs.close();
 
 	return result;

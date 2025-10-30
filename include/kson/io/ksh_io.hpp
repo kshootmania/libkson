@@ -12,7 +12,7 @@ namespace kson
 
 	ChartData LoadKSHChartData(const std::string& filePath);
 
-	bool SaveKSHChartData(std::ostream& stream, const ChartData& chartData);
+	ErrorType SaveKSHChartData(std::ostream& stream, const ChartData& chartData);
 
-	bool SaveKSHChartData(const std::string& filePath, const ChartData& chartData);
+	ErrorType SaveKSHChartData(const std::string& filePath, const ChartData& chartData);
 }
