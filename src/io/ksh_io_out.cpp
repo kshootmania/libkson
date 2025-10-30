@@ -1822,6 +1822,13 @@ namespace
 			{
 				updateGCD(seg.startPulse);
 				updateGCD(seg.startPulse + seg.length);
+
+				// Include laser segment length in GCD calculation (v1 compatibility)
+				if (seg.startPulse >= measureStart && seg.startPulse < measureEnd && seg.length > 0)
+				{
+					gcd = std::gcd(gcd, seg.length);
+					shouldDoubleResolution = true;
+				}
 			}
 
 			for (const auto& [sectionStart, section] : chartData.note.laser[laneIdx])
@@ -1975,6 +1982,11 @@ namespace
 		}
 
 		for (const auto& [pulse, vol] : chartData.audio.keySound.laser.vol)
+		{
+			updateGCD(pulse);
+		}
+
+		for (const auto& [pulse, gain] : chartData.audio.audioEffect.laser.legacy.filterGain)
 		{
 			updateGCD(pulse);
 		}
