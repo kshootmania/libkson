@@ -1355,10 +1355,13 @@ namespace
 					if (pulseValueMap.contains(pulse))
 					{
 						const std::string& value = pulseValueMap.at(pulse);
+						const std::string_view kshEffectName = IsKSONPresetFXEffectName(effectName)
+							? KSONPresetFXEffectNameToKSH(effectName)
+							: std::string_view{ effectName };
 						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string(kKSONToKSHParamName.at(paramName))
+							? std::string{ kKSONToKSHParamName.at(paramName) }
 							: paramName;
-						stream << "fx:" << effectName << ":" << kshParamName << "=" << value << "\r\n";
+						stream << "fx:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
 					}
 				}
 			}

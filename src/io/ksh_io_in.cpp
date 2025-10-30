@@ -1991,7 +1991,9 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						if (s_audioEffectParamNameTable.contains(a[kParamNameIdx]))
 						{
 							const std::string effectName = isFX
-								? std::string{ a[kAudioEffectNameIdx] }
+								? (s_kshFXToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+									? std::string{ s_kshFXToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+									: std::string{ a[kAudioEffectNameIdx] })
 								: (s_kshFilterToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
 									? std::string{ s_kshFilterToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
 									: std::string{ a[kAudioEffectNameIdx] });

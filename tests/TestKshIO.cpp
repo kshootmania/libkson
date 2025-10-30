@@ -1053,3 +1053,162 @@ TEST_CASE("KSH Export KSON round-trip (all songs)", "[.][ksh_io][export][kson_ro
 	}
 }
 
+TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test FX ParamChange";
+	chartData.meta.artist = "Test";
+	chartData.meta.chartAuthor = "Test";
+	chartData.meta.level = 1;
+	chartData.meta.difficulty.idx = 0;
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+
+	// Add preset FX effect param changes (KSON lowercase names)
+	chartData.audio.audioEffect.fx.paramChange["retrigger"]["rate"].emplace(0, "100%");
+	chartData.audio.audioEffect.fx.paramChange["retrigger"]["wave_length"].emplace(0, "1/8");
+	chartData.audio.audioEffect.fx.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
+
+	std::ostringstream oss;
+	const bool result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result);
+
+	std::string kshContent = oss.str();
+	INFO("KSH output:\n" << kshContent);
+
+	// Should export with KSH preset names (PascalCase)
+	REQUIRE(kshContent.find("fx:Retrigger:rate=100%") != std::string::npos);
+	REQUIRE(kshContent.find("fx:Retrigger:waveLength=1/8") != std::string::npos);
+	REQUIRE(kshContent.find("fx:BitCrusher:mix=0%>50%") != std::string::npos);
+
+	// Should NOT export with KSON names (lowercase)
+	REQUIRE(kshContent.find("fx:retrigger:") == std::string::npos);
+	REQUIRE(kshContent.find("fx:bitcrusher:") == std::string::npos);
+}
+
+TEST_CASE("KSH preset FX effect param_change import", "[ksh_io]")
+{
+	std::string kshContent = R"(title=Test FX ParamChange
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+--
+fx:Retrigger:rate=100%
+fx:Retrigger:waveLength=1/8
+fx:BitCrusher:mix=0%>50%
+0000|00|--
+--
+)";
+
+	std::istringstream iss(kshContent);
+	auto chartData = kson::LoadKSHChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	// Should import with KSON names (lowercase)
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.contains("retrigger"));
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("retrigger").contains("rate"));
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("retrigger").at("rate").at(0) == "100%");
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("retrigger").contains("wave_length"));
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("retrigger").at("wave_length").at(0) == "1/8");
+
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.contains("bitcrusher"));
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("bitcrusher").contains("mix"));
+	REQUIRE(chartData.audio.audioEffect.fx.paramChange.at("bitcrusher").at("mix").at(0) == "0%>50%");
+
+	// Should NOT import with KSH preset names (PascalCase)
+	REQUIRE_FALSE(chartData.audio.audioEffect.fx.paramChange.contains("Retrigger"));
+	REQUIRE_FALSE(chartData.audio.audioEffect.fx.paramChange.contains("BitCrusher"));
+}
+
+TEST_CASE("KSH preset laser filter param_change export", "[ksh_io]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test Filter ParamChange";
+	chartData.meta.artist = "Test";
+	chartData.meta.chartAuthor = "Test";
+	chartData.meta.level = 1;
+	chartData.meta.difficulty.idx = 0;
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+
+	// Add preset laser filter param changes (KSON lowercase names)
+	chartData.audio.audioEffect.laser.paramChange["peaking_filter"]["gain"].emplace(0, "60%");
+	chartData.audio.audioEffect.laser.paramChange["high_pass_filter"]["freq"].emplace(0, "1000Hz");
+	chartData.audio.audioEffect.laser.paramChange["low_pass_filter"]["freq"].emplace(0, "500Hz");
+	chartData.audio.audioEffect.laser.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
+
+	std::ostringstream oss;
+	const bool result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result);
+
+	std::string kshContent = oss.str();
+	INFO("KSH output:\n" << kshContent);
+
+	// Should export with KSH preset filter names
+	REQUIRE(kshContent.find("filter:peak:gain=60%") != std::string::npos);
+	REQUIRE(kshContent.find("filter:hpf1:freq=1000Hz") != std::string::npos);
+	REQUIRE(kshContent.find("filter:lpf1:freq=500Hz") != std::string::npos);
+	REQUIRE(kshContent.find("filter:bitc:mix=0%>50%") != std::string::npos);
+
+	// Should NOT export with KSON names
+	REQUIRE(kshContent.find("filter:peaking_filter:") == std::string::npos);
+	REQUIRE(kshContent.find("filter:high_pass_filter:") == std::string::npos);
+	REQUIRE(kshContent.find("filter:low_pass_filter:") == std::string::npos);
+	REQUIRE(kshContent.find("filter:bitcrusher:") == std::string::npos);
+
+	// Should NOT export with short names without "1"
+	REQUIRE(kshContent.find("filter:hpf:") == std::string::npos);
+	REQUIRE(kshContent.find("filter:lpf:") == std::string::npos);
+}
+
+TEST_CASE("KSH preset laser filter param_change import", "[ksh_io]")
+{
+	std::string kshContent = R"(title=Test Filter ParamChange
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+--
+filter:peak:gain=60%
+filter:hpf1:freq=1000Hz
+filter:lpf1:freq=500Hz
+filter:bitc:mix=0%>50%
+0000|00|--
+--
+)";
+
+	std::istringstream iss(kshContent);
+	auto chartData = kson::LoadKSHChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	// Should import with KSON names (lowercase with underscore)
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("peaking_filter"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").at(0) == "60%");
+
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("high_pass_filter"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("high_pass_filter").contains("freq"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("high_pass_filter").at("freq").at(0) == "1000Hz");
+
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("low_pass_filter"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("low_pass_filter").contains("freq"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("low_pass_filter").at("freq").at(0) == "500Hz");
+
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.contains("bitcrusher"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("bitcrusher").contains("mix"));
+	REQUIRE(chartData.audio.audioEffect.laser.paramChange.at("bitcrusher").at("mix").at(0) == "0%>50%");
+
+	// Should NOT import with KSH preset filter names
+	REQUIRE_FALSE(chartData.audio.audioEffect.laser.paramChange.contains("peak"));
+	REQUIRE_FALSE(chartData.audio.audioEffect.laser.paramChange.contains("hpf1"));
+	REQUIRE_FALSE(chartData.audio.audioEffect.laser.paramChange.contains("lpf1"));
+	REQUIRE_FALSE(chartData.audio.audioEffect.laser.paramChange.contains("bitc"));
+}
+
