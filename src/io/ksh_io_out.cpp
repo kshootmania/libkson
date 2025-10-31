@@ -27,6 +27,9 @@ namespace
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
 
+	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
+	constexpr std::int32_t kVerLayerDelimiterChanged = 166; // Layer delimiter changed from "/" to ";"
+
 	// KSON to KSH parameter name mapping (reverse of s_audioEffectParamNameTable)
 	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHParamName
 	{
@@ -602,6 +605,29 @@ namespace
 			stream << "to=" << FormatDouble(meta.stdBPM) << "\r\n";
 		}
 
+		// Calculate version value early (needed for layer delimiter selection)
+		// FX format changed at ver=160, so output at least ver=160
+		std::string verValue = "171";
+		int verInt = 171;
+		if (!chartData.compat.kshVersion.empty())
+		{
+			verValue = chartData.compat.kshVersion;
+			try
+			{
+				verInt = std::stoi(verValue);
+				if (verInt < kVerFXFormatChanged)
+				{
+					verValue = std::to_string(kVerFXFormatChanged);
+					verInt = kVerFXFormatChanged;
+				}
+			}
+			catch (...)
+			{
+				verValue = "171";
+				verInt = 171;
+			}
+		}
+
 		// Audio
 		if (!audio.bgm.filename.empty())
 		{
@@ -646,8 +672,11 @@ namespace
 
 			if (!isDefaultDuration || !isDefaultRotation)
 			{
+				// Delimiter changed from "/" to ";" at ver=166
+				const char delimiter = verInt < kVerLayerDelimiterChanged ? '/' : ';';
+
 				// Add duration
-				stream << ";" << bg.legacy.layer.duration;
+				stream << delimiter << bg.legacy.layer.duration;
 
 				// Calculate rotation flags (bit 0: tilt, bit 1: spin)
 				std::int32_t rotationFlags = 0;
@@ -659,7 +688,7 @@ namespace
 				{
 					rotationFlags |= kRotationFlagSpin;
 				}
-				stream << ";" << rotationFlags;
+				stream << delimiter << rotationFlags;
 			}
 
 			stream << "\r\n";
@@ -743,24 +772,6 @@ namespace
 		}
 
 		// Version
-		// FX format changed at ver=160, so output at least ver=160
-		std::string verValue = "171";
-		if (!chartData.compat.kshVersion.empty())
-		{
-			verValue = chartData.compat.kshVersion;
-			try
-			{
-				int verInt = std::stoi(verValue);
-				if (verInt < 160)
-				{
-					verValue = "160";
-				}
-			}
-			catch (...)
-			{
-				verValue = "171";
-			}
-		}
 		stream << "ver=" << verValue << "\r\n";
 
 		// Output unknown meta options from ksh_unknown
