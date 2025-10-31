@@ -571,14 +571,6 @@ namespace
 		stream << "effect=" << meta.chartAuthor << "\r\n";
 		stream << "jacket=" << meta.jacketFilename << "\r\n";
 		stream << "illustrator=" << meta.jacketAuthor << "\r\n";
-		if (!meta.iconFilename.empty())
-		{
-			stream << "icon=" << meta.iconFilename << "\r\n";
-		}
-		if (!meta.information.empty())
-		{
-			stream << "information=" << meta.information << "\r\n";
-		}
 
 		// Difficulty
 		const char* diffStr = "infinite";
@@ -645,8 +637,14 @@ namespace
 
 			stream << "\r\n";
 		}
-		// Master volume
-		stream << "mvol=" << static_cast<std::int32_t>(std::round(audio.bgm.vol * 100)) << "\r\n";
+
+		// Song volume (only output if not 100)
+		const std::int32_t mvol = static_cast<std::int32_t>(std::round(audio.bgm.vol * 100));
+		if (mvol != 100)
+		{
+			stream << "mvol=" << mvol << "\r\n";
+		}
+
 		stream << "o=" << audio.bgm.offset << "\r\n";
 
 		// Background
@@ -708,17 +706,22 @@ namespace
 		// Preview duration
 		stream << "plength=" << audio.bgm.preview.duration << "\r\n";
 
-		// Laser key sound volume
-		if (!audio.keySound.laser.vol.empty())
+		// Peaking filter gain (default: 50)
+		// Prioritize legacy.filter_gain if it has any elements
+		if (!audio.audioEffect.laser.legacy.filterGain.empty())
 		{
-			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(audio.keySound.laser.vol.begin()->second * 100));
-			stream << "chokkakuvol=" << chokkakuvol << "\r\n";
+			const double filterGain = audio.audioEffect.laser.legacy.filterGain.begin()->second;
+			const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
+			stream << "pfiltergain=" << pfiltergain << "\r\n";
 		}
-
-		// Laser key sound auto volume (default: 1)
-		if (!audio.keySound.laser.legacy.volAuto)
+		else if (!audio.audioEffect.laser.paramChange.empty() &&
+			audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
+			audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
+			!audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").empty())
 		{
-			stream << "chokkakuautovol=0\r\n";
+			const std::string& gainStr = audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").begin()->second;
+			const std::int32_t pfiltergain = std::atoi(gainStr.c_str());
+			stream << "pfiltergain=" << pfiltergain << "\r\n";
 		}
 
 		// Filter type
@@ -742,22 +745,14 @@ namespace
 			}
 		}
 
-		// Peaking filter gain (default: 50)
-		// Prioritize legacy.filter_gain if it has any elements
-		if (!audio.audioEffect.laser.legacy.filterGain.empty())
+		// Laser key sound auto volume (always output, default: 1)
+		stream << "chokkakuautovol=" << (audio.keySound.laser.legacy.volAuto ? 1 : 0) << "\r\n";
+
+		// Laser key sound volume
+		if (!audio.keySound.laser.vol.empty())
 		{
-			const double filterGain = audio.audioEffect.laser.legacy.filterGain.begin()->second;
-			const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
-			stream << "pfiltergain=" << pfiltergain << "\r\n";
-		}
-		else if (!audio.audioEffect.laser.paramChange.empty() &&
-			audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
-			audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
-			!audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").empty())
-		{
-			const std::string& gainStr = audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").begin()->second;
-			const std::int32_t pfiltergain = std::atoi(gainStr.c_str());
-			stream << "pfiltergain=" << pfiltergain << "\r\n";
+			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(audio.keySound.laser.vol.begin()->second * 100));
+			stream << "chokkakuvol=" << chokkakuvol << "\r\n";
 		}
 
 		// Peaking filter delay (default: 40)
@@ -770,6 +765,18 @@ namespace
 		if (chartData.gauge.total != 0)
 		{
 			stream << "total=" << chartData.gauge.total << "\r\n";
+		}
+
+		// Information
+		if (!meta.information.empty())
+		{
+			stream << "information=" << meta.information << "\r\n";
+		}
+
+		// Icon
+		if (!meta.iconFilename.empty())
+		{
+			stream << "icon=" << meta.iconFilename << "\r\n";
 		}
 
 		// Version
