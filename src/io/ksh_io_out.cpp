@@ -29,6 +29,7 @@ namespace
 
 	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
 	constexpr std::int32_t kVerLayerDelimiterChanged = 166; // Layer delimiter changed from "/" to ";"
+	constexpr std::int32_t kVerManualTiltScaleChanged = 170; // Manual tilt scale changed from 14 degrees to 10 degrees
 
 	// KSON to KSH parameter name mapping (reverse of s_audioEffectParamNameTable)
 	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHParamName
@@ -1208,7 +1209,7 @@ namespace
 	}
 
 	// Write note line
-	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state)
+	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt)
 	{
 		// Output unknown lines for this pulse first (except pulse 0, already output in header)
 		if (pulse != 0)
@@ -1636,13 +1637,18 @@ namespace
 		{
 			state.currentManualTiltSectionPulse = manualTiltSectionPulse;
 
-			const double clampedV = std::clamp(pManualTiltPoint->v.v, -kManualTiltAbsMax, kManualTiltAbsMax);
+			// Apply inverse legacy scale for ver < 170 if any large tilt value exists in the chart
+			// Legacy charts with large manual tilt values depend on the tilt scale (14 degrees) used before v1.70
+			constexpr double kFromLegacyScale = 10.0 / 14.0;
+			const double scale = useLegacyScaleForManualTilt ? kFromLegacyScale : 1.0;
+
+			const double clampedV = std::clamp(pManualTiltPoint->v.v * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
 			stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
 
 			// Output vf on next line if different from v
 			if (!AlmostEquals(pManualTiltPoint->v.v, pManualTiltPoint->v.vf))
 			{
-				const double clampedVf = std::clamp(pManualTiltPoint->v.vf, -kManualTiltAbsMax, kManualTiltAbsMax);
+				const double clampedVf = std::clamp(pManualTiltPoint->v.vf * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
 				stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
 			}
 
@@ -2069,6 +2075,28 @@ namespace
 	// Write measures
 	void WriteMeasures(std::ostream& stream, const ChartData& chartData, MeasureExportState& state, std::vector<std::string>& warnings)
 	{
+		// Check if legacy manual tilt scale should be used
+		// This matches the logic in ksh_io_in.cpp: ver < 170 && any abs(tilt) >= 10.0
+		bool useLegacyScaleForManualTilt = false;
+		if (chartData.compat.isKSHVersionOlderThan(kVerManualTiltScaleChanged))
+		{
+			for (const auto& [sectionPulse, section] : chartData.camera.tilt.manual)
+			{
+				for (const auto& [relativePulse, graphPoint] : section.v)
+				{
+					if (std::abs(graphPoint.v.v) >= 10.0 || std::abs(graphPoint.v.vf) >= 10.0)
+					{
+						useLegacyScaleForManualTilt = true;
+						break;
+					}
+				}
+				if (useLegacyScaleForManualTilt)
+				{
+					break;
+				}
+			}
+		}
+
 		// Initialize laser audio effect state from header values
 		if (!chartData.audio.keySound.laser.vol.empty())
 		{
@@ -2148,7 +2176,7 @@ namespace
 			{
 				const Pulse pulse = currentPulse + lineIdx * oneLinePulse;
 
-				WriteNoteLine(stream, chartData, laserSegments, pulse, oneLinePulse, state);
+				WriteNoteLine(stream, chartData, laserSegments, pulse, oneLinePulse, state, useLegacyScaleForManualTilt);
 			}
 
 			stream << kMeasureSeparator << "\r\n";
