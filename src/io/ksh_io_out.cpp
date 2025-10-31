@@ -6,6 +6,7 @@
 #include <numeric>
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 namespace
 {
@@ -27,6 +28,10 @@ namespace
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
 
+	// Maximum value of BPM
+	constexpr double kBPMMax = 65535.0; // ver >= 130
+
+	constexpr std::int32_t kVerBPMLimitAdded = 130;
 	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
 	constexpr std::int32_t kVerLayerDelimiterChanged = 166; // Layer delimiter changed from "/" to ";"
 	constexpr std::int32_t kVerManualTiltScaleChanged = 170; // Manual tilt scale changed from 14 degrees to 10 degrees
@@ -508,7 +513,7 @@ namespace
 	}
 
 	// Write BPM to header
-	void WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap)
+	void WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat)
 	{
 		// If dispBPM is set, use it as-is
 		if (!dispBPM.empty())
@@ -523,20 +528,34 @@ namespace
 			return;
 		}
 
+		// Apply BPM limit for ver >= 130
+		const bool shouldClampBPM = !compat.isKSHVersionOlderThan(kVerBPMLimitAdded);
+
 		// Check if single BPM
 		if (bpmMap.size() == 1)
 		{
-			stream << "t=" << FormatDouble(bpmMap.begin()->second) << "\r\n";
+			double bpm = bpmMap.begin()->second;
+			if (shouldClampBPM)
+			{
+				bpm = std::min(bpm, kBPMMax);
+			}
+			stream << "t=" << FormatDouble(bpm) << "\r\n";
 			return;
 		}
 
 		// Find min and max BPM
-		double minBPM = bpmMap.begin()->second;
-		double maxBPM = minBPM;
+		double minBPM = std::numeric_limits<double>::max();
+		double maxBPM = std::numeric_limits<double>::lowest();
+
 		for (const auto& [pulse, bpm] : bpmMap)
 		{
-			minBPM = std::min(minBPM, bpm);
-			maxBPM = std::max(maxBPM, bpm);
+			double clampedBPM = bpm;
+			if (shouldClampBPM)
+			{
+				clampedBPM = std::min(bpm, kBPMMax);
+			}
+			minBPM = std::min(minBPM, clampedBPM);
+			maxBPM = std::max(maxBPM, clampedBPM);
 		}
 
 		// If all BPMs are the same, output single BPM
@@ -590,7 +609,7 @@ namespace
 		stream << "level=" << meta.level << "\r\n";
 
 		// BPM
-		WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm);
+		WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat);
 
 		// Standard BPM (for hi-speed calculation)
 		if (meta.stdBPM != 0.0)
@@ -1229,7 +1248,13 @@ namespace
 
 		if (chartData.beat.bpm.contains(pulse))
 		{
-			stream << "t=" << FormatDouble(chartData.beat.bpm.at(pulse)) << "\r\n";
+			double bpm = chartData.beat.bpm.at(pulse);
+			// Apply BPM limit for ver >= 130
+			if (!chartData.compat.isKSHVersionOlderThan(kVerBPMLimitAdded))
+			{
+				bpm = std::min(bpm, kBPMMax);
+			}
+			stream << "t=" << FormatDouble(bpm) << "\r\n";
 		}
 
 		if (chartData.beat.stop.contains(pulse))

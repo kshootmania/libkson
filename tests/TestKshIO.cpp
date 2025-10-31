@@ -1384,3 +1384,194 @@ TEST_CASE("ver_compat reading", "[ksh_io][ver_compat]") {
 	}
 }
 
+TEST_CASE("BPM limit for ver >= 130", "[ksh_io][bpm_limit]") {
+	SECTION("ver >= 130 should limit BPM to 65535.0") {
+		// KSH file with ver=130 and BPM > 65535
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=100000\n"
+			"m=test.ogg\n"
+			"ver=130\n"
+			"--\n"
+			"t=80000\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// BPM should be clamped to 65535.0
+		REQUIRE(chartData.beat.bpm.at(0) == Approx(65535.0));
+		REQUIRE(chartData.beat.bpm.at(0) == Approx(65535.0));
+	}
+
+	SECTION("ver < 130 should not limit BPM") {
+		// KSH file with ver=120 and BPM > 65535
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=100000\n"
+			"m=test.ogg\n"
+			"ver=120\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// BPM should NOT be clamped
+		REQUIRE(chartData.beat.bpm.at(0) == Approx(100000.0));
+	}
+
+	SECTION("ver >= 160 should still limit BPM to 65535.0") {
+		// KSH file with ver=171 and BPM > 65535
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=100000\n"
+			"m=test.ogg\n"
+			"ver=171\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// BPM should be clamped to 65535.0
+		REQUIRE(chartData.beat.bpm.at(0) == Approx(65535.0));
+	}
+
+	SECTION("ver_compat should be used for BPM limit check") {
+		// KSH file with ver=160, ver_compat=120 and BPM > 65535
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=100000\n"
+			"m=test.ogg\n"
+			"ver=160\n"
+			"ver_compat=120\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// BPM should NOT be clamped because ver_compat=120 < 130
+		REQUIRE(chartData.beat.bpm.at(0) == Approx(100000.0));
+	}
+}
+
+TEST_CASE("BPM clamping on KSH output", "[ksh_io][bpm_output]") {
+	SECTION("ver >= 130 should clamp BPM on output") {
+		// Create chart data with ver=130 and BPM > 65535
+		kson::ChartData chartData;
+		chartData.meta.title = "Test";
+		chartData.meta.artist = "Test";
+		chartData.meta.chartAuthor = "Test";
+		chartData.meta.jacketFilename = "nowprinting1";
+		chartData.meta.difficulty.idx = 0;
+		chartData.meta.level = 1;
+		chartData.audio.bgm.filename = "test.ogg";
+		chartData.beat.bpm[0] = 100000.0;
+		chartData.beat.bpm[192] = 80000.0;
+		chartData.beat.timeSig[0] = {4, 4};
+		chartData.compat.kshVersion = "130";
+
+		// Convert to KSH
+		std::ostringstream oss;
+		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		// BPM should be clamped to 65535.0
+		REQUIRE(kshOutput.find("t=65535") != std::string::npos);
+		REQUIRE(kshOutput.find("100000") == std::string::npos);
+		REQUIRE(kshOutput.find("80000") == std::string::npos);
+	}
+
+	SECTION("ver < 130 should not clamp BPM on output") {
+		// Create chart data with ver=120 and BPM > 65535
+		kson::ChartData chartData;
+		chartData.meta.title = "Test";
+		chartData.meta.artist = "Test";
+		chartData.meta.chartAuthor = "Test";
+		chartData.meta.jacketFilename = "nowprinting1";
+		chartData.meta.difficulty.idx = 0;
+		chartData.meta.level = 1;
+		chartData.audio.bgm.filename = "test.ogg";
+		chartData.beat.bpm[0] = 100000.0;
+		chartData.beat.timeSig[0] = {4, 4};
+		chartData.compat.kshVersion = "120";
+
+		// Convert to KSH
+		std::ostringstream oss;
+		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		// BPM should NOT be clamped
+		REQUIRE(kshOutput.find("t=100000") != std::string::npos);
+	}
+
+	SECTION("Multiple BPM values should be clamped if needed") {
+		// Create chart data with multiple BPMs (some over limit, some under)
+		kson::ChartData chartData;
+		chartData.meta.title = "Test";
+		chartData.meta.artist = "Test";
+		chartData.meta.chartAuthor = "Test";
+		chartData.meta.jacketFilename = "nowprinting1";
+		chartData.meta.difficulty.idx = 0;
+		chartData.meta.level = 1;
+		chartData.audio.bgm.filename = "test.ogg";
+		chartData.beat.bpm[0] = 100000.0;
+		chartData.beat.bpm[192] = 70000.0;
+		chartData.beat.bpm[384] = 50000.0;
+		chartData.beat.timeSig[0] = {4, 4};
+		chartData.compat.kshVersion = "160";
+
+		// Convert to KSH
+		std::ostringstream oss;
+		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		// BPMs over 65535 should be clamped
+		REQUIRE(kshOutput.find("65535") != std::string::npos);
+		REQUIRE(kshOutput.find("100000") == std::string::npos);
+		REQUIRE(kshOutput.find("70000") == std::string::npos);
+		// 50000 is under the limit, so it should remain as-is
+		REQUIRE(kshOutput.find("50000") != std::string::npos);
+	}
+}
+

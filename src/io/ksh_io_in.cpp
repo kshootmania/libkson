@@ -37,6 +37,10 @@ namespace
 	constexpr double kManualTiltAbsMax = 1000.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
 
+	// Maximum value of BPM
+	constexpr double kBPMMax = 65535.0; // ver >= 130
+	constexpr std::int32_t kVerBPMLimitAdded = 130;
+
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
 
@@ -387,14 +391,22 @@ namespace
 		return isUTF8;
 	}
 
-	bool InsertBPMChange(ByPulse<double>& bpmChanges, Pulse time, std::string_view value)
+	bool InsertBPMChange(ByPulse<double>& bpmChanges, Pulse time, std::string_view value, std::int32_t kshVersionInt = 0)
 	{
 		if (value.find('-') != std::string_view::npos)
 		{
 			return false;
 		}
 
-		bpmChanges.insert_or_assign(time, ParseNumeric<double>(value));
+		double bpm = ParseNumeric<double>(value);
+
+		// Apply BPM limit for ver >= 130 (65535.0)
+		if (kshVersionInt >= kVerBPMLimitAdded)
+		{
+			bpm = std::min(bpm, kBPMMax);
+		}
+
+		bpmChanges.insert_or_assign(time, bpm);
 		return true;
 	}
 
@@ -1368,10 +1380,10 @@ namespace
 		}
 
 		// Insert meta data to chartData
+		const std::string kshVersion = Pop(metaDataHashMap, "ver", "100");
+		const std::string kshVersionCompat = Pop(metaDataHashMap, "ver_compat", "");
+		const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(kshVersionCompat.empty() ? kshVersion : kshVersionCompat, 100);
 		{
-			const std::string kshVersion = Pop(metaDataHashMap, "ver", "100");
-			const std::string kshVersionCompat = Pop(metaDataHashMap, "ver_compat", "");
-			const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(kshVersion, 100);
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
 			{
 				// Use ver_compat if present, otherwise use ver
@@ -1414,7 +1426,7 @@ namespace
 				// Insert the first tempo change
 				if (metaDataHashMap.contains("t")) [[likely]]
 				{
-					InsertBPMChange(chartData.beat.bpm, 0, metaDataHashMap.at("t"));
+					InsertBPMChange(chartData.beat.bpm, 0, metaDataHashMap.at("t"), kshVersionInt);
 				}
 			}
 			chartData.meta.dispBPM = Pop(metaDataHashMap, "t", "");
@@ -1801,11 +1813,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					if (chartData.beat.bpm.empty()) [[unlikely]]
 					{
 						// In rare cases where BPM is not specified on the chart metadata
-						InsertBPMChange(chartData.beat.bpm, 0, value);
+						InsertBPMChange(chartData.beat.bpm, 0, value, kshVersionInt);
 					}
 					else
 					{
-						InsertBPMChange(chartData.beat.bpm, time, value);
+						InsertBPMChange(chartData.beat.bpm, time, value, kshVersionInt);
 					}
 				}
 				else if (key == "stop")
