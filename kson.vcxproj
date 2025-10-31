@@ -51,7 +51,8 @@
     <ClCompile Include="src\compat\compat_info.cpp" />
     <ClCompile Include="src\encoding\encoding_win.cpp" />
     <ClCompile Include="src\error.cpp" />
-    <ClCompile Include="src\io\ksh_io.cpp" />
+    <ClCompile Include="src\io\ksh_io_in.cpp" />
+    <ClCompile Include="src\io\ksh_io_out.cpp" />
     <ClCompile Include="src\io\kson_io.cpp" />
     <ClCompile Include="src\util\graph_curve.cpp" />
     <ClCompile Include="src\util\graph_utils.cpp" />

@@ -161,7 +161,10 @@
     <ClCompile Include="src\util\graph_utils.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\ksh_io.cpp">
+    <ClCompile Include="src\io\ksh_io_in.cpp">
+      <Filter>Source Files\io</Filter>
+    </ClCompile>
+    <ClCompile Include="src\io\ksh_io_out.cpp">
       <Filter>Source Files\io</Filter>
     </ClCompile>
     <ClCompile Include="src\io\kson_io.cpp">
