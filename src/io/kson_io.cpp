@@ -733,7 +733,7 @@ namespace
 				Write(laserJSON, "peaking_filter_delay", d.audioEffect.laser.peakingFilterDelay, 0);
 				{
 					nlohmann::json legacyJSON = nlohmann::json::object();
-					WriteByPulse(legacyJSON, "filter_gain", d.audioEffect.laser.legacy.filterGain, 0.5);
+					WriteByPulse(legacyJSON, "filter_gain", d.audioEffect.laser.legacy.filterGain);
 					Write(laserJSON, "legacy", std::move(legacyJSON));
 				}
 				Write(audioEffectJSON, "laser", std::move(laserJSON));

@@ -1451,6 +1451,7 @@ namespace
 				{
 					InsertFiltertype(chartData, 0, Pop(metaDataHashMap, "filtertype", "peak"));
 				}
+				// Store pfiltergain even if it's the default value of 50
 				if (metaDataHashMap.contains("pfiltergain"))
 				{
 					const std::int32_t pfiltergainValue = PopInt<std::int32_t>(metaDataHashMap, "pfiltergain", 50);

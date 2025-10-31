@@ -707,20 +707,11 @@ namespace
 		stream << "plength=" << audio.bgm.preview.duration << "\r\n";
 
 		// Peaking filter gain (default: 50)
-		// Prioritize legacy.filter_gain if it has any elements
+		// Only use legacy.filter_gain (do not convert from param_change)
 		if (!audio.audioEffect.laser.legacy.filterGain.empty())
 		{
 			const double filterGain = audio.audioEffect.laser.legacy.filterGain.begin()->second;
 			const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
-			stream << "pfiltergain=" << pfiltergain << "\r\n";
-		}
-		else if (!audio.audioEffect.laser.paramChange.empty() &&
-			audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
-			audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
-			!audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").empty())
-		{
-			const std::string& gainStr = audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").begin()->second;
-			const std::int32_t pfiltergain = std::atoi(gainStr.c_str());
 			stream << "pfiltergain=" << pfiltergain << "\r\n";
 		}
 
@@ -1242,8 +1233,7 @@ namespace
 		// Check for laser audio effect annotations (pfiltergain, filtertype, chokkakuse, chokkakuvol)
 
 		// Check for peaking filter gain changes
-		// Prioritize legacy.filter_gain if it has any elements
-		bool filterGainFound = false;
+		// Only use legacy.filter_gain (do not convert from param_change)
 		if (!chartData.audio.audioEffect.laser.legacy.filterGain.empty())
 		{
 			const auto it = std::find_if(
@@ -1260,21 +1250,6 @@ namespace
 					stream << "pfiltergain=" << pfiltergain << "\r\n";
 					state.currentPfiltergain = pfiltergain;
 				}
-				filterGainFound = true;
-			}
-		}
-		if (!filterGainFound &&
-			!chartData.audio.audioEffect.laser.paramChange.empty() &&
-			chartData.audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
-			chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
-			chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").contains(pulse))
-		{
-			const std::string& gainStr = chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").at(pulse);
-			const std::int32_t pfiltergain = std::atoi(gainStr.c_str());
-			if (pfiltergain != state.currentPfiltergain)
-			{
-				stream << "pfiltergain=" << pfiltergain << "\r\n";
-				state.currentPfiltergain = pfiltergain;
 			}
 		}
 
