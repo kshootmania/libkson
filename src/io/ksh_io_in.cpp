@@ -1370,10 +1370,12 @@ namespace
 		// Insert meta data to chartData
 		{
 			const std::string kshVersion = Pop(metaDataHashMap, "ver", "100");
+			const std::string kshVersionCompat = Pop(metaDataHashMap, "ver_compat", "");
 			const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(kshVersion, 100);
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
 			{
-				chartData.compat.kshVersion = kshVersion;
+				// Use ver_compat if present, otherwise use ver
+				chartData.compat.kshVersion = kshVersionCompat.empty() ? kshVersion : kshVersionCompat;
 			}
 
 			chartData.meta.title = Pop(metaDataHashMap, "title");

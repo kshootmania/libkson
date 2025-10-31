@@ -602,6 +602,7 @@ namespace
 		// FX format changed at ver=160, so output at least ver=160
 		std::string verValue = "171";
 		int verInt = 171;
+		bool needVerCompat = false;
 		if (!chartData.compat.kshVersion.empty())
 		{
 			verValue = chartData.compat.kshVersion;
@@ -610,6 +611,7 @@ namespace
 				verInt = std::stoi(verValue);
 				if (verInt < kVerFXFormatChanged)
 				{
+					needVerCompat = true;
 					verValue = std::to_string(kVerFXFormatChanged);
 					verInt = kVerFXFormatChanged;
 				}
@@ -772,6 +774,12 @@ namespace
 
 		// Version
 		stream << "ver=" << verValue << "\r\n";
+
+		// Output ver_compat if original version was <160
+		if (needVerCompat)
+		{
+			stream << "ver_compat=" << chartData.compat.kshVersion << "\r\n";
+		}
 
 		// Output unknown meta options from ksh_unknown
 		for (const auto& [key, value] : chartData.compat.kshUnknown.meta)

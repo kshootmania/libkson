@@ -1252,3 +1252,135 @@ ver=130
 	}
 }
 
+TEST_CASE("ver_compat output for legacy versions", "[ksh_io][ver_compat]") {
+	SECTION("ver < 160 should output ver_compat") {
+		// Create minimal KSH with ver=130
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=120\n"
+			"m=test.ogg\n"
+			"ver=130\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.compat.kshVersion == "130");
+
+		// Convert to KSH
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		// Should output ver=160
+		REQUIRE(kshOutput.find("ver=160") != std::string::npos);
+
+		// Should also output ver_compat=130
+		REQUIRE(kshOutput.find("ver_compat=130") != std::string::npos);
+
+		// ver_compat should come after ver=
+		size_t verPos = kshOutput.find("ver=160");
+		size_t verCompatPos = kshOutput.find("ver_compat=130");
+		REQUIRE(verCompatPos > verPos);
+	}
+
+	SECTION("ver >= 160 should not output ver_compat") {
+		// Create minimal KSH with ver=171
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=120\n"
+			"m=test.ogg\n"
+			"ver=171\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.compat.kshVersion == "171");
+
+		// Convert to KSH
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		// Should output ver=171
+		REQUIRE(kshOutput.find("ver=171") != std::string::npos);
+
+		// Should NOT output ver_compat
+		REQUIRE(kshOutput.find("ver_compat") == std::string::npos);
+	}
+}
+
+TEST_CASE("ver_compat reading", "[ksh_io][ver_compat]") {
+	SECTION("Reading KSH with ver_compat should use ver_compat for kshVersion") {
+		// KSH file with both ver=160 and ver_compat=130
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=120\n"
+			"m=test.ogg\n"
+			"ver=160\n"
+			"ver_compat=130\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// Should use ver_compat=130, not ver=160
+		REQUIRE(chartData.compat.kshVersion == "130");
+	}
+
+	SECTION("Reading KSH without ver_compat should use ver for kshVersion") {
+		// KSH file with only ver=160
+		std::string kshContent =
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=nowprinting1\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=120\n"
+			"m=test.ogg\n"
+			"ver=160\n"
+			"--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+
+		// Should use ver=160
+		REQUIRE(chartData.compat.kshVersion == "160");
+	}
+}
+
