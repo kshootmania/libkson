@@ -1730,21 +1730,21 @@ namespace
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.spin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '(' : ')';
-			const std::int32_t kshLength = (spinEvent.length * 192) / kResolution4;
+			const std::int32_t kshLength = static_cast<std::int32_t>((spinEvent.length * 192) / kResolution4);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.halfSpin.contains(pulse))
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.halfSpin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = (spinEvent.length * 192) / kResolution4;
+			const std::int32_t kshLength = static_cast<std::int32_t>((spinEvent.length * 192) / kResolution4);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.swing.contains(pulse))
 		{
 			const auto& swingEvent = chartData.camera.cam.pattern.laser.slamEvent.swing.at(pulse);
 			const char dirChar = swingEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = (swingEvent.length * 192) / kResolution4;
+			const std::int32_t kshLength = static_cast<std::int32_t>((swingEvent.length * 192) / kResolution4);
 			const std::int32_t scale = static_cast<std::int32_t>(std::round(swingEvent.v.scale));
 			const std::int32_t repeat = swingEvent.v.repeat;
 			const std::int32_t decayOrder = swingEvent.v.decayOrder;
