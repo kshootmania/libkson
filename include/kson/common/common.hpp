@@ -144,8 +144,9 @@ namespace kson
 		ByRelPulse<GraphPoint> v;
 	};
 
+	// Use std::map instead of std::unordered_map to ensure stable output order in saving
 	template <typename T>
-	using Dict = std::unordered_map<std::string, T>;
+	using Dict = std::map<std::string, T>;
 
 	template <typename T, typename U>
 	auto ValueItrAt(const std::map<T, U>& map, T key)
