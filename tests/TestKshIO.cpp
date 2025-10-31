@@ -1192,3 +1192,63 @@ filter:bitc:mix=0%>50%
 	REQUIRE_FALSE(chartData.audio.audioEffect.laser.paramChange.contains("bitc"));
 }
 
+TEST_CASE("KSH version field preservation", "[ksh_io][version]")
+{
+	SECTION("ver >= 160 is preserved") {
+		std::string kshContent = R"(title=Test
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+ver=170
+--
+0000|00|--
+--
+)";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.compat.kshVersion == "170");
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+		REQUIRE(kshOutput.find("ver=170") != std::string::npos);
+	}
+
+	SECTION("ver < 160 is upgraded to 160") {
+		std::string kshContent = R"(title=Test
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+ver=130
+--
+0000|00|--
+--
+)";
+
+		std::istringstream iss(kshContent);
+		auto chartData = kson::LoadKSHChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.compat.kshVersion == "130");
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+		REQUIRE(kshOutput.find("ver=160") != std::string::npos);
+		REQUIRE(kshOutput.find("ver=130") == std::string::npos);
+	}
+}
+

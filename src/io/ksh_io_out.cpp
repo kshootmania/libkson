@@ -743,8 +743,25 @@ namespace
 		}
 
 		// Version
-		// Always save as ver=171
-		stream << "ver=171\r\n";
+		// FX format changed at ver=160, so output at least ver=160
+		std::string verValue = "171";
+		if (!chartData.compat.kshVersion.empty())
+		{
+			verValue = chartData.compat.kshVersion;
+			try
+			{
+				int verInt = std::stoi(verValue);
+				if (verInt < 160)
+				{
+					verValue = "160";
+				}
+			}
+			catch (...)
+			{
+				verValue = "171";
+			}
+		}
+		stream << "ver=" << verValue << "\r\n";
 
 		// Output unknown meta options from ksh_unknown
 		for (const auto& [key, value] : chartData.compat.kshUnknown.meta)
