@@ -1651,7 +1651,14 @@ namespace
 		{
 			const auto& graphPoint = chartData.beat.scrollSpeed.at(pulse);
 			const double scrollSpeed = graphPoint.v.v;
-			stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
+
+			// Skip output if scroll_speed has only one element with the default value of 1.0
+			const bool isDefaultOnly = chartData.beat.scrollSpeed.size() == 1 &&
+				AlmostEquals(chartData.beat.scrollSpeed.begin()->second.v.v, 1.0);
+			if (!isDefaultOnly)
+			{
+				stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
+			}
 
 			// Output vf on next line if different from v
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
