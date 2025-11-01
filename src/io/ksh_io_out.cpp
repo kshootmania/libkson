@@ -267,6 +267,7 @@ namespace
 	{
 		TimeSig currentTimeSig{ 4, 4 };
 		double currentBPM = 120.0;
+		std::string headerBPMStr; // BPM string output in header
 
 		// FX effect state (output only when changed)
 		std::array<std::string, kNumFXLanesSZ> currentFXEffects;
@@ -512,19 +513,20 @@ namespace
 	}
 
 	// Write BPM to header
-	void WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat)
+	// Returns the header BPM string that was output
+	std::string WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat)
 	{
 		// If dispBPM is set, use it as-is
 		if (!dispBPM.empty())
 		{
 			stream << "t=" << dispBPM << "\r\n";
-			return;
+			return dispBPM;
 		}
 
 		if (bpmMap.empty())
 		{
 			stream << "t=120\r\n";
-			return;
+			return "120";
 		}
 
 		// Apply BPM limit for ver >= 130
@@ -538,8 +540,9 @@ namespace
 			{
 				bpm = std::min(bpm, kBPMMax);
 			}
-			stream << "t=" << FormatDouble(bpm) << "\r\n";
-			return;
+			std::string bpmStr = FormatDouble(bpm);
+			stream << "t=" << bpmStr << "\r\n";
+			return bpmStr;
 		}
 
 		// Find min and max BPM
@@ -560,16 +563,20 @@ namespace
 		// If all BPMs are the same, output single BPM
 		if (AlmostEquals(minBPM, maxBPM))
 		{
-			stream << "t=" << FormatDouble(minBPM) << "\r\n";
+			std::string bpmStr = FormatDouble(minBPM);
+			stream << "t=" << bpmStr << "\r\n";
+			return bpmStr;
 		}
 		else
 		{
-			stream << "t=" << FormatDouble(minBPM) << "-" << FormatDouble(maxBPM) << "\r\n";
+			std::string bpmStr = FormatDouble(minBPM) + "-" + FormatDouble(maxBPM);
+			stream << "t=" << bpmStr << "\r\n";
+			return bpmStr;
 		}
 	}
 
 	// Write header section
-	void WriteHeader(std::ostream& stream, const ChartData& chartData)
+	void WriteHeader(std::ostream& stream, const ChartData& chartData, std::string* headerBPMStr = nullptr)
 	{
 		const auto& meta = chartData.meta;
 		const auto& audio = chartData.audio;
@@ -608,7 +615,11 @@ namespace
 		stream << "level=" << meta.level << "\r\n";
 
 		// BPM
-		WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat);
+		std::string bpmStr = WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat);
+		if (headerBPMStr != nullptr)
+		{
+			*headerBPMStr = bpmStr;
+		}
 
 		// Standard BPM (for hi-speed calculation)
 		if (meta.stdBPM != 0.0)
@@ -1274,7 +1285,16 @@ namespace
 			{
 				bpm = std::min(bpm, kBPMMax);
 			}
-			stream << "t=" << FormatDouble(bpm) << "\r\n";
+
+			std::string bpmStr = FormatDouble(bpm);
+
+			// Skip output at pulse 0 if it matches the header BPM
+			bool shouldSkipDuplicate = pulse == 0 && !state.headerBPMStr.empty() && bpmStr == state.headerBPMStr;
+
+			if (!shouldSkipDuplicate)
+			{
+				stream << "t=" << bpmStr << "\r\n";
+			}
 		}
 
 		// TODO: Output comments here
@@ -2282,7 +2302,8 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 	MeasureExportState state;
 	std::vector<std::string> warnings;
 
-	WriteHeader(stream, chartData);
+	// Write header and store the header BPM string in state
+	WriteHeader(stream, chartData, &state.headerBPMStr);
 	WriteMeasures(stream, chartData, state, warnings);
 	WriteAudioEffectDefinitions(stream, chartData);
 
