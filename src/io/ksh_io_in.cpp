@@ -505,6 +505,27 @@ namespace
 		}
 	}
 
+	void ApplyBufferedCurvesToTilt(
+		const std::string& paramName,
+		ByPulse<TiltValue>& tilt,
+		const std::unordered_map<std::string, std::map<Pulse, GraphCurveValue>>& bufferedCurves)
+	{
+		if (!bufferedCurves.contains(paramName))
+		{
+			return;
+		}
+
+		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
+		{
+			auto it = tilt.find(pulse);
+			if (it != tilt.end() && std::holds_alternative<GraphPoint>(it->second))
+			{
+				GraphPoint& point = std::get<GraphPoint>(it->second);
+				point.curve = curve;
+			}
+		}
+	}
+
 	void ApplyBufferedCurvesToGraphSection(
 		const std::string& paramName,
 		ByPulse<GraphSection>& graphSections,
@@ -1004,53 +1025,16 @@ namespace
 		{ "keep", true }, // legacy
 	};
 
-	class PreparedGraphSection
+	AutoTiltType ParseAutoTiltType(std::string_view str)
 	{
-	private:
-		PreparedInserter<GraphSectionData> m_inserter;
-		ChartData* m_pTargetChartData = nullptr;
-
-	public:
-		PreparedGraphSection() = default;
-
-		explicit PreparedGraphSection(ChartData* pTargetChartData)
-			: m_pTargetChartData(pTargetChartData)
-		{
-		}
-
-		void prepare(Pulse time)
-		{
-			m_inserter.prepare(time);
-		}
-
-		bool prepared() const
-		{
-			return m_inserter.prepared();
-		}
-
-		void addGraphPoint(Pulse time, double value)
-		{
-			const RelPulse relTime = time - m_inserter.startTime();
-			if (relTime >= 0)
-			{
-				m_inserter.data().addPoint(relTime, value);
-			}
-		}
-
-		void publishManualTilt()
-		{
-			if (auto result = m_inserter.publish())
-			{
-				const auto& [time, data] = *result;
-				m_pTargetChartData->camera.tilt.manual.emplace(time, GraphSection{ .v = data.points });
-			}
-		}
-
-		void clear()
-		{
-			m_inserter.clear();
-		}
-	};
+		if (str == "bigger" || str == "big") return AutoTiltType::kBigger;
+		if (str == "biggest") return AutoTiltType::kBiggest;
+		if (str == "keep_normal") return AutoTiltType::kKeepNormal;
+		if (str == "keep_bigger" || str == "keep") return AutoTiltType::kKeepBigger;
+		if (str == "keep_biggest") return AutoTiltType::kKeepBiggest;
+		if (str == "zero") return AutoTiltType::kZero;
+		return AutoTiltType::kNormal;
+	}
 
 	class PreparedLaserSection
 	{
@@ -1586,9 +1570,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	ByPulse<std::int32_t> relScrollSpeeds;
 	PreparedLongNoteArray preparedLongNoteArray(&chartData);
 
-	// GraphSections buffers
-	PreparedGraphSection preparedManualTilt(&chartData);
-
 	// Curve values buffer (key: parameter name, value: pulse -> curve)
 	std::unordered_map<std::string, ByPulse<GraphCurveValue>> bufferedCurves;
 
@@ -1875,13 +1856,26 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				}
 				else if (key == "tilt")
 				{
+					auto& target = chartData.camera.tilt;
+
 					if (IsTiltValueManual(value))
 					{
 						const double dValue = ParseNumeric<double>(value);
 						if (std::abs(dValue) <= kManualTiltAbsMax)
 						{
-							preparedManualTilt.prepare(time);
-							preparedManualTilt.addGraphPoint(time, dValue);
+							// Check for immediate change (consecutive manual tilt values at the same pulse)
+							if (!target.empty())
+							{
+								auto lastIt = target.rbegin();
+								if (lastIt->first == time && std::holds_alternative<GraphPoint>(lastIt->second))
+								{
+									const GraphPoint& lastGraphPoint = std::get<GraphPoint>(lastIt->second);
+									target.insert_or_assign(time, GraphPoint{ GraphValue{ lastGraphPoint.v.v, dValue }, lastGraphPoint.curve });
+									continue;
+								}
+							}
+
+							target.insert_or_assign(time, GraphPoint{ GraphValue{ dValue } });
 						}
 						if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
 						{
@@ -1891,33 +1885,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else
 					{
-						if (preparedManualTilt.prepared())
-						{
-							preparedManualTilt.publishManualTilt();
-						}
-
-						// Insert tilt.scale
-						if (s_tiltTypeScaleTable.contains(value))
-						{
-							auto& target = chartData.camera.tilt.scale;
-							const double prevValue = target.empty() ? 1.0 : target.crbegin()->second;
-							const double currentValue = s_tiltTypeScaleTable.at(value);
-							if (currentValue != prevValue)
-							{
-								target.insert_or_assign(time, currentValue);
-							}
-						}
-
-						// Insert tilt.keep
-						{
-							auto& target = chartData.camera.tilt.keep;
-							const bool prevValue = target.empty() ? false : target.crbegin()->second;
-							const bool currentValue = value.starts_with("keep_");
-							if (currentValue != prevValue)
-							{
-								target.insert_or_assign(time, currentValue);
-							}
-						}
+						target.insert_or_assign(time, ParseAutoTiltType(value));
 					}
 				}
 				else if (key == "chokkakuvol")
@@ -2192,12 +2160,6 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		});
 	}
 
-	// Publish the last manual tilt section if exists
-	if (preparedManualTilt.prepared())
-	{
-		preparedManualTilt.publishManualTilt();
-	}
-
 	// KSH file must end with the bar line "--" (except for user-defined audio effects), so there can never be a prepared button note here
 	for (const auto& preparedBTNote : preparedLongNoteArray.bt)
 	{
@@ -2231,7 +2193,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
 	ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
 	ApplyBufferedCurvesToGraph("center_split", chartData.camera.cam.body.centerSplit, bufferedCurves);
-	ApplyBufferedCurvesToGraphSection("tilt", chartData.camera.tilt.manual, bufferedCurves);
+	ApplyBufferedCurvesToTilt("tilt", chartData.camera.tilt, bufferedCurves);
 
 	// Convert scroll speeds
 	{
@@ -2384,10 +2346,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	if (useLegacyScaleForManualTilt)
 	{
 		constexpr double kToLegacyScale = 14.0 / 10.0;
-		for (auto& [y, section] : chartData.camera.tilt.manual)
+		for (auto& [pulse, tiltValue] : chartData.camera.tilt)
 		{
-			for (auto& [ry, point] : section.v)
+			if (std::holds_alternative<GraphPoint>(tiltValue))
 			{
+				GraphPoint& point = std::get<GraphPoint>(tiltValue);
 				point.v.v *= kToLegacyScale;
 				point.v.vf *= kToLegacyScale;
 			}

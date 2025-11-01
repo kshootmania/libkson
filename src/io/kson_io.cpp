@@ -744,14 +744,90 @@ namespace
 		return j;
 	}
 
+	const char* AutoTiltTypeToString(AutoTiltType type)
+	{
+		switch (type)
+		{
+		case AutoTiltType::kNormal: return "normal";
+		case AutoTiltType::kBigger: return "bigger";
+		case AutoTiltType::kBiggest: return "biggest";
+		case AutoTiltType::kKeepNormal: return "keep_normal";
+		case AutoTiltType::kKeepBigger: return "keep_bigger";
+		case AutoTiltType::kKeepBiggest: return "keep_biggest";
+		case AutoTiltType::kZero: return "zero";
+		default: return "normal";
+		}
+	}
+
+	void WriteTiltValue(nlohmann::json& arrayJSON, Pulse pulse, const TiltValue& tiltValue)
+	{
+		nlohmann::json entry = nlohmann::json::array();
+		entry.push_back(pulse);
+
+		if (std::holds_alternative<AutoTiltType>(tiltValue))
+		{
+			// Auto tilt type: [pulse, "string"]
+			entry.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(tiltValue)));
+		}
+		else if (std::holds_alternative<GraphPoint>(tiltValue))
+		{
+			const GraphPoint& point = std::get<GraphPoint>(tiltValue);
+			const bool hasCurve = !point.curve.isLinear();
+			const bool hasGraphValue = !AlmostEquals(point.v.v, point.v.vf);
+
+			if (hasCurve && hasGraphValue)
+			{
+				// With immediate change and curve: [pulse, [[v, vf], [a, b]]]
+				nlohmann::json graphValue = nlohmann::json::array({
+					RemoveFloatingPointError(point.v.v),
+					RemoveFloatingPointError(point.v.vf)
+				});
+				nlohmann::json curveValue = nlohmann::json::array({
+					RemoveFloatingPointError(point.curve.a),
+					RemoveFloatingPointError(point.curve.b)
+				});
+				entry.push_back(nlohmann::json::array({ graphValue, curveValue }));
+			}
+			else if (hasCurve)
+			{
+				// With curve only: [pulse, [v, [a, b]]]
+				nlohmann::json curveValue = nlohmann::json::array({
+					RemoveFloatingPointError(point.curve.a),
+					RemoveFloatingPointError(point.curve.b)
+				});
+				entry.push_back(nlohmann::json::array({
+					RemoveFloatingPointError(point.v.v),
+					curveValue
+				}));
+			}
+			else if (hasGraphValue)
+			{
+				// GraphValue without curve: [pulse, [v, vf]]
+				entry.push_back(nlohmann::json::array({
+					RemoveFloatingPointError(point.v.v),
+					RemoveFloatingPointError(point.v.vf)
+				}));
+			}
+			else
+			{
+				// Simple value: [pulse, double]
+				entry.push_back(RemoveFloatingPointError(point.v.v));
+			}
+		}
+
+		arrayJSON.push_back(entry);
+	}
+
 	nlohmann::json ToJSON(const CameraInfo& d)
 	{
 		nlohmann::json j = nlohmann::json::object();
+		if (!d.tilt.empty())
 		{
-			nlohmann::json tiltJSON = nlohmann::json::object();
-			WriteByPulse(tiltJSON, "scale", d.tilt.scale, 1.0);
-			WriteGraphSections(tiltJSON, "manual", d.tilt.manual);
-			WriteByPulse(tiltJSON, "keep", d.tilt.keep, false);
+			nlohmann::json tiltJSON = nlohmann::json::array();
+			for (const auto& [pulse, tiltValue] : d.tilt)
+			{
+				WriteTiltValue(tiltJSON, pulse, tiltValue);
+			}
 			Write(j, "tilt", std::move(tiltJSON));
 		}
 		{
@@ -1635,45 +1711,80 @@ namespace
 		return graphs;
 	}
 
-	TiltInfo ParseTiltInfo(const nlohmann::json& j, ChartData& chartData)
+	AutoTiltType ParseAutoTiltType(const std::string& str)
 	{
-		TiltInfo tilt;
-		
-		if (j.contains("scale"))
+		if (str == "bigger") return AutoTiltType::kBigger;
+		if (str == "biggest") return AutoTiltType::kBiggest;
+		if (str == "keep_normal") return AutoTiltType::kKeepNormal;
+		if (str == "keep_bigger") return AutoTiltType::kKeepBigger;
+		if (str == "keep_biggest") return AutoTiltType::kKeepBiggest;
+		if (str == "zero") return AutoTiltType::kZero;
+		return AutoTiltType::kNormal;
+	}
+
+	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, ChartData& chartData)
+	{
+		ByPulse<TiltValue> tilt;
+
+		if (j.is_array())
 		{
-			tilt.scale = ParseByPulse<double>(j["scale"], chartData);
-		}
-		
-		if (j.contains("keep"))
-		{
-			tilt.keep = ParseByPulse<bool>(j["keep"], chartData);
-		}
-		
-		if (j.contains("manual") && j["manual"].is_array())
-		{
-			for (const auto& item : j["manual"])
+			for (const auto& item : j)
 			{
 				if (item.is_array() && item.size() >= 2)
 				{
-					Pulse y = item[0].get<Pulse>();
-					if (item[1].is_array())
+					Pulse pulse = item[0].get<Pulse>();
+
+					if (item[1].is_string())
 					{
-						GraphSection section;
-						for (const auto& point : item[1])
+						// Auto tilt type: [pulse, "string"]
+						tilt[pulse] = ParseAutoTiltType(item[1].get<std::string>());
+					}
+					else if (item[1].is_number())
+					{
+						// Simple value: [pulse, double]
+						tilt[pulse] = GraphPoint{ GraphValue{ item[1].get<double>() } };
+					}
+					else if (item[1].is_array() && item[1].size() == 2)
+					{
+						// Check if this is [v, vf], [v, [a, b]], or [[v, vf], [a, b]]
+						if (item[1][0].is_array())
 						{
-							if (point.is_array() && point.size() >= 2)
-							{
-								RelPulse ry = point[0].get<RelPulse>();
-								GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, chartData);
-								section.v[ry] = graphPoint;
-							}
+							// [[v, vf], [a, b]]: GraphValue with immediate change and curve
+							GraphValue gv{
+								item[1][0][0].get<double>(),
+								item[1][0][1].get<double>()
+							};
+							GraphCurveValue curve{
+								item[1][1][0].get<double>(),
+								item[1][1][1].get<double>()
+							};
+							tilt[pulse] = GraphPoint{ gv, curve };
 						}
-						tilt.manual[y] = section;
+						else if (item[1][1].is_array())
+						{
+							// [v, [a, b]]: Single value with curve
+							GraphValue gv{ item[1][0].get<double>() };
+							GraphCurveValue curve{
+								item[1][1][0].get<double>(),
+								item[1][1][1].get<double>()
+							};
+							tilt[pulse] = GraphPoint{ gv, curve };
+						}
+						else
+						{
+							// [v, vf]: GraphValue with immediate change, no curve
+							tilt[pulse] = GraphPoint{
+								GraphValue{
+									item[1][0].get<double>(),
+									item[1][1].get<double>()
+								}
+							};
+						}
 					}
 				}
 			}
 		}
-		
+
 		return tilt;
 	}
 
@@ -1683,7 +1794,7 @@ namespace
 		
 		if (j.contains("tilt"))
 		{
-			camera.tilt = ParseTiltInfo(j["tilt"], chartData);
+			camera.tilt = ParseTilt(j["tilt"], chartData);
 		}
 		
 		if (j.contains("cam"))

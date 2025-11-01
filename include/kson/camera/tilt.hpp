@@ -1,12 +1,25 @@
 ﻿#pragma once
 #include "kson/common/common.hpp"
+#include <variant>
 
 namespace kson
 {
-	struct TiltInfo
+	enum class AutoTiltType
 	{
-		ByPulse<double> scale;
-		ByPulse<GraphSection> manual;
-		ByPulse<bool> keep;
+		kNormal,
+		kBigger,
+		kBiggest,
+		kKeepNormal,
+		kKeepBigger,
+		kKeepBiggest,
+		kZero,
 	};
+
+	using TiltValue = std::variant<AutoTiltType, GraphPoint>;
+
+	// Get scale value from AutoTiltType
+	double GetAutoTiltScale(AutoTiltType type);
+
+	// Check if AutoTiltType is a keep type
+	bool IsKeepAutoTiltType(AutoTiltType type);
 }

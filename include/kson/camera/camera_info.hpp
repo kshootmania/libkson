@@ -8,6 +8,6 @@ namespace kson
 	struct CameraInfo
 	{
 		CamInfo cam;
-		TiltInfo tilt;
+		ByPulse<TiltValue> tilt;
 	};
 }

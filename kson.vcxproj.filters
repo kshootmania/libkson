@@ -135,6 +135,9 @@
     <ClInclude Include="include\kson\util\graph_utils.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="include\kson\util\tilt_utils.hpp">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
     <ClInclude Include="include\kson\editor\editor_info.hpp">
       <Filter>Header Files\editor</Filter>
     </ClInclude>
@@ -160,6 +163,12 @@
     </ClCompile>
     <ClCompile Include="src\util\graph_utils.cpp">
       <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\tilt_utils.cpp">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera\tilt.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\io\ksh_io_in.cpp">
       <Filter>Source Files\io</Filter>

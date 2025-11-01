@@ -824,3 +824,125 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 		REQUIRE(chart.error == kson::ErrorType::None);
 	}
 }
+
+TEST_CASE("KSON Tilt Serialization", "[kson_io][tilt]") {
+	SECTION("All tilt format variations") {
+		// Create chart with all tilt format types
+		kson::ChartData chart;
+		chart.meta.title = "Tilt Test";
+		chart.meta.artist = "Test";
+		chart.meta.chartAuthor = "Test";
+		chart.meta.level = 1;
+		chart.meta.dispBPM = "120";
+		chart.beat.bpm[0] = 120.0;
+		chart.beat.timeSig[0] = {4, 4};
+
+		// Format 1: [pulse, "string"]
+		chart.camera.tilt[0] = kson::AutoTiltType::kNormal;
+		chart.camera.tilt[480] = kson::AutoTiltType::kBigger;
+
+		// Format 2: [pulse, double]
+		chart.camera.tilt[960] = kson::GraphPoint{kson::GraphValue{2.5}};
+
+		// Format 3: [pulse, [v, vf]]
+		chart.camera.tilt[1440] = kson::GraphPoint{kson::GraphValue{1.0, 3.0}};
+
+		// Format 4: [pulse, [v, [a, b]]]
+		chart.camera.tilt[1920] = kson::GraphPoint{kson::GraphValue{1.5}, kson::GraphCurveValue{0.2, 0.8}};
+
+		// Format 5: [pulse, [[v, vf], [a, b]]]
+		chart.camera.tilt[2400] = kson::GraphPoint{kson::GraphValue{0.0, 5.0}, kson::GraphCurveValue{0.3, 0.7}};
+
+		// Save to KSON
+		std::ostringstream oss;
+		kson::ErrorType result = kson::SaveKSONChartData(oss, chart);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string ksonOutput = oss.str();
+		REQUIRE(!ksonOutput.empty());
+
+		// Verify JSON structure
+		nlohmann::json j = nlohmann::json::parse(ksonOutput);
+		REQUIRE(j.contains("camera"));
+		REQUIRE(j["camera"].contains("tilt"));
+		REQUIRE(j["camera"]["tilt"].is_array());
+
+		auto& tiltArray = j["camera"]["tilt"];
+		REQUIRE(tiltArray.size() == 6);
+
+		// Verify auto tilt (normal)
+		REQUIRE(tiltArray[0][0] == 0);
+		REQUIRE(tiltArray[0][1] == "normal");
+
+		// Verify auto tilt (bigger)
+		REQUIRE(tiltArray[1][0] == 480);
+		REQUIRE(tiltArray[1][1] == "bigger");
+
+		// Verify simple value
+		REQUIRE(tiltArray[2][0] == 960);
+		REQUIRE(tiltArray[2][1] == 2.5);
+
+		// Verify immediate change
+		REQUIRE(tiltArray[3][0] == 1440);
+		REQUIRE(tiltArray[3][1].is_array());
+		REQUIRE(tiltArray[3][1].size() == 2);
+		REQUIRE(tiltArray[3][1][0] == 1.0);
+		REQUIRE(tiltArray[3][1][1] == 3.0);
+
+		// Verify curve only [v, [a, b]]
+		REQUIRE(tiltArray[4][0] == 1920);
+		REQUIRE(tiltArray[4][1].is_array());
+		REQUIRE(tiltArray[4][1].size() == 2);
+		REQUIRE(tiltArray[4][1][0] == 1.5);
+		REQUIRE(tiltArray[4][1][1].is_array());
+		REQUIRE(tiltArray[4][1][1][0] == 0.2);
+		REQUIRE(tiltArray[4][1][1][1] == 0.8);
+
+		// Verify immediate change with curve [[v, vf], [a, b]]
+		REQUIRE(tiltArray[5][0] == 2400);
+		REQUIRE(tiltArray[5][1].is_array());
+		REQUIRE(tiltArray[5][1].size() == 2);
+		REQUIRE(tiltArray[5][1][0].is_array());
+		REQUIRE(tiltArray[5][1][0][0] == 0.0);
+		REQUIRE(tiltArray[5][1][0][1] == 5.0);
+		REQUIRE(tiltArray[5][1][1].is_array());
+		REQUIRE(tiltArray[5][1][1][0] == 0.3);
+		REQUIRE(tiltArray[5][1][1][1] == 0.7);
+
+		// Load back
+		std::istringstream iss(ksonOutput);
+		kson::ChartData loaded = kson::LoadKSONChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+
+		// Compare tilt data
+		REQUIRE(loaded.camera.tilt.size() == 6);
+
+		REQUIRE(std::holds_alternative<kson::AutoTiltType>(loaded.camera.tilt.at(0)));
+		REQUIRE(std::get<kson::AutoTiltType>(loaded.camera.tilt.at(0)) == kson::AutoTiltType::kNormal);
+
+		REQUIRE(std::holds_alternative<kson::AutoTiltType>(loaded.camera.tilt.at(480)));
+		REQUIRE(std::get<kson::AutoTiltType>(loaded.camera.tilt.at(480)) == kson::AutoTiltType::kBigger);
+
+		const auto& point960 = std::get<kson::GraphPoint>(loaded.camera.tilt.at(960));
+		REQUIRE(point960.v.v == Approx(2.5));
+		REQUIRE(point960.v.vf == Approx(2.5));
+		REQUIRE(point960.curve.isLinear());
+
+		const auto& point1440 = std::get<kson::GraphPoint>(loaded.camera.tilt.at(1440));
+		REQUIRE(point1440.v.v == Approx(1.0));
+		REQUIRE(point1440.v.vf == Approx(3.0));
+		REQUIRE(point1440.curve.isLinear());
+
+		const auto& point1920 = std::get<kson::GraphPoint>(loaded.camera.tilt.at(1920));
+		REQUIRE(point1920.v.v == Approx(1.5));
+		REQUIRE(point1920.v.vf == Approx(1.5));
+		REQUIRE(point1920.curve.a == Approx(0.2));
+		REQUIRE(point1920.curve.b == Approx(0.8));
+
+		const auto& point2400 = std::get<kson::GraphPoint>(loaded.camera.tilt.at(2400));
+		REQUIRE(point2400.v.v == Approx(0.0));
+		REQUIRE(point2400.v.vf == Approx(5.0));
+		REQUIRE(point2400.curve.a == Approx(0.3));
+		REQUIRE(point2400.curve.b == Approx(0.7));
+	}
+}

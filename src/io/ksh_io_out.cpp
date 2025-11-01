@@ -193,39 +193,19 @@ namespace
 		return kKSONToKSHPresetFXEffectName.contains(effectName);
 	}
 
-	// Get tilt type string from scale and keep values
-	const char* GetTiltTypeString(double scale, bool keep)
+	const char* AutoTiltTypeToString(AutoTiltType type)
 	{
-		// Find closest scale value
-		struct ScaleOption
+		switch (type)
 		{
-			double value;
-			const char* typeName;
-			const char* keepTypeName;
-		};
-
-		constexpr std::array<ScaleOption, 4> scaleOptions = {{
-			{ 0.0, "zero", "zero" },
-			{ 1.0, "normal", "keep_normal" },
-			{ 1.75, "bigger", "keep_bigger" },
-			{ 2.5, "biggest", "keep_biggest" },
-		}};
-
-		// Find closest scale
-		const ScaleOption* pClosest = &scaleOptions[0];
-		double minDistance = std::abs(scale - scaleOptions[0].value);
-
-		for (const auto& option : scaleOptions)
-		{
-			const double distance = std::abs(scale - option.value);
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-				pClosest = &option;
-			}
+		case AutoTiltType::kNormal: return "normal";
+		case AutoTiltType::kBigger: return "bigger";
+		case AutoTiltType::kBiggest: return "biggest";
+		case AutoTiltType::kKeepNormal: return "keep_normal";
+		case AutoTiltType::kKeepBigger: return "keep_bigger";
+		case AutoTiltType::kKeepBiggest: return "keep_biggest";
+		case AutoTiltType::kZero: return "zero";
+		default: return "normal";
 		}
-
-		return keep ? pClosest->keepTypeName : pClosest->typeName;
 	}
 
 	// Write UTF-8 BOM
@@ -288,11 +268,6 @@ namespace
 
 		// FX audio effect state (output only when changed)
 		std::array<std::string, kNumFXLanesSZ> currentFXAudioEffects;
-
-		// Camera tilt state (output only when changed)
-		double currentTiltScale = 1.0;
-		bool currentTiltKeep = false;
-		std::optional<Pulse> currentManualTiltSectionPulse;
 
 		MeasureExportState()
 		{
@@ -403,24 +378,9 @@ namespace
 		}
 
 		// Camera tilt
-		if (!chartData.camera.tilt.scale.empty())
+		if (!chartData.camera.tilt.empty())
 		{
-			maxPulse = std::max(maxPulse, chartData.camera.tilt.scale.rbegin()->first);
-		}
-		if (!chartData.camera.tilt.keep.empty())
-		{
-			maxPulse = std::max(maxPulse, chartData.camera.tilt.keep.rbegin()->first);
-		}
-		if (!chartData.camera.tilt.manual.empty())
-		{
-			for (const auto& [sectionPulse, section] : chartData.camera.tilt.manual)
-			{
-				if (!section.v.empty())
-				{
-					const RelPulse lastRelativePulse = section.v.rbegin()->first;
-					maxPulse = std::max(maxPulse, sectionPulse + lastRelativePulse);
-				}
-			}
+			maxPulse = std::max(maxPulse, chartData.camera.tilt.rbegin()->first);
 		}
 
 		// Spin events
@@ -1456,115 +1416,39 @@ namespace
 			}
 		}
 
-		// Check for tilt changes (scale, keep, or manual)
-		const bool scaleChanged = chartData.camera.tilt.scale.contains(pulse);
-		const bool keepChanged = chartData.camera.tilt.keep.contains(pulse);
-
-		// Check if current pulse is in any manual tilt section
-		const bool isInManualTiltSection = GraphSectionValueAt(chartData.camera.tilt.manual, pulse).has_value();
-		bool manualChanged = false;
-		const GraphPoint* pManualTiltPoint = nullptr;
-		std::optional<Pulse> manualTiltSectionPulse;
-		for (const auto& [sectionPulse, section] : chartData.camera.tilt.manual)
+		if (chartData.camera.tilt.contains(pulse))
 		{
-			for (const auto& [relativePulse, graphPoint] : section.v)
+			const auto& tiltValue = chartData.camera.tilt.at(pulse);
+
+			if (std::holds_alternative<GraphPoint>(tiltValue))
 			{
-				if (sectionPulse + relativePulse == pulse)
+				const GraphPoint& graphPoint = std::get<GraphPoint>(tiltValue);
+
+				// Apply inverse legacy scale for ver < 170 if any large tilt value exists in the chart
+				// Legacy charts with large manual tilt values depend on the tilt scale (14 degrees) used before v1.70
+				constexpr double kFromLegacyScale = 10.0 / 14.0;
+				const double scale = useLegacyScaleForManualTilt ? kFromLegacyScale : 1.0;
+
+				// Output curve if present
+				if (!graphPoint.curve.isLinear())
 				{
-					manualChanged = true;
-					pManualTiltPoint = &graphPoint;
-					manualTiltSectionPulse = sectionPulse;
-					break;
-				}
-			}
-			if (manualChanged) break;
-		}
-
-		// Check if this is a new manual tilt section
-		const bool isManualTiltStart = manualChanged && pManualTiltPoint != nullptr &&
-			manualTiltSectionPulse.has_value() &&
-			(!state.currentManualTiltSectionPulse.has_value() ||
-			 state.currentManualTiltSectionPulse.value() != manualTiltSectionPulse.value());
-
-		// If starting a new manual tilt section, close previous section first
-		if (isManualTiltStart && state.currentManualTiltSectionPulse.has_value())
-		{
-			stream << "tilt=" << GetTiltTypeString(state.currentTiltScale, state.currentTiltKeep) << "\r\n";
-		}
-
-		// Output manual tilt
-		if (manualChanged && pManualTiltPoint != nullptr && manualTiltSectionPulse.has_value())
-		{
-			state.currentManualTiltSectionPulse = manualTiltSectionPulse;
-
-			// Apply inverse legacy scale for ver < 170 if any large tilt value exists in the chart
-			// Legacy charts with large manual tilt values depend on the tilt scale (14 degrees) used before v1.70
-			constexpr double kFromLegacyScale = 10.0 / 14.0;
-			const double scale = useLegacyScaleForManualTilt ? kFromLegacyScale : 1.0;
-
-			const double clampedV = std::clamp(pManualTiltPoint->v.v * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
-			stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
-
-			// Output vf on next line if different from v
-			if (!AlmostEquals(pManualTiltPoint->v.v, pManualTiltPoint->v.vf))
-			{
-				const double clampedVf = std::clamp(pManualTiltPoint->v.vf * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
-				stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
-			}
-
-			// Check for curve interpolation
-			if (pManualTiltPoint->curve.a != 0.0 || pManualTiltPoint->curve.b != 0.0)
-			{
-				stream << "tilt_curve=" << FormatDouble(pManualTiltPoint->curve.a) << ";" << FormatDouble(pManualTiltPoint->curve.b) << "\r\n";
-			}
-
-			// Check if this is the last point in the section
-			const auto& section = chartData.camera.tilt.manual.at(manualTiltSectionPulse.value());
-			if (!section.v.empty() && pulse == manualTiltSectionPulse.value() + section.v.rbegin()->first)
-			{
-				// End of manual tilt section
-				state.currentManualTiltSectionPulse.reset();
-
-				// Output tilt type to end manual tilt section
-				// Use current state values (set before manual tilt started) unless there's a change at this pulse
-				double scaleToOutput = state.currentTiltScale;
-				bool keepToOutput = state.currentTiltKeep;
-
-				// If there's a scale/keep change at this exact pulse, use that instead
-				if (scaleChanged)
-				{
-					scaleToOutput = chartData.camera.tilt.scale.at(pulse);
-				}
-				if (keepChanged)
-				{
-					keepToOutput = chartData.camera.tilt.keep.at(pulse);
+					stream << "tilt_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
 				}
 
-				// Only output if there's no scale/keep change at this pulse
-				// (if there is, it will be output by the scale/keep change handler)
-				if (!scaleChanged && !keepChanged)
+				const double clampedV = std::clamp(graphPoint.v.v * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
+				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
+
+				// Output vf on next line if different from v (immediate change)
+				if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 				{
-					stream << "tilt=" << GetTiltTypeString(scaleToOutput, keepToOutput) << "\r\n";
+					const double clampedVf = std::clamp(graphPoint.v.vf * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
+					stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
 				}
 			}
-		}
-
-		// Output scale/keep changes before manual tilt (if starting new section)
-		if (scaleChanged || keepChanged)
-		{
-			if (scaleChanged)
+			else if (std::holds_alternative<AutoTiltType>(tiltValue))
 			{
-				state.currentTiltScale = chartData.camera.tilt.scale.at(pulse);
-			}
-			if (keepChanged)
-			{
-				state.currentTiltKeep = chartData.camera.tilt.keep.at(pulse);
-			}
-
-			// Only output if not in manual tilt section, or if starting new section
-			if (!isInManualTiltSection || isManualTiltStart)
-			{
-				stream << "tilt=" << GetTiltTypeString(state.currentTiltScale, state.currentTiltKeep) << "\r\n";
+				const AutoTiltType autoTiltType = std::get<AutoTiltType>(tiltValue);
+				stream << "tilt=" << AutoTiltTypeToString(autoTiltType) << "\r\n";
 			}
 		}
 
@@ -1982,24 +1866,9 @@ namespace
 		}
 
 		// Camera tilt
-		for (const auto& [pulse, scale] : chartData.camera.tilt.scale)
+		for (const auto& [pulse, tiltValue] : chartData.camera.tilt)
 		{
 			updateGCD(pulse);
-		}
-		for (const auto& [pulse, keep] : chartData.camera.tilt.keep)
-		{
-			updateGCD(pulse);
-		}
-		for (const auto& [pulse, section] : chartData.camera.tilt.manual)
-		{
-			updateGCD(pulse);
-			for (const auto& [relativePulse, graphPoint] : section.v)
-			{
-				if (relativePulse != 0)
-				{
-					updateGCD(pulse + relativePulse);
-				}
-			}
 		}
 
 		// Spin events
@@ -2135,19 +2004,16 @@ namespace
 		bool useLegacyScaleForManualTilt = false;
 		if (chartData.compat.isKSHVersionOlderThan(kVerManualTiltScaleChanged))
 		{
-			for (const auto& [sectionPulse, section] : chartData.camera.tilt.manual)
+			for (const auto& [pulse, tiltValue] : chartData.camera.tilt)
 			{
-				for (const auto& [relativePulse, graphPoint] : section.v)
+				if (std::holds_alternative<GraphPoint>(tiltValue))
 				{
-					if (std::abs(graphPoint.v.v) >= 10.0 || std::abs(graphPoint.v.vf) >= 10.0)
+					const GraphPoint& point = std::get<GraphPoint>(tiltValue);
+					if (std::abs(point.v.v) >= 10.0 || std::abs(point.v.vf) >= 10.0)
 					{
 						useLegacyScaleForManualTilt = true;
 						break;
 					}
-				}
-				if (useLegacyScaleForManualTilt)
-				{
-					break;
 				}
 			}
 		}
