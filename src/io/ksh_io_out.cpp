@@ -1,4 +1,5 @@
 ﻿#include "kson/io/ksh_io.hpp"
+#include "kson/util/graph_utils.hpp"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -1460,6 +1461,7 @@ namespace
 		const bool keepChanged = chartData.camera.tilt.keep.contains(pulse);
 
 		// Check if current pulse is in any manual tilt section
+		const bool isInManualTiltSection = GraphSectionValueAt(chartData.camera.tilt.manual, pulse).has_value();
 		bool manualChanged = false;
 		const GraphPoint* pManualTiltPoint = nullptr;
 		std::optional<Pulse> manualTiltSectionPulse;
@@ -1488,25 +1490,6 @@ namespace
 		if (isManualTiltStart && state.currentManualTiltSectionPulse.has_value())
 		{
 			stream << "tilt=" << GetTiltTypeString(state.currentTiltScale, state.currentTiltKeep) << "\r\n";
-		}
-
-		// Output scale/keep changes before manual tilt (if starting new section)
-		if (scaleChanged || keepChanged)
-		{
-			if (scaleChanged)
-			{
-				state.currentTiltScale = chartData.camera.tilt.scale.at(pulse);
-			}
-			if (keepChanged)
-			{
-				state.currentTiltKeep = chartData.camera.tilt.keep.at(pulse);
-			}
-
-			// Only output if not in manual tilt section, or if starting new section
-			if (!state.currentManualTiltSectionPulse.has_value() || isManualTiltStart)
-			{
-				stream << "tilt=" << GetTiltTypeString(state.currentTiltScale, state.currentTiltKeep) << "\r\n";
-			}
 		}
 
 		// Output manual tilt
@@ -1543,6 +1526,44 @@ namespace
 				state.currentManualTiltSectionPulse.reset();
 
 				// Output tilt type to end manual tilt section
+				// Use current state values (set before manual tilt started) unless there's a change at this pulse
+				double scaleToOutput = state.currentTiltScale;
+				bool keepToOutput = state.currentTiltKeep;
+
+				// If there's a scale/keep change at this exact pulse, use that instead
+				if (scaleChanged)
+				{
+					scaleToOutput = chartData.camera.tilt.scale.at(pulse);
+				}
+				if (keepChanged)
+				{
+					keepToOutput = chartData.camera.tilt.keep.at(pulse);
+				}
+
+				// Only output if there's no scale/keep change at this pulse
+				// (if there is, it will be output by the scale/keep change handler)
+				if (!scaleChanged && !keepChanged)
+				{
+					stream << "tilt=" << GetTiltTypeString(scaleToOutput, keepToOutput) << "\r\n";
+				}
+			}
+		}
+
+		// Output scale/keep changes before manual tilt (if starting new section)
+		if (scaleChanged || keepChanged)
+		{
+			if (scaleChanged)
+			{
+				state.currentTiltScale = chartData.camera.tilt.scale.at(pulse);
+			}
+			if (keepChanged)
+			{
+				state.currentTiltKeep = chartData.camera.tilt.keep.at(pulse);
+			}
+
+			// Only output if not in manual tilt section, or if starting new section
+			if (!isInManualTiltSection || isManualTiltStart)
+			{
 				stream << "tilt=" << GetTiltTypeString(state.currentTiltScale, state.currentTiltKeep) << "\r\n";
 			}
 		}
