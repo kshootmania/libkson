@@ -276,7 +276,6 @@ namespace
 		{
 			bool active = false;
 			double lastValue = 0.0;
-			bool lastWide = false;
 		};
 		std::array<LaserState, kNumLaserLanesSZ> laserStates;
 
@@ -1077,14 +1076,12 @@ namespace
 				// Segment start
 				laserState.active = true;
 				laserState.lastValue = static_cast<double>(seg.startValue) / kLaserXMax;
-				laserState.lastWide = seg.wide;
 				return LaserXToChar(seg.startValue);
 			}
 			else if (pulse == segmentEnd)
 			{
 				// Segment end
 				laserState.lastValue = static_cast<double>(seg.endValue) / kLaserXMax;
-				laserState.lastWide = seg.wide;
 				return LaserXToChar(seg.endValue);
 			}
 			else
@@ -1096,7 +1093,6 @@ namespace
 
 		// No laser at this pulse
 		laserState.active = false;
-		laserState.lastWide = false; // Reset wide state when laser ends
 		return '-';
 	}
 
@@ -1246,6 +1242,30 @@ namespace
 			}
 		}
 
+		// Note: The output order below should be the same as v1's order (*command_save in kshooteditor.hsp) for better compatibility of internet ranking hashing
+
+		// Output FX chip events for this pulse
+		if (!chartData.audio.keySound.fx.chipEvent.empty())
+		{
+			for (const auto& [chipName, lanes] : chartData.audio.keySound.fx.chipEvent)
+			{
+				for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+				{
+					if (lanes[laneIdx].contains(pulse))
+					{
+						const auto& chipData = lanes[laneIdx].at(pulse);
+						const std::int32_t vol = static_cast<std::int32_t>(std::round(chipData.vol * 100));
+						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "_se=" << chipName;
+						if (vol != 100)
+						{
+							stream << ";" << vol;
+						}
+						stream << "\r\n";
+					}
+				}
+			}
+		}
+
 		if (chartData.beat.bpm.contains(pulse))
 		{
 			double bpm = chartData.beat.bpm.at(pulse);
@@ -1257,13 +1277,51 @@ namespace
 			stream << "t=" << FormatDouble(bpm) << "\r\n";
 		}
 
-		if (chartData.beat.stop.contains(pulse))
+		// TODO: Output comments here
+
+		// Check for FX param_change (fx:effect_name:param_name=value)
+		if (!chartData.audio.audioEffect.fx.paramChange.empty())
 		{
-			const RelPulse stopLength = chartData.beat.stop.at(pulse);
-			stream << "stop=" << RelPulseToKSHLength(stopLength) << "\r\n";
+			for (const auto& [effectName, paramMap] : chartData.audio.audioEffect.fx.paramChange)
+			{
+				for (const auto& [paramName, pulseValueMap] : paramMap)
+				{
+					if (pulseValueMap.contains(pulse))
+					{
+						const std::string& value = pulseValueMap.at(pulse);
+						const std::string_view kshEffectName = IsKSONPresetFXEffectName(effectName)
+							? KSONPresetFXEffectNameToKSH(effectName)
+							: std::string_view{ effectName };
+						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
+							? std::string{ kKSONToKSHParamName.at(paramName) }
+							: paramName;
+						stream << "fx:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
+					}
+				}
+			}
 		}
 
-		// Check for laser audio effect annotations (pfiltergain, filtertype, chokkakuse, chokkakuvol)
+		// Check for laser param_change (filter:effect_name:param_name=value)
+		if (!chartData.audio.audioEffect.laser.paramChange.empty())
+		{
+			for (const auto& [effectName, paramMap] : chartData.audio.audioEffect.laser.paramChange)
+			{
+				for (const auto& [paramName, pulseValueMap] : paramMap)
+				{
+					if (pulseValueMap.contains(pulse))
+					{
+						const std::string& value = pulseValueMap.at(pulse);
+						const std::string_view kshEffectName = IsKSONPresetLaserFilterName(effectName)
+							? KSONPresetLaserFilterNameToKSH(effectName)
+							: std::string_view{ effectName };
+						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
+							? std::string{ kKSONToKSHParamName.at(paramName) }
+							: paramName;
+						stream << "filter:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
+					}
+				}
+			}
+		}
 
 		// Check for peaking filter gain changes
 		// Only use legacy.filter_gain (do not convert from param_change)
@@ -1336,6 +1394,16 @@ namespace
 			}
 		}
 
+		if (chartData.audio.keySound.laser.vol.contains(pulse))
+		{
+			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.at(pulse) * 100));
+			if (chokkakuvol != state.currentChokkakuvol)
+			{
+				stream << "chokkakuvol=" << chokkakuvol << "\r\n";
+				state.currentChokkakuvol = chokkakuvol;
+			}
+		}
+
 		// Check for laser slam key sounds (chokkakuse)
 		if (!chartData.audio.keySound.laser.slamEvent.empty())
 		{
@@ -1364,232 +1432,6 @@ namespace
 				std::find(slamEvent.at("mute").begin(), slamEvent.at("mute").end(), pulse) != slamEvent.at("mute").end())
 			{
 				stream << "chokkakuse=mute\r\n";
-			}
-		}
-
-		if (chartData.audio.keySound.laser.vol.contains(pulse))
-		{
-			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.at(pulse) * 100));
-			if (chokkakuvol != state.currentChokkakuvol)
-			{
-				stream << "chokkakuvol=" << chokkakuvol << "\r\n";
-				state.currentChokkakuvol = chokkakuvol;
-			}
-		}
-
-
-		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomBottom.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_bottom=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_bottom=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_bottom_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
-
-		if (chartData.camera.cam.body.zoomSide.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomSide.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_side=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_side=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_side_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
-		if (chartData.camera.cam.body.zoomTop.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomTop.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_top=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_top=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_top_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-		// Check for FX audio effect annotations (fx-l, fx-r)
-		// Output in lane order (fx-l before fx-r) to match v1 behavior
-		if (!chartData.audio.audioEffect.fx.longEvent.empty())
-		{
-			for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
-			{
-				for (const auto& [effectName, laneEvents] : chartData.audio.audioEffect.fx.longEvent)
-				{
-					if (!laneEvents[laneIdx].contains(pulse))
-					{
-						continue;
-					}
-
-					// Empty effect name represents "effect off"
-					if (effectName.empty())
-					{
-						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=\r\n";
-						state.currentFXAudioEffects[laneIdx].clear();
-						break;
-					}
-
-					const auto& params = laneEvents[laneIdx].at(pulse);
-					const std::string audioEffectStr = GenerateKSHAudioEffectString(chartData, effectName, params, true);
-
-					// Check if this pulse is the start of an FX long note
-					const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
-						chartData.note.fx[laneIdx].at(pulse).length > 0;
-
-					// Output fx-l/fx-r
-					if (audioEffectStr != state.currentFXAudioEffects[laneIdx] || isNoteStart)
-					{
-						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
-						state.currentFXAudioEffects[laneIdx] = audioEffectStr;
-						break;
-					}
-				}
-			}
-		}
-
-		// Check for FX param_change (fx:effect_name:param_name=value)
-		if (!chartData.audio.audioEffect.fx.paramChange.empty())
-		{
-			for (const auto& [effectName, paramMap] : chartData.audio.audioEffect.fx.paramChange)
-			{
-				for (const auto& [paramName, pulseValueMap] : paramMap)
-				{
-					if (pulseValueMap.contains(pulse))
-					{
-						const std::string& value = pulseValueMap.at(pulse);
-						const std::string_view kshEffectName = IsKSONPresetFXEffectName(effectName)
-							? KSONPresetFXEffectNameToKSH(effectName)
-							: std::string_view{ effectName };
-						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string{ kKSONToKSHParamName.at(paramName) }
-							: paramName;
-						stream << "fx:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
-					}
-				}
-			}
-		}
-
-		// Check for laser param_change (filter:effect_name:param_name=value)
-		if (!chartData.audio.audioEffect.laser.paramChange.empty())
-		{
-			for (const auto& [effectName, paramMap] : chartData.audio.audioEffect.laser.paramChange)
-			{
-				for (const auto& [paramName, pulseValueMap] : paramMap)
-				{
-					if (pulseValueMap.contains(pulse))
-					{
-						const std::string& value = pulseValueMap.at(pulse);
-						const std::string_view kshEffectName = IsKSONPresetLaserFilterName(effectName)
-							? KSONPresetLaserFilterNameToKSH(effectName)
-							: std::string_view{ effectName };
-						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string{ kKSONToKSHParamName.at(paramName) }
-							: paramName;
-						stream << "filter:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
-					}
-				}
-			}
-		}
-		if (chartData.camera.cam.body.centerSplit.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kCenterSplitAbsMax, kCenterSplitAbsMax);
-			stream << "center_split=" << clampedV << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kCenterSplitAbsMax, kCenterSplitAbsMax);
-				stream << "center_split=" << clampedVf << "\r\n";
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "center_split_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
-		if (chartData.beat.scrollSpeed.contains(pulse))
-		{
-			const auto& graphPoint = chartData.beat.scrollSpeed.at(pulse);
-			const double scrollSpeed = graphPoint.v.v;
-			stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
-
-			// Output vf on next line if different from v
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				stream << "scroll_speed=" << FormatDouble(graphPoint.v.vf) << "\r\n";
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "scroll_speed_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
-			}
-		}
-
-		if (chartData.camera.cam.body.rotationDeg.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.rotationDeg.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
-			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
-
-			// Output vf on next line if different from v
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
-				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "rotation_deg_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
 			}
 		}
 
@@ -1685,6 +1527,81 @@ namespace
 			}
 		}
 
+		if (chartData.camera.cam.body.zoomTop.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomTop.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_top=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_top=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_top_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
+		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomBottom.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_bottom=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_bottom=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_bottom_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
+		if (chartData.camera.cam.body.zoomSide.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.zoomSide.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+			stream << "zoom_side=" << zoomValue << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+				if (zoomValue != zoomValueFinal)
+				{
+					stream << "zoom_side=" << zoomValueFinal << "\r\n";
+				}
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "zoom_side_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
 		// Check for laser wide annotation changes before processing notes
 		for (std::int32_t i = 0; i < kNumLaserLanes; ++i)
 		{
@@ -1695,38 +1612,113 @@ namespace
 				{
 					auto& laserState = state.laserStates[i];
 					// Output wide annotation if changed
-					if (seg.wide && !laserState.lastWide)
+					if (seg.wide)
 					{
 						stream << "laserrange_" << (i == 0 ? 'l' : 'r') << "=2x\r\n";
-						laserState.lastWide = true;
-					}
-					else if (!seg.wide && laserState.lastWide)
-					{
-						stream << "laserrange_" << (i == 0 ? 'l' : 'r') << "=1x\r\n";
-						laserState.lastWide = false;
 					}
 					break;
 				}
 			}
 		}
 
-		// Output FX chip events for this pulse
-		if (!chartData.audio.keySound.fx.chipEvent.empty())
+		if (chartData.beat.stop.contains(pulse))
 		{
-			for (const auto& [chipName, lanes] : chartData.audio.keySound.fx.chipEvent)
+			const RelPulse stopLength = chartData.beat.stop.at(pulse);
+			stream << "stop=" << RelPulseToKSHLength(stopLength) << "\r\n";
+		}
+
+		if (chartData.camera.cam.body.centerSplit.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+			stream << "center_split=" << clampedV << "\r\n";
+
+			// If v != vf (slam), output vf on the next line if it's different
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
-				for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+				stream << "center_split=" << clampedVf << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "center_split_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			}
+		}
+
+		if (chartData.beat.scrollSpeed.contains(pulse))
+		{
+			const auto& graphPoint = chartData.beat.scrollSpeed.at(pulse);
+			const double scrollSpeed = graphPoint.v.v;
+			stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
+
+			// Output vf on next line if different from v
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				stream << "scroll_speed=" << FormatDouble(graphPoint.v.vf) << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "scroll_speed_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
+			}
+		}
+
+		if (chartData.camera.cam.body.rotationDeg.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.rotationDeg.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
+			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
+
+			// Output vf on next line if different from v
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
+				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "rotation_deg_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
+			}
+		}
+
+		// Check for FX audio effect annotations (fx-l, fx-r)
+		// Output in lane order (fx-l before fx-r) to match v1 behavior
+		if (!chartData.audio.audioEffect.fx.longEvent.empty())
+		{
+			for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+			{
+				for (const auto& [effectName, laneEvents] : chartData.audio.audioEffect.fx.longEvent)
 				{
-					if (lanes[laneIdx].contains(pulse))
+					if (!laneEvents[laneIdx].contains(pulse))
 					{
-						const auto& chipData = lanes[laneIdx].at(pulse);
-						const std::int32_t vol = static_cast<std::int32_t>(std::round(chipData.vol * 100));
-						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "_se=" << chipName;
-						if (vol != 100)
-						{
-							stream << ";" << vol;
-						}
-						stream << "\r\n";
+						continue;
+					}
+
+					// Empty effect name represents "effect off"
+					if (effectName.empty())
+					{
+						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=\r\n";
+						state.currentFXAudioEffects[laneIdx].clear();
+						break;
+					}
+
+					const auto& params = laneEvents[laneIdx].at(pulse);
+					const std::string audioEffectStr = GenerateKSHAudioEffectString(chartData, effectName, params, true);
+
+					// Check if this pulse is the start of an FX long note
+					const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
+						chartData.note.fx[laneIdx].at(pulse).length > 0;
+
+					// Output fx-l/fx-r
+					if (audioEffectStr != state.currentFXAudioEffects[laneIdx] || isNoteStart)
+					{
+						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
+						state.currentFXAudioEffects[laneIdx] = audioEffectStr;
+						break;
 					}
 				}
 			}
