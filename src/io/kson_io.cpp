@@ -769,19 +769,36 @@ namespace
 			// Auto tilt type: [pulse, "string"]
 			entry.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(tiltValue)));
 		}
-		else if (std::holds_alternative<GraphPoint>(tiltValue))
+		else if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 		{
-			const GraphPoint& point = std::get<GraphPoint>(tiltValue);
+			const TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
 			const bool hasCurve = !point.curve.isLinear();
-			const bool hasGraphValue = !AlmostEquals(point.v.v, point.v.vf);
+
+			// Check if vf is different from v
+			bool hasGraphValue = false;
+			if (std::holds_alternative<double>(point.v.vf))
+			{
+				hasGraphValue = !AlmostEquals(point.v.v, std::get<double>(point.v.vf));
+			}
+			else if (std::holds_alternative<AutoTiltType>(point.v.vf))
+			{
+				// vf is AutoTiltType, so there is a graph value transition
+				hasGraphValue = true;
+			}
 
 			if (hasCurve && hasGraphValue)
 			{
 				// With immediate change and curve: [pulse, [[v, vf], [a, b]]]
-				nlohmann::json graphValue = nlohmann::json::array({
-					RemoveFloatingPointError(point.v.v),
-					RemoveFloatingPointError(point.v.vf)
-				});
+				nlohmann::json graphValue = nlohmann::json::array();
+				graphValue.push_back(RemoveFloatingPointError(point.v.v));
+				if (std::holds_alternative<double>(point.v.vf))
+				{
+					graphValue.push_back(RemoveFloatingPointError(std::get<double>(point.v.vf)));
+				}
+				else
+				{
+					graphValue.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(point.v.vf)));
+				}
 				nlohmann::json curveValue = nlohmann::json::array({
 					RemoveFloatingPointError(point.curve.a),
 					RemoveFloatingPointError(point.curve.b)
@@ -803,10 +820,17 @@ namespace
 			else if (hasGraphValue)
 			{
 				// GraphValue without curve: [pulse, [v, vf]]
-				entry.push_back(nlohmann::json::array({
-					RemoveFloatingPointError(point.v.v),
-					RemoveFloatingPointError(point.v.vf)
-				}));
+				nlohmann::json graphValue = nlohmann::json::array();
+				graphValue.push_back(RemoveFloatingPointError(point.v.v));
+				if (std::holds_alternative<double>(point.v.vf))
+				{
+					graphValue.push_back(RemoveFloatingPointError(std::get<double>(point.v.vf)));
+				}
+				else
+				{
+					graphValue.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(point.v.vf)));
+				}
+				entry.push_back(graphValue);
 			}
 			else
 			{
@@ -1742,15 +1766,15 @@ namespace
 					else if (item[1].is_number())
 					{
 						// Simple value: [pulse, double]
-						tilt[pulse] = GraphPoint{ GraphValue{ item[1].get<double>() } };
+						tilt[pulse] = TiltGraphPoint{ TiltGraphValue{ item[1].get<double>() } };
 					}
 					else if (item[1].is_array() && item[1].size() == 2)
 					{
 						// Check if this is [v, vf], [v, [a, b]], or [[v, vf], [a, b]]
 						if (item[1][0].is_array())
 						{
-							// [[v, vf], [a, b]]: GraphValue with immediate change and curve
-							GraphValue gv{
+							// [[v, vf], [a, b]]: TiltGraphValue with immediate change and curve
+							TiltGraphValue gv{
 								item[1][0][0].get<double>(),
 								item[1][0][1].get<double>()
 							};
@@ -1758,27 +1782,42 @@ namespace
 								item[1][1][0].get<double>(),
 								item[1][1][1].get<double>()
 							};
-							tilt[pulse] = GraphPoint{ gv, curve };
+							tilt[pulse] = TiltGraphPoint{ gv, curve };
 						}
 						else if (item[1][1].is_array())
 						{
 							// [v, [a, b]]: Single value with curve
-							GraphValue gv{ item[1][0].get<double>() };
+							TiltGraphValue gv{ item[1][0].get<double>() };
 							GraphCurveValue curve{
 								item[1][1][0].get<double>(),
 								item[1][1][1].get<double>()
 							};
-							tilt[pulse] = GraphPoint{ gv, curve };
+							tilt[pulse] = TiltGraphPoint{ gv, curve };
 						}
 						else
 						{
-							// [v, vf]: GraphValue with immediate change, no curve
-							tilt[pulse] = GraphPoint{
-								GraphValue{
-									item[1][0].get<double>(),
-									item[1][1].get<double>()
-								}
-							};
+							// [v, vf]: TiltGraphValue with immediate change, no curve
+							// vf can be either double or string (AutoTiltType)
+							if (item[1][1].is_string())
+							{
+								// [double, string]: manual tilt to auto tilt
+								tilt[pulse] = TiltGraphPoint{
+									TiltGraphValue{
+										item[1][0].get<double>(),
+										ParseAutoTiltType(item[1][1].get<std::string>())
+									}
+								};
+							}
+							else
+							{
+								// [double, double]: manual tilt with immediate change
+								tilt[pulse] = TiltGraphPoint{
+									TiltGraphValue{
+										item[1][0].get<double>(),
+										item[1][1].get<double>()
+									}
+								};
+							}
 						}
 					}
 				}

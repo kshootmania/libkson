@@ -18,32 +18,40 @@ std::optional<double> kson::ManualTiltValueAt(const ByPulse<TiltValue>& tiltValu
 	const Pulse currentValuePulse = currentIt->first;
 	const TiltValue& currentValue = currentIt->second;
 
-	if (!std::holds_alternative<GraphPoint>(currentValue))
+	if (!std::holds_alternative<TiltGraphPoint>(currentValue))
 	{
 		return std::nullopt;
 	}
 
-	const GraphPoint& currentPoint = std::get<GraphPoint>(currentValue);
+	const TiltGraphPoint& currentPoint = std::get<TiltGraphPoint>(currentValue);
+
+	// If vf is AutoTiltType, return nullopt (this is not manual tilt)
+	if (std::holds_alternative<AutoTiltType>(currentPoint.v.vf))
+	{
+		return std::nullopt;
+	}
+
+	const double currentVf = std::get<double>(currentPoint.v.vf);
 
 	auto nextIt = currentIt;
 	++nextIt;
 
-	if (nextIt != tiltValue.end() && std::holds_alternative<GraphPoint>(nextIt->second))
+	if (nextIt != tiltValue.end() && std::holds_alternative<TiltGraphPoint>(nextIt->second))
 	{
 		// Next is also manual tilt: interpolate between vf and next v
-		const GraphPoint& nextPoint = std::get<GraphPoint>(nextIt->second);
+		const TiltGraphPoint& nextPoint = std::get<TiltGraphPoint>(nextIt->second);
 		const Pulse nextPulse = nextIt->first;
 		const double lerpRate = static_cast<double>(currentPulse - currentValuePulse) / static_cast<double>(nextPulse - currentValuePulse);
 
 		// Apply curve if present
 		const double curveValue = EvaluateCurve(currentPoint.curve, lerpRate);
 
-		return std::lerp(currentPoint.v.vf, nextPoint.v.v, curveValue);
+		return std::lerp(currentVf, nextPoint.v.v, curveValue);
 	}
 	else
 	{
 		// Next is auto tilt or no next: continue with vf value
-		return currentPoint.v.vf;
+		return currentVf;
 	}
 }
 

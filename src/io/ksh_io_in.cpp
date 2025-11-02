@@ -518,9 +518,9 @@ namespace
 		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
 		{
 			auto it = tilt.find(pulse);
-			if (it != tilt.end() && std::holds_alternative<GraphPoint>(it->second))
+			if (it != tilt.end() && std::holds_alternative<TiltGraphPoint>(it->second))
 			{
-				GraphPoint& point = std::get<GraphPoint>(it->second);
+				TiltGraphPoint& point = std::get<TiltGraphPoint>(it->second);
 				point.curve = curve;
 			}
 		}
@@ -1863,19 +1863,19 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 						const double dValue = ParseNumeric<double>(value);
 						if (std::abs(dValue) <= kManualTiltAbsMax)
 						{
-							// Check for immediate change (consecutive manual tilt values at the same pulse)
+							// Check for immediate change (consecutive tilt values at the same pulse)
 							if (!target.empty())
 							{
 								auto lastIt = target.rbegin();
-								if (lastIt->first == time && std::holds_alternative<GraphPoint>(lastIt->second))
+								if (lastIt->first == time && std::holds_alternative<TiltGraphPoint>(lastIt->second))
 								{
-									const GraphPoint& lastGraphPoint = std::get<GraphPoint>(lastIt->second);
-									target.insert_or_assign(time, GraphPoint{ GraphValue{ lastGraphPoint.v.v, dValue }, lastGraphPoint.curve });
+									const TiltGraphPoint& lastGraphPoint = std::get<TiltGraphPoint>(lastIt->second);
+									target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, dValue }, lastGraphPoint.curve });
 									continue;
 								}
 							}
 
-							target.insert_or_assign(time, GraphPoint{ GraphValue{ dValue } });
+							target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ dValue } });
 						}
 						if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
 						{
@@ -1885,7 +1885,22 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else
 					{
-						target.insert_or_assign(time, ParseAutoTiltType(value));
+						// Auto tilt type
+						const AutoTiltType autoTiltType = ParseAutoTiltType(value);
+
+						// Check for immediate change from manual tilt to auto tilt (consecutive values at the same pulse)
+						if (!target.empty())
+						{
+							auto lastIt = target.rbegin();
+							if (lastIt->first == time && std::holds_alternative<TiltGraphPoint>(lastIt->second))
+							{
+								const TiltGraphPoint& lastGraphPoint = std::get<TiltGraphPoint>(lastIt->second);
+								target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, autoTiltType }, lastGraphPoint.curve });
+								continue;
+							}
+						}
+
+						target.insert_or_assign(time, autoTiltType);
 					}
 				}
 				else if (key == "chokkakuvol")
@@ -2348,11 +2363,15 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		constexpr double kToLegacyScale = 14.0 / 10.0;
 		for (auto& [pulse, tiltValue] : chartData.camera.tilt)
 		{
-			if (std::holds_alternative<GraphPoint>(tiltValue))
+			if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 			{
-				GraphPoint& point = std::get<GraphPoint>(tiltValue);
+				TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
 				point.v.v *= kToLegacyScale;
-				point.v.vf *= kToLegacyScale;
+				// Only scale vf if it's a double value (not AutoTiltType)
+				if (std::holds_alternative<double>(point.v.vf))
+				{
+					std::get<double>(point.v.vf) *= kToLegacyScale;
+				}
 			}
 		}
 	}

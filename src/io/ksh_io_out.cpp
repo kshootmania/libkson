@@ -1420,9 +1420,9 @@ namespace
 		{
 			const auto& tiltValue = chartData.camera.tilt.at(pulse);
 
-			if (std::holds_alternative<GraphPoint>(tiltValue))
+			if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 			{
-				const GraphPoint& graphPoint = std::get<GraphPoint>(tiltValue);
+				const TiltGraphPoint& graphPoint = std::get<TiltGraphPoint>(tiltValue);
 
 				// Apply inverse legacy scale for ver < 170 if any large tilt value exists in the chart
 				// Legacy charts with large manual tilt values depend on the tilt scale (14 degrees) used before v1.70
@@ -1439,10 +1439,20 @@ namespace
 				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
 
 				// Output vf on next line if different from v (immediate change)
-				if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+				if (std::holds_alternative<double>(graphPoint.v.vf))
 				{
-					const double clampedVf = std::clamp(graphPoint.v.vf * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
-					stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
+					const double vfValue = std::get<double>(graphPoint.v.vf);
+					if (!AlmostEquals(graphPoint.v.v, vfValue))
+					{
+						const double clampedVf = std::clamp(vfValue * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
+						stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
+					}
+				}
+				else if (std::holds_alternative<AutoTiltType>(graphPoint.v.vf))
+				{
+					// vf is AutoTiltType: output it as string
+					const AutoTiltType vfAutoTilt = std::get<AutoTiltType>(graphPoint.v.vf);
+					stream << "tilt=" << AutoTiltTypeToString(vfAutoTilt) << "\r\n";
 				}
 			}
 			else if (std::holds_alternative<AutoTiltType>(tiltValue))
@@ -2006,10 +2016,11 @@ namespace
 		{
 			for (const auto& [pulse, tiltValue] : chartData.camera.tilt)
 			{
-				if (std::holds_alternative<GraphPoint>(tiltValue))
+				if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 				{
-					const GraphPoint& point = std::get<GraphPoint>(tiltValue);
-					if (std::abs(point.v.v) >= 10.0 || std::abs(point.v.vf) >= 10.0)
+					const TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
+					bool largeVf = std::holds_alternative<double>(point.v.vf) && std::abs(std::get<double>(point.v.vf)) >= 10.0;
+					if (std::abs(point.v.v) >= 10.0 || largeVf)
 					{
 						useLegacyScaleForManualTilt = true;
 						break;

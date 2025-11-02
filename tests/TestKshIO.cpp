@@ -430,10 +430,11 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
 
         REQUIRE(chart.camera.tilt.contains(kMeasurePulse / 2));
         const auto& tiltValue = chart.camera.tilt.at(kMeasurePulse / 2);
-        REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue));
-        const auto& tiltGraphPoint = std::get<kson::GraphPoint>(tiltValue);
+        REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
+        const auto& tiltGraphPoint = std::get<kson::TiltGraphPoint>(tiltValue);
         REQUIRE(tiltGraphPoint.v.v == Approx(0.1));
-        REQUIRE(tiltGraphPoint.v.vf == Approx(0.1));
+        REQUIRE(std::holds_alternative<double>(tiltGraphPoint.v.vf));
+        REQUIRE(std::get<double>(tiltGraphPoint.v.vf) == Approx(0.1));
 
         REQUIRE(chart.note.laser[0].contains(kMeasurePulse * 5 / 8));
         const auto& laserL = chart.note.laser[0].at(kMeasurePulse * 5 / 8);
@@ -521,10 +522,11 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
 
         REQUIRE(chart.camera.tilt.contains(kMeasurePulse / 2));
         const auto& tiltValue = chart.camera.tilt.at(kMeasurePulse / 2);
-        REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue));
-        const auto& tiltGraphPoint = std::get<kson::GraphPoint>(tiltValue);
+        REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
+        const auto& tiltGraphPoint = std::get<kson::TiltGraphPoint>(tiltValue);
         REQUIRE(tiltGraphPoint.v.v == Approx(0.1));
-        REQUIRE(tiltGraphPoint.v.vf == Approx(0.1));
+        REQUIRE(std::holds_alternative<double>(tiltGraphPoint.v.vf));
+        REQUIRE(std::get<double>(tiltGraphPoint.v.vf) == Approx(0.1));
 
         REQUIRE(chart.note.laser[0].contains(kMeasurePulse * 5 / 8));
         const auto& laserL = chart.note.laser[0].at(kMeasurePulse * 5 / 8);
@@ -615,10 +617,11 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         // tilt should NOT have curve (curve was at different pulse)
         REQUIRE(chart.camera.tilt.size() == 1);
         const auto& tiltValue = chart.camera.tilt.begin()->second;
-        REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue));
-        const auto& tiltGraphPoint = std::get<kson::GraphPoint>(tiltValue);
+        REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
+        const auto& tiltGraphPoint = std::get<kson::TiltGraphPoint>(tiltValue);
         REQUIRE(tiltGraphPoint.v.v == Approx(0.1));
-        REQUIRE(tiltGraphPoint.v.vf == Approx(0.1));
+        REQUIRE(std::holds_alternative<double>(tiltGraphPoint.v.vf));
+        REQUIRE(std::get<double>(tiltGraphPoint.v.vf) == Approx(0.1));
 
         // laser L should NOT have curve at second point (curve was only for first point)
         REQUIRE(chart.note.laser[0].size() == 1);
@@ -1607,20 +1610,22 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		// First tilt point should have curve
 		REQUIRE(chart.camera.tilt.contains(0));
 		const auto& tiltValue0 = chart.camera.tilt.at(0);
-		REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue0));
-		const auto& point0 = std::get<kson::GraphPoint>(tiltValue0);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue0));
+		const auto& point0 = std::get<kson::TiltGraphPoint>(tiltValue0);
 		REQUIRE(point0.v.v == Approx(0.0));
-		REQUIRE(point0.v.vf == Approx(0.0));
+		REQUIRE(std::holds_alternative<double>(point0.v.vf));
+		REQUIRE(std::get<double>(point0.v.vf) == Approx(0.0));
 		REQUIRE(point0.curve.a == Approx(0.1));
 		REQUIRE(point0.curve.b == Approx(0.5));
 
 		// Second tilt point should not have curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
 		const auto& tiltValue1 = chart.camera.tilt.at(kMeasurePulse);
-		REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue1));
-		const auto& point1 = std::get<kson::GraphPoint>(tiltValue1);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue1));
+		const auto& point1 = std::get<kson::TiltGraphPoint>(tiltValue1);
 		REQUIRE(point1.v.v == Approx(5.0));
-		REQUIRE(point1.v.vf == Approx(5.0));
+		REQUIRE(std::holds_alternative<double>(point1.v.vf));
+		REQUIRE(std::get<double>(point1.v.vf) == Approx(5.0));
 		REQUIRE(point1.curve.isLinear());
 	}
 
@@ -1655,10 +1660,11 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		// Immediate change should preserve curve
 		REQUIRE(chart.camera.tilt.contains(0));
 		const auto& tiltValue = chart.camera.tilt.at(0);
-		REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue));
-		const auto& point = std::get<kson::GraphPoint>(tiltValue);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
+		const auto& point = std::get<kson::TiltGraphPoint>(tiltValue);
 		REQUIRE(point.v.v == Approx(0.0));  // First value
-		REQUIRE(point.v.vf == Approx(2.5)); // Second value (immediate change)
+		REQUIRE(std::holds_alternative<double>(point.v.vf));
+		REQUIRE(std::get<double>(point.v.vf) == Approx(2.5)); // Second value (immediate change)
 		REQUIRE(point.curve.a == Approx(0.3)); // Curve should be preserved
 		REQUIRE(point.curve.b == Approx(0.7));
 	}
@@ -1694,16 +1700,17 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		// Curve between first and second tilt should be preserved in immediate change
 		REQUIRE(chart.camera.tilt.contains(0));
 		const auto& tiltValue = chart.camera.tilt.at(0);
-		REQUIRE(std::holds_alternative<kson::GraphPoint>(tiltValue));
-		const auto& point = std::get<kson::GraphPoint>(tiltValue);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
+		const auto& point = std::get<kson::TiltGraphPoint>(tiltValue);
 		REQUIRE(point.v.v == Approx(0.0));  // First value
-		REQUIRE(point.v.vf == Approx(3.0)); // Second value (immediate change)
+		REQUIRE(std::holds_alternative<double>(point.v.vf));
+		REQUIRE(std::get<double>(point.v.vf) == Approx(3.0)); // Second value (immediate change)
 		REQUIRE(point.curve.a == Approx(0.5)); // Curve should be preserved
 		REQUIRE(point.curve.b == Approx(0.5));
 
 		// Next tilt point
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
-		const auto& point2 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse));
+		const auto& point2 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse));
 		REQUIRE(point2.v.v == Approx(6.0));
 		REQUIRE(point2.curve.isLinear());
 	}
@@ -1747,24 +1754,26 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 
 		// First immediate change with curve
 		REQUIRE(chart.camera.tilt.contains(0));
-		const auto& point0 = std::get<kson::GraphPoint>(chart.camera.tilt.at(0));
+		const auto& point0 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(0));
 		REQUIRE(point0.v.v == Approx(0.0));
-		REQUIRE(point0.v.vf == Approx(1.0));
+		REQUIRE(std::holds_alternative<double>(point0.v.vf));
+		REQUIRE(std::get<double>(point0.v.vf) == Approx(1.0));
 		REQUIRE(point0.curve.a == Approx(0.2));
 		REQUIRE(point0.curve.b == Approx(0.8));
 
 		// Second point with curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
-		const auto& point1 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse));
+		const auto& point1 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse));
 		REQUIRE(point1.v.v == Approx(3.0));
 		REQUIRE(point1.curve.a == Approx(0.6));
 		REQUIRE(point1.curve.b == Approx(0.4));
 
 		// Third immediate change with curve before both values
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse * 2));
-		const auto& point2 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
+		const auto& point2 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
 		REQUIRE(point2.v.v == Approx(5.0));
-		REQUIRE(point2.v.vf == Approx(7.0));
+		REQUIRE(std::holds_alternative<double>(point2.v.vf));
+		REQUIRE(std::get<double>(point2.v.vf) == Approx(7.0));
 		REQUIRE(point2.curve.a == Approx(0.7));
 		REQUIRE(point2.curve.b == Approx(0.3));
 	}
@@ -1805,21 +1814,21 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 
 		// First point with first curve
 		REQUIRE(chart.camera.tilt.contains(0));
-		const auto& point0 = std::get<kson::GraphPoint>(chart.camera.tilt.at(0));
+		const auto& point0 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(0));
 		REQUIRE(point0.v.v == Approx(0.0));
 		REQUIRE(point0.curve.a == Approx(0.2));
 		REQUIRE(point0.curve.b == Approx(0.8));
 
 		// Second point with second curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
-		const auto& point1 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse));
+		const auto& point1 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse));
 		REQUIRE(point1.v.v == Approx(3.0));
 		REQUIRE(point1.curve.a == Approx(0.6));
 		REQUIRE(point1.curve.b == Approx(0.4));
 
 		// Third point without curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse * 2));
-		const auto& point2 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
+		const auto& point2 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
 		REQUIRE(point2.v.v == Approx(7.0));
 		REQUIRE(point2.curve.isLinear());
 	}
@@ -1870,14 +1879,14 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 
 		// Manual tilt with curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
-		const auto& manualPoint = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse));
+		const auto& manualPoint = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse));
 		REQUIRE(manualPoint.v.v == Approx(1.5));
 		REQUIRE(manualPoint.curve.a == Approx(0.4));
 		REQUIRE(manualPoint.curve.b == Approx(0.6));
 
 		// Manual tilt without curve
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse * 2));
-		const auto& manualPoint2 = std::get<kson::GraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
+		const auto& manualPoint2 = std::get<kson::TiltGraphPoint>(chart.camera.tilt.at(kMeasurePulse * 2));
 		REQUIRE(manualPoint2.v.v == Approx(4.0));
 		REQUIRE(manualPoint2.curve.isLinear());
 
@@ -1919,6 +1928,65 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
 		REQUIRE(std::holds_alternative<kson::AutoTiltType>(chart.camera.tilt.at(kMeasurePulse)));
 		REQUIRE(std::get<kson::AutoTiltType>(chart.camera.tilt.at(kMeasurePulse)) == kson::AutoTiltType::kKeepBigger);
+	}
+
+	SECTION("Manual tilt to auto tilt immediate change") {
+		std::stringstream ss;
+		ss << "title=test\n";
+		ss << "artist=test\n";
+		ss << "effect=test\n";
+		ss << "jacket=test.png\n";
+		ss << "illustrator=test\n";
+		ss << "difficulty=light\n";
+		ss << "level=1\n";
+		ss << "t=120\n";
+		ss << "--\n";
+		ss << "tilt=0.0\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+		ss << "tilt=0.5\n";
+		ss << "tilt=normal\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+		ss << "tilt=0.3\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+		ss << "tilt=0.8\n";
+		ss << "tilt=bigger\n";
+		ss << "0000|00|--\n";
+		ss << "--\n";
+
+		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+
+		// First manual tilt: 0.0 at pulse 0
+		REQUIRE(chart.camera.tilt.contains(0));
+		const auto& tiltValue0 = chart.camera.tilt.at(0);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue0));
+		REQUIRE(std::get<kson::TiltGraphPoint>(tiltValue0).v.v == Approx(0.0));
+
+		// Manual to auto tilt: [0.5, "normal"] at pulse kMeasurePulse
+		REQUIRE(chart.camera.tilt.contains(kMeasurePulse));
+		const auto& tiltValue1 = chart.camera.tilt.at(kMeasurePulse);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue1));
+		const auto& point1 = std::get<kson::TiltGraphPoint>(tiltValue1);
+		REQUIRE(point1.v.v == Approx(0.5));
+		REQUIRE(std::holds_alternative<kson::AutoTiltType>(point1.v.vf));
+		REQUIRE(std::get<kson::AutoTiltType>(point1.v.vf) == kson::AutoTiltType::kNormal);
+
+		// Manual tilt: 0.3 at pulse kMeasurePulse * 2
+		REQUIRE(chart.camera.tilt.contains(kMeasurePulse * 2));
+		const auto& tiltValue2 = chart.camera.tilt.at(kMeasurePulse * 2);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue2));
+		REQUIRE(std::get<kson::TiltGraphPoint>(tiltValue2).v.v == Approx(0.3));
+
+		// Manual to auto tilt: [0.8, "bigger"] at pulse kMeasurePulse * 3
+		REQUIRE(chart.camera.tilt.contains(kMeasurePulse * 3));
+		const auto& tiltValue3 = chart.camera.tilt.at(kMeasurePulse * 3);
+		REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue3));
+		const auto& point3 = std::get<kson::TiltGraphPoint>(tiltValue3);
+		REQUIRE(point3.v.v == Approx(0.8));
+		REQUIRE(std::holds_alternative<kson::AutoTiltType>(point3.v.vf));
+		REQUIRE(std::get<kson::AutoTiltType>(point3.v.vf) == kson::AutoTiltType::kBigger);
 	}
 }
 
