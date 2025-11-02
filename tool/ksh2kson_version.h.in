@@ -1,0 +1,6 @@
+#pragma once
+
+constexpr const char* kKsh2KsonAppName = "ksh2kson";
+constexpr const char* kKsh2KsonVersion = "@KSON_VERSION@";
+constexpr const char* kKsh2KsonVersionFull = "@KSON_VERSION_FULL@";
+constexpr const char* kKsh2KsonGitHash = "@KSON_GIT_HASH@";

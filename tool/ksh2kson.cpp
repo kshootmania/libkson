@@ -3,6 +3,7 @@
 #include <sstream>
 #include <filesystem>
 #include "kson/kson.hpp"
+#include "ksh2kson_version.h"
 
 enum ExitCode : int
 {
@@ -28,12 +29,16 @@ void PrintError(kson::ErrorType errorType)
 
 int DoConvert(std::istream& input)
 {
-	const kson::ChartData chartData = kson::LoadKSHChartData(input);
+	kson::ChartData chartData = kson::LoadKSHChartData(input);
 	if (chartData.error != kson::ErrorType::None)
 	{
 		PrintError(chartData.error);
 		return kExitError;
 	}
+
+	// Set editor info
+	chartData.editor.appName = kKsh2KsonAppName;
+	chartData.editor.appVersion = kKsh2KsonVersionFull;
 
 	const kson::ErrorType error = kson::SaveKSONChartData(std::cout, chartData);
 	if (error != kson::ErrorType::None)

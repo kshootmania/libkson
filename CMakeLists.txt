@@ -9,6 +9,27 @@ option(KSON_BUILD_TESTS "Build tests" ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Get git commit hash
+find_package(Git QUIET)
+if(GIT_FOUND)
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		OUTPUT_VARIABLE KSON_GIT_HASH
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		ERROR_QUIET
+	)
+else()
+	set(KSON_GIT_HASH "unknown")
+endif()
+
+set(KSON_VERSION "0.1.0")
+if(NOT KSON_GIT_HASH STREQUAL "unknown")
+	set(KSON_VERSION_FULL "${KSON_VERSION}+${KSON_GIT_HASH}")
+else()
+	set(KSON_VERSION_FULL "${KSON_VERSION}")
+endif()
+
 file(GLOB_RECURSE sources src/*.cpp)
 
 if(KSON_BUILD_SHARED)
@@ -27,8 +48,15 @@ if(NOT WIN32)
 endif()
 
 if(KSON_BUILD_TOOL_KSH2KSON)
-    add_executable(ksh2kson ${PROJECT_SOURCE_DIR}/tool/ksh2kson.cpp)
-    target_link_libraries(ksh2kson kson)
+	# Generate version header for ksh2kson
+	configure_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/tool/ksh2kson_version.h.in
+		${CMAKE_CURRENT_BINARY_DIR}/tool/ksh2kson_version.h
+		@ONLY
+	)
+	add_executable(ksh2kson ${PROJECT_SOURCE_DIR}/tool/ksh2kson.cpp)
+	target_link_libraries(ksh2kson kson)
+	target_include_directories(ksh2kson PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tool)
 endif()
 
 if(KSON_BUILD_TOOL_KSON2KSH)
