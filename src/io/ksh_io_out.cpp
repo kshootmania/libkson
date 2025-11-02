@@ -464,10 +464,23 @@ namespace
 			}
 		}
 
+		// Editor comments
+		if (!chartData.editor.comment.empty())
+		{
+			maxPulse = std::max(maxPulse, chartData.editor.comment.rbegin()->first);
+		}
+
 		// Unknown lines from ksh_unknown
 		if (!chartData.compat.kshUnknown.line.empty())
 		{
 			maxPulse = std::max(maxPulse, chartData.compat.kshUnknown.line.rbegin()->first);
+		}
+		for (const auto& [optionKey, pulseValueMap] : chartData.compat.kshUnknown.option)
+		{
+			if (!pulseValueMap.empty())
+			{
+				maxPulse = std::max(maxPulse, pulseValueMap.rbegin()->first);
+			}
 		}
 
 		return maxPulse;
@@ -1204,16 +1217,6 @@ namespace
 	// Write note line
 	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt)
 	{
-		// Output unknown lines for this pulse first (except pulse 0, already output in header)
-		if (pulse != 0)
-		{
-			auto lineRange = chartData.compat.kshUnknown.line.equal_range(pulse);
-			for (auto it = lineRange.first; it != lineRange.second; ++it)
-			{
-				stream << it->second << "\r\n";
-			}
-		}
-
 		// Note: The output order below should be the same as v1's order (*command_save in kshooteditor.hsp) for better compatibility of internet ranking hashing
 
 		// Output FX chip events for this pulse
@@ -1258,7 +1261,19 @@ namespace
 			}
 		}
 
-		// TODO: Output comments here
+		// Output comments for this pulse
+		auto commentRange = chartData.editor.comment.equal_range(pulse);
+		for (auto it = commentRange.first; it != commentRange.second; ++it)
+		{
+			stream << "//" << it->second << "\r\n";
+		}
+
+		// Output unknown lines for this pulse
+		auto lineRange = chartData.compat.kshUnknown.line.equal_range(pulse);
+		for (auto it = lineRange.first; it != lineRange.second; ++it)
+		{
+			stream << it->second << "\r\n";
+		}
 
 		// Check for FX param_change (fx:effect_name:param_name=value)
 		if (!chartData.audio.audioEffect.fx.paramChange.empty())
@@ -1967,6 +1982,11 @@ namespace
 					updateGCD(pulse);
 				}
 			}
+		}
+
+		for (const auto& [pulse, comment] : chartData.editor.comment)
+		{
+			updateGCD(pulse);
 		}
 
 		for (const auto& [optionKey, pulseValueMap] : chartData.compat.kshUnknown.option)
