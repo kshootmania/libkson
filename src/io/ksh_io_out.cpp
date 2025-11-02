@@ -1988,6 +1988,21 @@ namespace
 			}
 		}
 
+		// FX chip events
+		if (!chartData.audio.keySound.fx.chipEvent.empty())
+		{
+			for (const auto& [chipName, lanes] : chartData.audio.keySound.fx.chipEvent)
+			{
+				for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+				{
+					for (const auto& [pulse, chipData] : lanes[laneIdx])
+					{
+						updateGCD(pulse);
+					}
+				}
+			}
+		}
+
 		for (const auto& [pulse, comment] : chartData.editor.comment)
 		{
 			updateGCD(pulse);
