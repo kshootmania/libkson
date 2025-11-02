@@ -1344,7 +1344,11 @@ namespace
 				const std::int32_t pfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
 				if (pfiltergain != state.currentPfiltergain)
 				{
-					stream << "pfiltergain=" << pfiltergain << "\r\n";
+					// Skip output at pulse 0 (already output in header)
+					if (pulse != 0)
+					{
+						stream << "pfiltergain=" << pfiltergain << "\r\n";
+					}
 					state.currentPfiltergain = pfiltergain;
 				}
 			}
@@ -1405,7 +1409,11 @@ namespace
 			const std::int32_t chokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.at(pulse) * 100));
 			if (chokkakuvol != state.currentChokkakuvol)
 			{
-				stream << "chokkakuvol=" << chokkakuvol << "\r\n";
+				// Skip output at pulse 0 (already output in header)
+				if (pulse != 0)
+				{
+					stream << "chokkakuvol=" << chokkakuvol << "\r\n";
+				}
 				state.currentChokkakuvol = chokkakuvol;
 			}
 		}
