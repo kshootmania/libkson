@@ -13,6 +13,16 @@ namespace
 {
 	using namespace kson;
 
+	// KSH resolution (192 pulses per 4/4 measure)
+	constexpr Pulse kKSHResolution4 = 192;
+	static_assert(kResolution4 % kKSHResolution4 == 0, "kResolution4 must be divisible by kKSHResolution4");
+
+	// Convert pulse value from KSON resolution to KSH resolution
+	constexpr std::int32_t ToKSHResolution(Pulse pulse)
+	{
+		return static_cast<std::int32_t>(pulse * kKSHResolution4 / kResolution4);
+	}
+
 	constexpr char kOptionSeparator = '=';
 	constexpr char kBlockSeparator = '|';
 	constexpr std::string_view kMeasureSeparator = "--";
@@ -239,7 +249,7 @@ namespace
 	// Convert RelPulse to KSH length string
 	std::string RelPulseToKSHLength(RelPulse relPulse)
 	{
-		const std::int32_t kshLength = static_cast<std::int32_t>(std::round(relPulse * 192.0 / kResolution4));
+		const std::int32_t kshLength = ToKSHResolution(relPulse);
 		return std::to_string(kshLength);
 	}
 
@@ -1712,21 +1722,21 @@ namespace
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.spin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '(' : ')';
-			const std::int32_t kshLength = static_cast<std::int32_t>((spinEvent.length * 192) / kResolution4);
+			const std::int32_t kshLength = ToKSHResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.halfSpin.contains(pulse))
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.halfSpin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = static_cast<std::int32_t>((spinEvent.length * 192) / kResolution4);
+			const std::int32_t kshLength = ToKSHResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.swing.contains(pulse))
 		{
 			const auto& swingEvent = chartData.camera.cam.pattern.laser.slamEvent.swing.at(pulse);
 			const char dirChar = swingEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = static_cast<std::int32_t>((swingEvent.length * 192) / kResolution4);
+			const std::int32_t kshLength = ToKSHResolution(swingEvent.length);
 			const std::int32_t scale = static_cast<std::int32_t>(std::round(swingEvent.v.scale));
 			const std::int32_t repeat = swingEvent.v.repeat;
 			const std::int32_t decayOrder = swingEvent.v.decayOrder;
@@ -1820,28 +1830,14 @@ namespace
 				updateGCD(seg.startPulse);
 				updateGCD(seg.startPulse + seg.length);
 
-				// Include laser segment length in GCD calculation (v1 compatibility)
-				if (seg.startPulse >= measureStart && seg.startPulse < measureEnd && seg.length > 0)
-				{
-					gcd = std::gcd(gcd, seg.length);
-					shouldDoubleResolution = true;
-				}
-			}
-
-			for (const auto& [sectionStart, section] : chartData.note.laser[laneIdx])
-			{
-				Pulse sectionEnd = sectionStart;
-				if (!section.v.empty())
-				{
-					sectionEnd = sectionStart + section.v.rbegin()->first;
-				}
-
-				if (sectionStart >= measureStart && sectionStart < measureEnd)
+				// Laser segments starting or ending in this measure require doubled resolution
+				if (seg.startPulse >= measureStart && seg.startPulse < measureEnd)
 				{
 					shouldDoubleResolution = true;
 				}
 
-				if (sectionEnd >= measureStart && sectionEnd < measureEnd)
+				const Pulse endPulse = seg.startPulse + seg.length;
+				if (endPulse >= measureStart && endPulse < measureEnd)
 				{
 					shouldDoubleResolution = true;
 				}
@@ -2002,22 +1998,34 @@ namespace
 			updateGCD(pulse);
 		}
 
-		// Calculate base division
-		std::int32_t division = static_cast<std::int32_t>(measureLength / gcd);
+		// Convert to KSH resolution (192) for accurate division calculation
+		const std::int32_t measureLengthKSH = ToKSHResolution(measureLength);
+		const std::int32_t gcdKSH = ToKSHResolution(gcd);
 
-		if (division < measureLength)
+		// Calculate base division in KSH units
+		std::int32_t division = measureLengthKSH / gcdKSH;
+
+		// Apply doubling for long notes/lasers (v1 compatibility)
+		if (division < measureLengthKSH)
 		{
 			division *= (1 + (shouldDoubleResolution ? 1 : 0));
 		}
 
-		if (measureLength % division != 0)
+		// Ensure division divides measureLength evenly
+		if (measureLengthKSH % division != 0)
 		{
-			division = static_cast<std::int32_t>(measureLength);
+			division = measureLengthKSH;
+		}
+
+		// Ensure division is at least 1
+		if (division < 1)
+		{
+			division = 1;
 		}
 
 		// Limit division to reasonable range
-		// Use measure length as max to ensure all pulses in the measure are covered
-		const std::int32_t maxDivision = static_cast<std::int32_t>(measureLength);
+		// Use measure length in KSH units as max
+		const std::int32_t maxDivision = std::max(1, ToKSHResolution(measureLength));
 		if (division > maxDivision)
 		{
 			return maxDivision;
