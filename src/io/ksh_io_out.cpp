@@ -730,17 +730,17 @@ namespace
 		{
 			const auto& pulseEvent = audio.audioEffect.laser.pulseEvent;
 			if (pulseEvent.contains("peaking_filter") &&
-				std::find(pulseEvent.at("peaking_filter").begin(), pulseEvent.at("peaking_filter").end(), 0) != pulseEvent.at("peaking_filter").end())
+				pulseEvent.at("peaking_filter").contains(0))
 			{
 				stream << "filtertype=peak\r\n";
 			}
 			else if (pulseEvent.contains("low_pass_filter") &&
-				std::find(pulseEvent.at("low_pass_filter").begin(), pulseEvent.at("low_pass_filter").end(), 0) != pulseEvent.at("low_pass_filter").end())
+				pulseEvent.at("low_pass_filter").contains(0))
 			{
 				stream << "filtertype=lpf1\r\n";
 			}
 			else if (pulseEvent.contains("high_pass_filter") &&
-				std::find(pulseEvent.at("high_pass_filter").begin(), pulseEvent.at("high_pass_filter").end(), 0) != pulseEvent.at("high_pass_filter").end())
+				pulseEvent.at("high_pass_filter").contains(0))
 			{
 				stream << "filtertype=hpf1\r\n";
 			}
@@ -1351,22 +1351,22 @@ namespace
 			std::string newFilterType;
 			const auto& pulseEvent = chartData.audio.audioEffect.laser.pulseEvent;
 			if (pulseEvent.contains("peaking_filter") &&
-				std::find(pulseEvent.at("peaking_filter").begin(), pulseEvent.at("peaking_filter").end(), pulse) != pulseEvent.at("peaking_filter").end())
+				pulseEvent.at("peaking_filter").contains(pulse))
 			{
 				newFilterType = "peak";
 			}
 			else if (pulseEvent.contains("low_pass_filter") &&
-				std::find(pulseEvent.at("low_pass_filter").begin(), pulseEvent.at("low_pass_filter").end(), pulse) != pulseEvent.at("low_pass_filter").end())
+				pulseEvent.at("low_pass_filter").contains(pulse))
 			{
 				newFilterType = "lpf1";
 			}
 			else if (pulseEvent.contains("high_pass_filter") &&
-				std::find(pulseEvent.at("high_pass_filter").begin(), pulseEvent.at("high_pass_filter").end(), pulse) != pulseEvent.at("high_pass_filter").end())
+				pulseEvent.at("high_pass_filter").contains(pulse))
 			{
 				newFilterType = "hpf1";
 			}
 			else if (pulseEvent.contains("bitcrusher") &&
-				std::find(pulseEvent.at("bitcrusher").begin(), pulseEvent.at("bitcrusher").end(), pulse) != pulseEvent.at("bitcrusher").end())
+				pulseEvent.at("bitcrusher").contains(pulse))
 			{
 				newFilterType = "bitc";
 			}
@@ -1383,7 +1383,7 @@ namespace
 				// Skip preset filters (already handled above)
 				if (!IsKSONPresetLaserFilterName(effectName))
 				{
-					if (std::find(pulses.begin(), pulses.end(), pulse) != pulses.end())
+					if (pulses.contains(pulse))
 					{
 						if (effectName != state.currentFilterType)
 						{
@@ -1416,25 +1416,25 @@ namespace
 
 			// Check for down slam
 			if (slamEvent.contains("down") &&
-				std::find(slamEvent.at("down").begin(), slamEvent.at("down").end(), pulse) != slamEvent.at("down").end())
+				slamEvent.at("down").contains(pulse))
 			{
 				stream << "chokkakuse=down\r\n";
 			}
 			// Check for up slam
 			else if (slamEvent.contains("up") &&
-				std::find(slamEvent.at("up").begin(), slamEvent.at("up").end(), pulse) != slamEvent.at("up").end())
+				slamEvent.at("up").contains(pulse))
 			{
 				stream << "chokkakuse=up\r\n";
 			}
 			// Check for swing slam
 			else if (slamEvent.contains("swing") &&
-				std::find(slamEvent.at("swing").begin(), slamEvent.at("swing").end(), pulse) != slamEvent.at("swing").end())
+				slamEvent.at("swing").contains(pulse))
 			{
 				stream << "chokkakuse=swing\r\n";
 			}
 			// Check for mute slam
 			else if (slamEvent.contains("mute") &&
-				std::find(slamEvent.at("mute").begin(), slamEvent.at("mute").end(), pulse) != slamEvent.at("mute").end())
+				slamEvent.at("mute").contains(pulse))
 			{
 				stream << "chokkakuse=mute\r\n";
 			}
@@ -2104,17 +2104,17 @@ namespace
 		{
 			const auto& pulseEvent = chartData.audio.audioEffect.laser.pulseEvent;
 			if (pulseEvent.contains("peaking_filter") &&
-				std::find(pulseEvent.at("peaking_filter").begin(), pulseEvent.at("peaking_filter").end(), 0) != pulseEvent.at("peaking_filter").end())
+				pulseEvent.at("peaking_filter").contains(0))
 			{
 				state.currentFilterType = "peak";
 			}
 			else if (pulseEvent.contains("low_pass_filter") &&
-				std::find(pulseEvent.at("low_pass_filter").begin(), pulseEvent.at("low_pass_filter").end(), 0) != pulseEvent.at("low_pass_filter").end())
+				pulseEvent.at("low_pass_filter").contains(0))
 			{
 				state.currentFilterType = "lpf1";
 			}
 			else if (pulseEvent.contains("high_pass_filter") &&
-				std::find(pulseEvent.at("high_pass_filter").begin(), pulseEvent.at("high_pass_filter").end(), 0) != pulseEvent.at("high_pass_filter").end())
+				pulseEvent.at("high_pass_filter").contains(0))
 			{
 				state.currentFilterType = "hpf1";
 			}
