@@ -1589,6 +1589,25 @@ namespace
 			}
 		}
 
+		// Output laser curve for points at this pulse
+		for (std::int32_t i = 0; i < kNumLaserLanes; ++i)
+		{
+			for (const auto& [sectionPulse, section] : chartData.note.laser[i])
+			{
+				const RelPulse relPulse = pulse - sectionPulse;
+				if (relPulse >= 0 && section.v.contains(relPulse))
+				{
+					const auto& point = section.v.at(relPulse);
+					if (point.curve.a != 0.0 || point.curve.b != 0.0)
+					{
+						stream << "laser_" << (i == 0 ? 'l' : 'r') << "_curve="
+							<< FormatDouble(point.curve.a) << ";" << FormatDouble(point.curve.b) << "\r\n";
+					}
+					break;
+				}
+			}
+		}
+
 		if (chartData.beat.stop.contains(pulse))
 		{
 			const RelPulse stopLength = chartData.beat.stop.at(pulse);
