@@ -257,11 +257,7 @@ namespace
 	struct MeasureExportState
 	{
 		TimeSig currentTimeSig{ 4, 4 };
-		double currentBPM = 120.0;
 		std::string headerBPMStr; // BPM string output in header
-
-		// FX effect state (output only when changed)
-		std::array<std::string, kNumFXLanesSZ> currentFXEffects;
 
 		// Laser state
 		struct LaserState
@@ -281,7 +277,6 @@ namespace
 
 		MeasureExportState()
 		{
-			currentFXEffects.fill("*");
 			currentFXAudioEffects.fill("");
 		}
 	};
@@ -1061,10 +1056,6 @@ namespace
 			{
 				continue;
 			}
-
-			// Slam segment (startValue != endValue with short length)
-			constexpr Pulse kSlamLength = kResolution4 / 32; // 1/32 measure = 30 pulses
-			const bool isSlam = (seg.startValue != seg.endValue) && (seg.length <= kSlamLength);
 
 			if (pulse == seg.startPulse)
 			{
