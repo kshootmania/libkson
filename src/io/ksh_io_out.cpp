@@ -2007,7 +2007,7 @@ namespace
 		const std::int32_t gcdKSH = ToKSHResolution(gcd);
 
 		// Calculate base division in KSH units
-		std::int32_t division = measureLengthKSH / gcdKSH;
+		std::int32_t division = gcdKSH > 0 ? measureLengthKSH / gcdKSH : measureLengthKSH;
 
 		// Apply doubling for long notes/lasers (v1 compatibility)
 		if (division < measureLengthKSH)

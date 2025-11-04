@@ -1772,376 +1772,380 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 		if (IsBarLine(line))
 		{
 			const std::size_t bufLineCount = chartLines.size();
-			const RelPulse oneLinePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d / bufLineCount;
 
-			// Add options that require their position
-			for (const auto& [lineIdx, key, value] : optionLines)
+			if (bufLineCount > 0)
 			{
-				const Pulse time = currentPulse + lineIdx * oneLinePulse;
+				const RelPulse oneLinePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d / bufLineCount;
 
-				// Check for _curve suffix
-				if (key.ends_with("_curve"))
+				// Add options that require their position
+				for (const auto& [lineIdx, key, value] : optionLines)
 				{
-					const std::string paramName = key.substr(0, key.size() - 6);
-					const auto curveValue = ParseCurveValue(value);
-					if (curveValue.has_value())
-					{
-						bufferedCurves[paramName][time] = curveValue.value();
-					}
-					continue;
-				}
+					const Pulse time = currentPulse + lineIdx * oneLinePulse;
 
-				if (key == "t")
-				{
-					if (chartData.beat.bpm.empty()) [[unlikely]]
+					// Check for _curve suffix
+					if (key.ends_with("_curve"))
 					{
-						// In rare cases where BPM is not specified on the chart metadata
-						InsertBPMChange(chartData.beat.bpm, 0, value, kshVersionInt);
+						const std::string paramName = key.substr(0, key.size() - 6);
+						const auto curveValue = ParseCurveValue(value);
+						if (curveValue.has_value())
+						{
+							bufferedCurves[paramName][time] = curveValue.value();
+						}
+						continue;
 					}
-					else
-					{
-						InsertBPMChange(chartData.beat.bpm, time, value, kshVersionInt);
-					}
-				}
-				else if (key == "stop")
-				{
-					const RelPulse length = KSHLengthToRelPulse(value);
-					if (length > 0)
-					{
-						chartData.beat.stop[time] = length;
-					}
-				}
-				else if (key == "zoom_top")
-				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomTop.contains(time)))
-					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomTop, time, dValue);
-					}
-				}
-				else if (key == "zoom_bottom")
-				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomBottom.contains(time)))
-					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomBottom, time, dValue);
-					}
-				}
-				else if (key == "zoom_side")
-				{
-					const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
-					if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomSide.contains(time)))
-					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomSide, time, dValue);
-					}
-				}
-				else if (key == "center_split")
-				{
-					const double dValue = ParseNumeric<double>(value);
-					if (std::abs(dValue) <= kCenterSplitAbsMax)
-					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
-					}
-				}
-				else if (key == "scroll_speed")
-				{
-					const double dValue = ParseNumeric<double>(value);
-					InsertGraphPointOrAssignVf(chartData.beat.scrollSpeed, time, dValue);
-				}
-				else if (key == "rotation_deg")
-				{
-					const double dValue = ParseNumeric<double>(value);
-					if (std::abs(dValue) <= kRotationDegAbsMax)
-					{
-						InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);
-					}
-				}
-				else if (key == "tilt")
-				{
-					auto& target = chartData.camera.tilt;
 
-					if (IsTiltValueManual(value))
+					if (key == "t")
+					{
+						if (chartData.beat.bpm.empty()) [[unlikely]]
+						{
+							// In rare cases where BPM is not specified on the chart metadata
+							InsertBPMChange(chartData.beat.bpm, 0, value, kshVersionInt);
+						}
+						else
+						{
+							InsertBPMChange(chartData.beat.bpm, time, value, kshVersionInt);
+						}
+					}
+					else if (key == "stop")
+					{
+						const RelPulse length = KSHLengthToRelPulse(value);
+						if (length > 0)
+						{
+							chartData.beat.stop[time] = length;
+						}
+					}
+					else if (key == "zoom_top")
+					{
+						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomTop.contains(time)))
+						{
+							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomTop, time, dValue);
+						}
+					}
+					else if (key == "zoom_bottom")
+					{
+						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomBottom.contains(time)))
+						{
+							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomBottom, time, dValue);
+						}
+					}
+					else if (key == "zoom_side")
+					{
+						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomSide.contains(time)))
+						{
+							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomSide, time, dValue);
+						}
+					}
+					else if (key == "center_split")
 					{
 						const double dValue = ParseNumeric<double>(value);
-						if (std::abs(dValue) <= kManualTiltAbsMax)
+						if (std::abs(dValue) <= kCenterSplitAbsMax)
 						{
-							// Check for immediate change (consecutive tilt values at the same pulse)
+							InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
+						}
+					}
+					else if (key == "scroll_speed")
+					{
+						const double dValue = ParseNumeric<double>(value);
+						InsertGraphPointOrAssignVf(chartData.beat.scrollSpeed, time, dValue);
+					}
+					else if (key == "rotation_deg")
+					{
+						const double dValue = ParseNumeric<double>(value);
+						if (std::abs(dValue) <= kRotationDegAbsMax)
+						{
+							InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);
+						}
+					}
+					else if (key == "tilt")
+					{
+						auto& target = chartData.camera.tilt;
+
+						if (IsTiltValueManual(value))
+						{
+							const double dValue = ParseNumeric<double>(value);
+							if (std::abs(dValue) <= kManualTiltAbsMax)
+							{
+								// Check for immediate change (consecutive tilt values at the same pulse)
+								if (!target.empty())
+								{
+									auto lastIt = target.rbegin();
+									if (lastIt->first == time && std::holds_alternative<TiltGraphPoint>(lastIt->second))
+									{
+										const TiltGraphPoint& lastGraphPoint = std::get<TiltGraphPoint>(lastIt->second);
+										target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, dValue }, lastGraphPoint.curve });
+										continue;
+									}
+								}
+
+								target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ dValue } });
+							}
+							if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
+							{
+								// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
+								useLegacyScaleForManualTilt = true;
+							}
+						}
+						else
+						{
+							// Auto tilt type
+							const AutoTiltType autoTiltType = ParseAutoTiltType(value);
+
+							// Check for immediate change from manual tilt to auto tilt (consecutive values at the same pulse)
 							if (!target.empty())
 							{
 								auto lastIt = target.rbegin();
 								if (lastIt->first == time && std::holds_alternative<TiltGraphPoint>(lastIt->second))
 								{
 									const TiltGraphPoint& lastGraphPoint = std::get<TiltGraphPoint>(lastIt->second);
-									target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, dValue }, lastGraphPoint.curve });
+									target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, autoTiltType }, lastGraphPoint.curve });
 									continue;
 								}
 							}
 
-							target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ dValue } });
+							target.insert_or_assign(time, autoTiltType);
 						}
-						if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
+					}
+					else if (key == "chokkakuvol")
+					{
+						const double dValue = ParseNumeric<double>(value) / 100;
+						chartData.audio.keySound.laser.vol.insert_or_assign(time, dValue);
+					}
+					else if (key == "chokkakuse")
+					{
+						currentMeasureLaserKeySounds.insert_or_assign(lineIdx, value);
+					}
+					else if (key == "pfiltergain")
+					{
+						const std::int32_t pfiltergainValue = ParseNumeric<std::int32_t>(value, 50);
+						chartData.audio.audioEffect.laser.legacy.filterGain.emplace(time, pfiltergainValue / 100.0);
+					}
+					else if (key == "fx-l")
+					{
+						currentMeasureFXAudioEffectStrs[0].insert_or_assign(lineIdx, value);
+					}
+					else if (key == "fx-r")
+					{
+						currentMeasureFXAudioEffectStrs[1].insert_or_assign(lineIdx, value);
+					}
+					// Note: "fx-l_param2"/"fx-r_param2" need not be processed because "fx-l_param1"/"fx-r_param1" is legacy (< v1.60) and 
+					//       Echo, the only audio effect that uses a second parameter, was added in v1.60.
+					else if (key == "fx-l_param1")
+					{
+						currentMeasureFXAudioEffectParamStrs[0].insert_or_assign(lineIdx, value);
+					}
+					else if (key == "fx-r_param1")
+					{
+						currentMeasureFXAudioEffectParamStrs[1].insert_or_assign(lineIdx, value);
+					}
+					else if (bool isL = key == "fx-l_se"; isL || key == "fx-r_se")
+					{
+						const auto strPair = Split<2>(value, ';');
+						currentMeasureFXKeySounds[isL ? 0 : 1].insert_or_assign(lineIdx, BufKeySound{
+							.name = strPair[0],
+							.vol = ParseNumeric<std::int32_t>(strPair[1], 100),
+						});
+					}
+					else if (key == "filtertype")
+					{
+						InsertFiltertype(chartData, time, value);
+					}
+					else if (key == "laserrange_l")
+					{
+						if (value == "2x")
 						{
-							// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
-							useLegacyScaleForManualTilt = true;
+							currentMeasureLaserXScale2x[0].emplace(lineIdx);
+						}
+					}
+					else if (key == "laserrange_r")
+					{
+						if (value == "2x")
+						{
+							currentMeasureLaserXScale2x[1].emplace(lineIdx);
+						}
+					}
+					else if (bool isFX = key.starts_with("fx:"); isFX || key.starts_with("filter:"))
+					{
+						constexpr std::size_t kAudioEffectNameIdx = 1;
+						constexpr std::size_t kParamNameIdx = 2;
+
+						const auto& a = Split<3>(key, ':');
+						if (!a[kAudioEffectNameIdx].empty() && !a[kParamNameIdx].empty())
+						{
+							auto& paramChange = isFX ? chartData.audio.audioEffect.fx.paramChange : chartData.audio.audioEffect.laser.paramChange;
+							if (s_audioEffectParamNameTable.contains(a[kParamNameIdx]))
+							{
+								const std::string effectName = isFX
+									? (s_kshFXToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+										? std::string{ s_kshFXToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+										: std::string{ a[kAudioEffectNameIdx] })
+									: (s_kshFilterToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+										? std::string{ s_kshFilterToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+										: std::string{ a[kAudioEffectNameIdx] });
+								paramChange[effectName][std::string{ s_audioEffectParamNameTable.at(a[kParamNameIdx]) }].insert_or_assign(time, value);
+							}
 						}
 					}
 					else
 					{
-						// Auto tilt type
-						const AutoTiltType autoTiltType = ParseAutoTiltType(value);
+						chartData.compat.kshUnknown.option[key].emplace(time, value);
+					}
+				}
 
-						// Check for immediate change from manual tilt to auto tilt (consecutive values at the same pulse)
-						if (!target.empty())
+				// Add notes
+				for (std::size_t i = 0; i < bufLineCount; ++i)
+				{
+					const std::string_view buf = chartLines.at(i);
+					std::size_t currentBlock = 0;
+					std::size_t laneIdx = 0;
+
+					const Pulse time = currentPulse + i * oneLinePulse;
+
+					for (std::size_t j = 0; j < buf.size(); ++j)
+					{
+						if (buf[j] == kBlockSeparator)
 						{
-							auto lastIt = target.rbegin();
-							if (lastIt->first == time && std::holds_alternative<TiltGraphPoint>(lastIt->second))
-							{
-								const TiltGraphPoint& lastGraphPoint = std::get<TiltGraphPoint>(lastIt->second);
-								target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ lastGraphPoint.v.v, autoTiltType }, lastGraphPoint.curve });
-								continue;
-							}
+							++currentBlock;
+							laneIdx = 0;
+							continue;
 						}
 
-						target.insert_or_assign(time, autoTiltType);
-					}
-				}
-				else if (key == "chokkakuvol")
-				{
-					const double dValue = ParseNumeric<double>(value) / 100;
-					chartData.audio.keySound.laser.vol.insert_or_assign(time, dValue);
-				}
-				else if (key == "chokkakuse")
-				{
-					currentMeasureLaserKeySounds.insert_or_assign(lineIdx, value);
-				}
-				else if (key == "pfiltergain")
-				{
-					const std::int32_t pfiltergainValue = ParseNumeric<std::int32_t>(value, 50);
-					chartData.audio.audioEffect.laser.legacy.filterGain.emplace(time, pfiltergainValue / 100.0);
-				}
-				else if (key == "fx-l")
-				{
-					currentMeasureFXAudioEffectStrs[0].insert_or_assign(lineIdx, value);
-				}
-				else if (key == "fx-r")
-				{
-					currentMeasureFXAudioEffectStrs[1].insert_or_assign(lineIdx, value);
-				}
-				// Note: "fx-l_param2"/"fx-r_param2" need not be processed because "fx-l_param1"/"fx-r_param1" is legacy (< v1.60) and 
-				//       Echo, the only audio effect that uses a second parameter, was added in v1.60.
-				else if (key == "fx-l_param1")
-				{
-					currentMeasureFXAudioEffectParamStrs[0].insert_or_assign(lineIdx, value);
-				}
-				else if (key == "fx-r_param1")
-				{
-					currentMeasureFXAudioEffectParamStrs[1].insert_or_assign(lineIdx, value);
-				}
-				else if (bool isL = key == "fx-l_se"; isL || key == "fx-r_se")
-				{
-					const auto strPair = Split<2>(value, ';');
-					currentMeasureFXKeySounds[isL ? 0 : 1].insert_or_assign(lineIdx, BufKeySound{
-						.name = strPair[0],
-						.vol = ParseNumeric<std::int32_t>(strPair[1], 100),
-					});
-				}
-				else if (key == "filtertype")
-				{
-					InsertFiltertype(chartData, time, value);
-				}
-				else if (key == "laserrange_l")
-				{
-					if (value == "2x")
-					{
-						currentMeasureLaserXScale2x[0].emplace(lineIdx);
-					}
-				}
-				else if (key == "laserrange_r")
-				{
-					if (value == "2x")
-					{
-						currentMeasureLaserXScale2x[1].emplace(lineIdx);
-					}
-				}
-				else if (bool isFX = key.starts_with("fx:"); isFX || key.starts_with("filter:"))
-				{
-					constexpr std::size_t kAudioEffectNameIdx = 1;
-					constexpr std::size_t kParamNameIdx = 2;
-
-					const auto& a = Split<3>(key, ':');
-					if (!a[kAudioEffectNameIdx].empty() && !a[kParamNameIdx].empty())
-					{
-						auto& paramChange = isFX ? chartData.audio.audioEffect.fx.paramChange : chartData.audio.audioEffect.laser.paramChange;
-						if (s_audioEffectParamNameTable.contains(a[kParamNameIdx]))
+						if (currentBlock == kBlockIdxBT && laneIdx < kNumBTLanesSZ) // BT notes
 						{
-							const std::string effectName = isFX
-								? (s_kshFXToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
-									? std::string{ s_kshFXToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
-									: std::string{ a[kAudioEffectNameIdx] })
-								: (s_kshFilterToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
-									? std::string{ s_kshFilterToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
-									: std::string{ a[kAudioEffectNameIdx] });
-							paramChange[effectName][std::string{ s_audioEffectParamNameTable.at(a[kParamNameIdx]) }].insert_or_assign(time, value);
-						}
-					}
-				}
-				else
-				{
-					chartData.compat.kshUnknown.option[key].emplace(time, value);
-				}
-			}
-
-			// Add notes
-			for (std::size_t i = 0; i < bufLineCount; ++i)
-			{
-				const std::string_view buf = chartLines.at(i);
-				std::size_t currentBlock = 0;
-				std::size_t laneIdx = 0;
-
-				const Pulse time = currentPulse + i * oneLinePulse;
-
-				for (std::size_t j = 0; j < buf.size(); ++j)
-				{
-					if (buf[j] == kBlockSeparator)
-					{
-						++currentBlock;
-						laneIdx = 0;
-						continue;
-					}
-
-					if (currentBlock == kBlockIdxBT && laneIdx < kNumBTLanesSZ) // BT notes
-					{
-						auto& preparedLongNoteRef = preparedLongNoteArray.bt[laneIdx];
-						switch (buf[j])
-						{
-						case '2': // Long BT note
-							if (!preparedLongNoteRef.prepared())
+							auto& preparedLongNoteRef = preparedLongNoteArray.bt[laneIdx];
+							switch (buf[j])
 							{
-								preparedLongNoteRef.prepare(time);
-							}
-							preparedLongNoteRef.extendLength(oneLinePulse);
-							break;
-						case '1': // Chip BT note
-							preparedLongNoteRef.publishLongBTNote();
-							chartData.note.bt[laneIdx].emplace(time, Interval{ .length = 0 });
-							break;
-						default:  // Empty
-							preparedLongNoteRef.publishLongBTNote();
-							break;
-						}
-					}
-					else if (currentBlock == kBlockIdxFX && laneIdx < kNumFXLanesSZ) // FX notes
-					{
-						auto& preparedLongNoteRef = preparedLongNoteArray.fx[laneIdx];
-						switch (buf[j])
-						{
-						case '2': // Chip FX note
-							chartData.note.fx[laneIdx].emplace(time, Interval{ .length = 0 });
-							if (currentMeasureFXKeySounds[laneIdx].contains(i))
-							{
-								const auto& bufKeySound = currentMeasureFXKeySounds[laneIdx].at(i);
-								chartData.audio.keySound.fx.chipEvent[bufKeySound.name][laneIdx].emplace(time, KeySoundInvokeFX{
-									.vol = static_cast<double>(bufKeySound.vol) / 100,
-								});
-							}
-							break;
-						case '0': // Empty
-							preparedLongNoteRef.publishLongFXNote();
-							break;
-						case '1': // Long FX note
-							if (currentMeasureFXAudioEffectStrs[laneIdx].contains(i))
-							{
-								const std::string audioEffectStr = currentMeasureFXAudioEffectStrs[laneIdx].at(i);
-								const std::string audioEffectParamStr =
-									currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i)
-									? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) // Note: Normally this is not used here because it's for legacy long FX chars
-									: "";
-								preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, false);
-							}
-							else
-							{
-								preparedLongNoteRef.prepare(time);
-							}
-							preparedLongNoteRef.extendLength(oneLinePulse);
-							break;
-						default: // Long FX note (legacy characters, e.g., "F" = Flanger)
-							{
-								const std::string audioEffectStr(KSHLegacyFXCharToKSHAudioEffectStr(buf[j]));
-								const std::string audioEffectParamStr = currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i) ? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) : "";
-								preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, true);
-							}
-							preparedLongNoteRef.extendLength(oneLinePulse);
-							break;
-						}
-					}
-					else if (currentBlock == kBlockIdxLaser && laneIdx < kNumLaserLanesSZ) // Laser notes
-					{
-						auto& preparedLaserSectionRef = preparedLongNoteArray.laser[laneIdx];
-						switch (buf[j])
-						{
-						case '-': // Empty
-							preparedLaserSectionRef.publishLaserNote();
-							preparedLaserSectionRef.clear();
-							break;
-						case ':': // Connection
-							break;
-						default:
-							{
-								const std::int32_t laserX = CharToLaserX(buf[j]);
-								if (laserX >= 0)
+							case '2': // Long BT note
+								if (!preparedLongNoteRef.prepared())
 								{
-									if (!preparedLaserSectionRef.prepared())
+									preparedLongNoteRef.prepare(time);
+								}
+								preparedLongNoteRef.extendLength(oneLinePulse);
+								break;
+							case '1': // Chip BT note
+								preparedLongNoteRef.publishLongBTNote();
+								chartData.note.bt[laneIdx].emplace(time, Interval{ .length = 0 });
+								break;
+							default:  // Empty
+								preparedLongNoteRef.publishLongBTNote();
+								break;
+							}
+						}
+						else if (currentBlock == kBlockIdxFX && laneIdx < kNumFXLanesSZ) // FX notes
+						{
+							auto& preparedLongNoteRef = preparedLongNoteArray.fx[laneIdx];
+							switch (buf[j])
+							{
+							case '2': // Chip FX note
+								chartData.note.fx[laneIdx].emplace(time, Interval{ .length = 0 });
+								if (currentMeasureFXKeySounds[laneIdx].contains(i))
+								{
+									const auto& bufKeySound = currentMeasureFXKeySounds[laneIdx].at(i);
+									chartData.audio.keySound.fx.chipEvent[bufKeySound.name][laneIdx].emplace(time, KeySoundInvokeFX{
+										.vol = static_cast<double>(bufKeySound.vol) / 100,
+									});
+								}
+								break;
+							case '0': // Empty
+								preparedLongNoteRef.publishLongFXNote();
+								break;
+							case '1': // Long FX note
+								if (currentMeasureFXAudioEffectStrs[laneIdx].contains(i))
+								{
+									const std::string audioEffectStr = currentMeasureFXAudioEffectStrs[laneIdx].at(i);
+									const std::string audioEffectParamStr =
+										currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i)
+										? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) // Note: Normally this is not used here because it's for legacy long FX chars
+										: "";
+									preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, false);
+								}
+								else
+								{
+									preparedLongNoteRef.prepare(time);
+								}
+								preparedLongNoteRef.extendLength(oneLinePulse);
+								break;
+							default: // Long FX note (legacy characters, e.g., "F" = Flanger)
+								{
+									const std::string audioEffectStr(KSHLegacyFXCharToKSHAudioEffectStr(buf[j]));
+									const std::string audioEffectParamStr = currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i) ? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) : "";
+									preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, true);
+								}
+								preparedLongNoteRef.extendLength(oneLinePulse);
+								break;
+							}
+						}
+						else if (currentBlock == kBlockIdxLaser && laneIdx < kNumLaserLanesSZ) // Laser notes
+						{
+							auto& preparedLaserSectionRef = preparedLongNoteArray.laser[laneIdx];
+							switch (buf[j])
+							{
+							case '-': // Empty
+								preparedLaserSectionRef.publishLaserNote();
+								preparedLaserSectionRef.clear();
+								break;
+							case ':': // Connection
+								break;
+							default:
+								{
+									const std::int32_t laserX = CharToLaserX(buf[j]);
+									if (laserX >= 0)
 									{
-										const bool wide = currentMeasureLaserXScale2x[laneIdx].contains(i);
-										preparedLaserSectionRef.prepare(time, wide);
-									}
-
-									const double graphValue = LaserXToGraphValue(laserX, preparedLaserSectionRef.wide());
-									preparedLaserSectionRef.addGraphPoint(time, graphValue);
-
-									if (currentMeasureLaserKeySounds.contains(i))
-									{
-										// Note: Here, the key sound element is inserted even if the laser segment is not a slam, but it doesn't matter much.
-										const std::string& name = currentMeasureLaserKeySounds.at(i);
-										if (!name.empty())
+										if (!preparedLaserSectionRef.prepared())
 										{
-											chartData.audio.keySound.laser.slamEvent[name].insert(time);
+											const bool wide = currentMeasureLaserXScale2x[laneIdx].contains(i);
+											preparedLaserSectionRef.prepare(time, wide);
+										}
+
+										const double graphValue = LaserXToGraphValue(laserX, preparedLaserSectionRef.wide());
+										preparedLaserSectionRef.addGraphPoint(time, graphValue);
+
+										if (currentMeasureLaserKeySounds.contains(i))
+										{
+											// Note: Here, the key sound element is inserted even if the laser segment is not a slam, but it doesn't matter much.
+											const std::string& name = currentMeasureLaserKeySounds.at(i);
+											if (!name.empty())
+											{
+												chartData.audio.keySound.laser.slamEvent[name].insert(time);
+											}
 										}
 									}
 								}
+								break;
 							}
-							break;
 						}
-					}
-					else if (currentBlock == kBlockIdxLaser && laneIdx == kNumLaserLanesSZ) // Lane spin
-					{
-						// Create a lane spin from string
-						const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKSHSpinStr(buf.substr(j));
-						if (laneSpin.isValid())
+						else if (currentBlock == kBlockIdxLaser && laneIdx == kNumLaserLanesSZ) // Lane spin
 						{
-							// Assign to the laser point if valid
-							for (auto& lane : preparedLongNoteArray.laser)
+							// Create a lane spin from string
+							const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKSHSpinStr(buf.substr(j));
+							if (laneSpin.isValid())
 							{
-								lane.addLaneSpin(time, laneSpin);
+								// Assign to the laser point if valid
+								for (auto& lane : preparedLongNoteArray.laser)
+								{
+									lane.addLaneSpin(time, laneSpin);
+								}
 							}
 						}
+						++laneIdx;
 					}
-					++laneIdx;
 				}
-			}
 
-			// Add comments
-			for (const auto& [lineIdx, value] : commentLines)
-			{
-				const Pulse time = currentPulse + lineIdx * oneLinePulse;
-				chartData.editor.comment.emplace(time, value);
-			}
+				// Add comments
+				for (const auto& [lineIdx, value] : commentLines)
+				{
+					const Pulse time = currentPulse + lineIdx * oneLinePulse;
+					chartData.editor.comment.emplace(time, value);
+				}
 
-			// Add unknown lines
-			for (const auto& [lineIdx, value] : unknownLines)
-			{
-				const Pulse time = currentPulse + lineIdx * oneLinePulse;
-				chartData.compat.kshUnknown.line.emplace(time, value);
+				// Add unknown lines
+				for (const auto& [lineIdx, value] : unknownLines)
+				{
+					const Pulse time = currentPulse + lineIdx * oneLinePulse;
+					chartData.compat.kshUnknown.line.emplace(time, value);
+				}
 			}
 
 			chartLines.clear();
