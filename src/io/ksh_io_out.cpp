@@ -1294,10 +1294,14 @@ namespace
 		}
 
 		// Output unknown lines for this pulse
-		auto lineRange = chartData.compat.kshUnknown.line.equal_range(pulse);
-		for (auto it = lineRange.first; it != lineRange.second; ++it)
+		// Skip output at pulse 0 (already output in header)
+		if (pulse != 0)
 		{
-			stream << it->second << "\r\n";
+			auto lineRange = chartData.compat.kshUnknown.line.equal_range(pulse);
+			for (auto it = lineRange.first; it != lineRange.second; ++it)
+			{
+				stream << it->second << "\r\n";
+			}
 		}
 
 		// Check for FX param_change (fx:effect_name:param_name=value)
