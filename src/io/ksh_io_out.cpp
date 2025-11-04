@@ -1215,6 +1215,30 @@ namespace
 		return result;
 	}
 
+	// Write zoom parameter (zoom_top, zoom_bottom, zoom_side)
+	void WriteZoomParameter(std::ostream& stream, const std::string& paramName, const GraphPoint& graphPoint)
+	{
+		const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+		const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
+		stream << paramName << "=" << zoomValue << "\r\n";
+
+		// If v != vf (slam), output vf on the next line if it's different
+		if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+		{
+			const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+			const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
+			if (zoomValue != zoomValueFinal)
+			{
+				stream << paramName << "=" << zoomValueFinal << "\r\n";
+			}
+		}
+
+		if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+		{
+			stream << paramName << "_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+		}
+	}
+
 	// Write note line
 	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt)
 	{
@@ -1488,77 +1512,17 @@ namespace
 
 		if (chartData.camera.cam.body.zoomTop.contains(pulse))
 		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomTop.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_top=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_top=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_top_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
+			WriteZoomParameter(stream, "zoom_top", chartData.camera.cam.body.zoomTop.at(pulse));
 		}
 
 		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
 		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomBottom.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_bottom=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_bottom=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_bottom_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
+			WriteZoomParameter(stream, "zoom_bottom", chartData.camera.cam.body.zoomBottom.at(pulse));
 		}
 
 		if (chartData.camera.cam.body.zoomSide.contains(pulse))
 		{
-			const auto& graphPoint = chartData.camera.cam.body.zoomSide.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
-			const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
-			stream << "zoom_side=" << zoomValue << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
-				const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
-				if (zoomValue != zoomValueFinal)
-				{
-					stream << "zoom_side=" << zoomValueFinal << "\r\n";
-				}
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "zoom_side_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
+			WriteZoomParameter(stream, "zoom_side", chartData.camera.cam.body.zoomSide.at(pulse));
 		}
 
 		// Check for laser wide annotation changes before processing notes
