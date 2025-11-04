@@ -780,7 +780,9 @@ namespace
 
 			auto& data = m_inserter.data();
 
-			if ((audioEffectStr != data.audioEffectStr || audioEffectParamStr != data.audioEffectParamStr) && (!audioEffectStr.empty() || m_inserter.prepared()))
+			// Always publish long_event when fx-l=/fx-r= is explicitly specified (for round-trip compatibility)
+			// This function is only called when fx-l=/fx-r= exists, so we don't need to check for value changes
+			if (!audioEffectStr.empty() || m_inserter.prepared())
 			{
 				publishLongFXAudioEffectEvent(time, audioEffectStr, audioEffectParamStr);
 			}

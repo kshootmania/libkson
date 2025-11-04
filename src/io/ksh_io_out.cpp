@@ -1667,12 +1667,9 @@ namespace
 						chartData.note.fx[laneIdx].at(pulse).length > 0;
 
 					// Output fx-l/fx-r
-					if (audioEffectStr != state.currentFXAudioEffects[laneIdx] || isNoteStart)
-					{
-						stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
-						state.currentFXAudioEffects[laneIdx] = audioEffectStr;
-						break;
-					}
+					stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
+					state.currentFXAudioEffects[laneIdx] = audioEffectStr;
+					break;
 				}
 			}
 		}
