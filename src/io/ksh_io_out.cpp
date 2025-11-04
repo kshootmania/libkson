@@ -1310,6 +1310,16 @@ namespace
 			}
 		}
 
+		// Output unknown options for this pulse
+		for (const auto& [optionKey, pulseValueMap] : chartData.compat.kshUnknown.option)
+		{
+			auto optionRange = pulseValueMap.equal_range(pulse);
+			for (auto it = optionRange.first; it != optionRange.second; ++it)
+			{
+				stream << optionKey << "=" << it->second << "\r\n";
+			}
+		}
+
 		// Check for FX param_change (fx:effect_name:param_name=value)
 		if (!chartData.audio.audioEffect.fx.paramChange.empty())
 		{
@@ -2110,20 +2120,8 @@ namespace
 				state.currentTimeSig = timeSig;
 			}
 
-			// Output unknown option changes for this measure
-			for (const auto& [optionKey, pulseValueMap] : chartData.compat.kshUnknown.option)
-			{
-				for (const auto& [pulse, value] : pulseValueMap)
-				{
-					if (pulse >= currentPulse && pulse < currentPulse + measureLength)
-					{
-						stream << optionKey << "=" << value << "\r\n";
-					}
-				}
-			}
-
 			// Calculate optimal division for this measure
-			const std::int32_t division =CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength, warnings);
+			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength, warnings);
 			const Pulse oneLinePulse = measureLength / division;
 
 			// Write each line
