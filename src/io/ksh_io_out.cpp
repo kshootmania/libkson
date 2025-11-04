@@ -1103,7 +1103,7 @@ namespace
 			? std::string{ KSONPresetFXEffectNameToKSH(effectName) }
 			: effectName;
 
-		const std::int32_t kAudioEffectParamUnspecified = -2147483648;
+		constexpr std::int32_t kAudioEffectParamUnspecified = std::numeric_limits<std::int32_t>::min();
 		std::int32_t param1 = kAudioEffectParamUnspecified;
 		std::int32_t param2 = kAudioEffectParamUnspecified;
 
