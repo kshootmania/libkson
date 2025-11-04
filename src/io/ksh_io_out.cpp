@@ -2104,13 +2104,10 @@ namespace
 		{
 			state.currentChokkakuvol = static_cast<std::int32_t>(std::round(chartData.audio.keySound.laser.vol.begin()->second * 100));
 		}
-		if (!chartData.audio.audioEffect.laser.paramChange.empty() &&
-			chartData.audio.audioEffect.laser.paramChange.contains("peaking_filter") &&
-			chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").contains("gain") &&
-			!chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").empty())
+		if (!chartData.audio.audioEffect.laser.legacy.filterGain.empty())
 		{
-			const std::string& gainStr = chartData.audio.audioEffect.laser.paramChange.at("peaking_filter").at("gain").begin()->second;
-			state.currentPfiltergain = std::atoi(gainStr.c_str());
+			const double filterGain = chartData.audio.audioEffect.laser.legacy.filterGain.begin()->second;
+			state.currentPfiltergain = static_cast<std::int32_t>(std::round(filterGain * 100.0));
 		}
 		if (!chartData.audio.audioEffect.laser.pulseEvent.empty())
 		{
