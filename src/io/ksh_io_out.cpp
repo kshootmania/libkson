@@ -2002,23 +2002,19 @@ namespace
 			updateGCD(pulse);
 		}
 
-		// Convert to KSH resolution (192) for accurate division calculation
-		const std::int32_t measureLengthKSH = ToKSHResolution(measureLength);
-		const std::int32_t gcdKSH = ToKSHResolution(gcd);
-
-		// Calculate base division in KSH units
-		std::int32_t division = gcdKSH > 0 ? measureLengthKSH / gcdKSH : measureLengthKSH;
+		// Calculate division in KSON resolution (960) to preserve all note timings
+		std::int32_t division = gcd > 0 ? measureLength / gcd : measureLength;
 
 		// Apply doubling for long notes/lasers (v1 compatibility)
-		if (division < measureLengthKSH)
+		if (division < measureLength)
 		{
 			division *= (1 + (shouldDoubleResolution ? 1 : 0));
 		}
 
 		// Ensure division divides measureLength evenly
-		if (measureLengthKSH % division != 0)
+		if (measureLength % division != 0)
 		{
-			division = measureLengthKSH;
+			division = measureLength;
 		}
 
 		// Ensure division is at least 1
@@ -2027,12 +2023,10 @@ namespace
 			division = 1;
 		}
 
-		// Limit division to reasonable range
-		// Use measure length in KSH units as max
-		const std::int32_t maxDivision = std::max(1, ToKSHResolution(measureLength));
-		if (division > maxDivision)
+		// Limit division to reasonable range (use measureLength as max)
+		if (division > measureLength)
 		{
-			return maxDivision;
+			return measureLength;
 		}
 
 		return division;
