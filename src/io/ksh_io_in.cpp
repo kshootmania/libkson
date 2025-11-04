@@ -1457,7 +1457,7 @@ namespace
 					const std::int32_t pfiltergainValue = PopInt<std::int32_t>(metaDataHashMap, "pfiltergain", 50);
 					chartData.audio.audioEffect.laser.legacy.filterGain.emplace(0, pfiltergainValue / 100.0);
 				}
-				chartData.audio.audioEffect.laser.peakingFilterDelay = chartData.audio.bgm.legacy.filenameP.empty() ? PopInt<std::int32_t>(metaDataHashMap, "pfilterdelay", 40) : 0;
+				chartData.audio.audioEffect.laser.peakingFilterDelay = PopInt<std::int32_t>(metaDataHashMap, "pfilterdelay", 40);
 			}
 
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
