@@ -649,7 +649,13 @@ namespace
 		}
 
 		// Song volume (only output if not 100)
-		const std::int32_t mvol = static_cast<std::int32_t>(std::round(audio.bgm.vol * 100));
+		// For ver=100, apply inverse scaling (v100 used 0.6x multiplier on input)
+		double volForOutput = audio.bgm.vol;
+		if (chartData.compat.kshVersion == "100")
+		{
+			volForOutput /= 0.6;
+		}
+		const std::int32_t mvol = static_cast<std::int32_t>(std::round(volForOutput * 100));
 		if (mvol != 100)
 		{
 			stream << "mvol=" << mvol << "\r\n";
