@@ -892,7 +892,10 @@ namespace
 	std::vector<KSHLaserSegment> ConvertLaserToKSHSegments(const ByPulse<LaserSection>& lane, std::int32_t laneIdx)
 	{
 		std::vector<KSHLaserSegment> segments;
-		constexpr Pulse kSlamLength = kResolution4 / 32; // 1/32 measure = 30 pulses
+		constexpr Pulse kPreferredSlamLength = kResolution4 / 32;
+		constexpr Pulse kPulse1_16 = kResolution4 / 16;
+		constexpr Pulse kPulse1_48 = kResolution4 / 48;
+		constexpr Pulse kPulse1_64 = kResolution4 / 64;
 
 		for (const auto& [sectionStart, section] : lane)
 		{
@@ -918,7 +921,7 @@ namespace
 					segments.push_back(KSHLaserSegment{
 						.laneIdx = laneIdx,
 						.startPulse = sectionStart,
-						.length = kSlamLength,
+						.length = kPreferredSlamLength,
 						.startValue = startValue,
 						.endValue = endValue,
 						.isSectionStart = true,
@@ -964,14 +967,33 @@ namespace
 					const std::int32_t endValue = GraphValueToLaserX(point.v.vf, section.wide());
 
 					// Determine slam length (shorten if next point is too close)
-					Pulse slamLength = kSlamLength;
+					Pulse slamLength = kPreferredSlamLength;
 					if (hasNextPoint)
 					{
 						const auto& [nextRelPulse, nextPoint] = *nextIt;
 						const Pulse distanceToNext = nextRelPulse - relPulse;
-						if (distanceToNext < kSlamLength)
+						if (distanceToNext < kPreferredSlamLength)
 						{
 							slamLength = distanceToNext;
+						}
+						else
+						{
+							// Special handling for short gaps to avoid roundtrip issues
+							// If gap <= 1/16 and next point value differs from slam end value,
+							// use shorter slam length to prevent the gap from being detected as a slam
+							const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
+
+							if (distanceToNext <= kPulse1_16 && nextStartValue != endValue)
+							{
+								if (distanceToNext > kPreferredSlamLength + kPulse1_48)
+								{
+									slamLength = kPulse1_48;
+								}
+								else
+								{
+									slamLength = kPulse1_64;
+								}
+							}
 						}
 					}
 
