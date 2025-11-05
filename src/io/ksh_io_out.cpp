@@ -904,6 +904,8 @@ namespace
 		constexpr Pulse kPulse1_16 = kResolution4 / 16;
 		constexpr Pulse kPulse1_48 = kResolution4 / 48;
 		constexpr Pulse kPulse1_64 = kResolution4 / 64;
+		constexpr Pulse kPulse1_96 = kResolution4 / 96;
+		constexpr Pulse kPulse1_192 = kResolution4 / 192;
 
 		for (const auto& [sectionStart, section] : lane)
 		{
@@ -997,9 +999,17 @@ namespace
 								{
 									slamLength = kPulse1_48;
 								}
-								else
+								else if (distanceToNext > kPreferredSlamLength + kPulse1_64)
 								{
 									slamLength = kPulse1_64;
+								}
+								else if (distanceToNext > kPreferredSlamLength + kPulse1_96)
+								{
+									slamLength = kPulse1_96;
+								}
+								else
+								{
+									slamLength = kPulse1_192;
 								}
 							}
 						}
