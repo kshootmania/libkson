@@ -1022,8 +1022,8 @@ namespace
 						const Pulse slamEndPulse = absolutePulse + slamLength;
 						const Pulse nextAbsolutePulse = sectionStart + nextRelPulse;
 
-						// Only create segment if slam end < next point
-						if (slamEndPulse < nextAbsolutePulse)
+						// Only create segment if slam end <= next point
+						if (slamEndPulse <= nextAbsolutePulse)
 						{
 							const std::int32_t slamEndValue = endValue;
 							const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
