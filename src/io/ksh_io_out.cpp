@@ -1256,7 +1256,7 @@ namespace
 		const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
 		stream << paramName << "=" << zoomValue << "\r\n";
 
-		// If v != vf (slam), output vf on the next line if it's different
+		// Output vf on next line if v != vf (immediate change)
 		if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 		{
 			const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
@@ -1281,9 +1281,9 @@ namespace
 		// Output FX chip events for this pulse
 		if (!chartData.audio.keySound.fx.chipEvent.empty())
 		{
-			for (const auto& [chipName, lanes] : chartData.audio.keySound.fx.chipEvent)
+			for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
 			{
-				for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+				for (const auto& [chipName, lanes] : chartData.audio.keySound.fx.chipEvent)
 				{
 					if (lanes[laneIdx].contains(pulse))
 					{
@@ -1345,6 +1345,27 @@ namespace
 			for (auto it = optionRange.first; it != optionRange.second; ++it)
 			{
 				stream << optionKey << "=" << it->second << "\r\n";
+			}
+		}
+
+		// Output center_split
+		if (chartData.camera.cam.body.centerSplit.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+			stream << "center_split=" << clampedV << "\r\n";
+
+			// Output vf on next line if v != vf (immediate change)
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+				stream << "center_split=" << clampedVf << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "center_split_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
 			}
 		}
 
@@ -1531,7 +1552,7 @@ namespace
 				const double clampedV = std::clamp(graphPoint.v.v * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
 				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
 
-				// Output vf on next line if different from v (immediate change)
+				// Output vf on next line if v != vf (immediate change)
 				if (std::holds_alternative<double>(graphPoint.v.vf))
 				{
 					const double vfValue = std::get<double>(graphPoint.v.vf);
@@ -1614,26 +1635,6 @@ namespace
 			stream << "stop=" << RelPulseToKSHLength(stopLength) << "\r\n";
 		}
 
-		if (chartData.camera.cam.body.centerSplit.contains(pulse))
-		{
-			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
-
-			const double clampedV = std::clamp(graphPoint.v.v, -kCenterSplitAbsMax, kCenterSplitAbsMax);
-			stream << "center_split=" << clampedV << "\r\n";
-
-			// If v != vf (slam), output vf on the next line if it's different
-			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
-			{
-				const double clampedVf = std::clamp(graphPoint.v.vf, -kCenterSplitAbsMax, kCenterSplitAbsMax);
-				stream << "center_split=" << clampedVf << "\r\n";
-			}
-
-			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
-			{
-				stream << "center_split_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
-			}
-		}
-
 		if (chartData.beat.scrollSpeed.contains(pulse))
 		{
 			const auto& graphPoint = chartData.beat.scrollSpeed.at(pulse);
@@ -1647,7 +1648,7 @@ namespace
 				stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
 			}
 
-			// Output vf on next line if different from v
+			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
 				stream << "scroll_speed=" << FormatDouble(graphPoint.v.vf) << "\r\n";
@@ -1666,7 +1667,7 @@ namespace
 			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
 			stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedV)) << "\r\n";
 
-			// Output vf on next line if different from v
+			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
 				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
