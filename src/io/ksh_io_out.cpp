@@ -1437,7 +1437,7 @@ namespace
 				newFilterType = "bitc";
 			}
 
-			if (!newFilterType.empty() && newFilterType != state.currentFilterType)
+			if (!newFilterType.empty())
 			{
 				stream << "filtertype=" << newFilterType << "\r\n";
 				state.currentFilterType = newFilterType;
@@ -1451,11 +1451,8 @@ namespace
 				{
 					if (pulses.contains(pulse))
 					{
-						if (effectName != state.currentFilterType)
-						{
-							stream << "filtertype=" << effectName << "\r\n";
-							state.currentFilterType = effectName;
-						}
+						stream << "filtertype=" << effectName << "\r\n";
+						state.currentFilterType = effectName;
 					}
 				}
 			}
