@@ -1443,7 +1443,7 @@ namespace
 				newFilterType = "bitc";
 			}
 
-			if (!newFilterType.empty())
+			if (!newFilterType.empty() && pulse != 0)
 			{
 				stream << "filtertype=" << newFilterType << "\r\n";
 				state.currentFilterType = newFilterType;
@@ -1455,7 +1455,7 @@ namespace
 				// Skip preset filters (already handled above)
 				if (!IsKSONPresetLaserFilterName(effectName))
 				{
-					if (pulses.contains(pulse))
+					if (pulses.contains(pulse) && pulse != 0)
 					{
 						stream << "filtertype=" << effectName << "\r\n";
 						state.currentFilterType = effectName;
