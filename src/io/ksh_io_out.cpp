@@ -203,6 +203,8 @@ namespace
 		return kKSONToKSHPresetFXEffectName.contains(effectName);
 	}
 
+	std::string_view KSONPresetLaserFilterNameToKSH(const std::string& effectName);
+
 	const char* AutoTiltTypeToString(AutoTiltType type)
 	{
 		switch (type)
@@ -741,20 +743,20 @@ namespace
 		if (!audio.audioEffect.laser.pulseEvent.empty())
 		{
 			const auto& pulseEvent = audio.audioEffect.laser.pulseEvent;
-			if (pulseEvent.contains("peaking_filter") &&
-				pulseEvent.at("peaking_filter").contains(0))
+			for (const auto& [effectName, pulses] : pulseEvent)
 			{
-				stream << "filtertype=peak\r\n";
-			}
-			else if (pulseEvent.contains("low_pass_filter") &&
-				pulseEvent.at("low_pass_filter").contains(0))
-			{
-				stream << "filtertype=lpf1\r\n";
-			}
-			else if (pulseEvent.contains("high_pass_filter") &&
-				pulseEvent.at("high_pass_filter").contains(0))
-			{
-				stream << "filtertype=hpf1\r\n";
+				if (pulses.contains(0))
+				{
+					if (IsKSONPresetLaserFilterName(effectName))
+					{
+						stream << "filtertype=" << KSONPresetLaserFilterNameToKSH(effectName) << "\r\n";
+					}
+					else
+					{
+						stream << "filtertype=" << effectName << "\r\n";
+					}
+					break;
+				}
 			}
 		}
 
