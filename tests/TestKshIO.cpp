@@ -900,46 +900,6 @@ TEST_CASE("KSH Export KSON round-trip (all songs)", "[.][ksh_io][export][kson_ro
 		REQUIRE(kson1.error == kson::ErrorType::None);
 		std::cerr << "Loaded KSH successfully: " << filename << std::endl;
 
-		// Check skip list
-		struct SkipEntry {
-			const char* title;
-			std::int32_t difficultyIdx; // 0=light, 1=challenge, 2=extended, 3=infinite, -1=all
-			const char* reason;
-		};
-
-		constexpr std::array<SkipEntry, 21> kSkipList = {{
-			{"Always Feel the Same", 2, "manual tilt values lose precision in KSH export"},
-			{"\xCE\xB1steroiD", 2, "1/64 slams lose length info in KSH->KSON conversion"},
-			{"Astrindjent", 3, "laser sections with small gaps cannot be preserved"},
-			{"EVERLASTING HAPPiNESS\xE2\x86\x91", 2, "laser sections with small gaps cannot be preserved"},
-			{"\xCE\xB5modec", 2, "laser sections with small gaps cannot be preserved"},
-			{"Heliodor", 0, "closely spaced effects are lost in conversion"},
-			{"Heliodor", 1, "closely spaced effects are lost in conversion"},
-			{"Heliodor", 2, "closely spaced effects are lost in conversion"},
-			{"Let's go Summer VACAtion!!!", -1, "empty effect name and closely spaced effects"},
-			{"Orso Medium", -1, "closely spaced effect parameter changes are lost in conversion"},
-			{"Prototype \xE3\x81\xBF\xE3\x82\x89\xE3\x81\x92", 1, "consecutive duplicate tilt scale values are optimized out"},
-			{"RuiNAre", 2, "manual tilt values lose precision in KSH export"},
-			{"Sister\xE2\x80\xA0Sister", -1, "closely spaced effect parameter changes are lost in conversion"},
-			{"The Fourth Stage: Depression", -1, "closely spaced effect resets require note splitting"},
-			{"Winter Planet", -1, "closely spaced effect parameter changes are lost in conversion"},
-			{"YEARN \xEF\xBD\x9E\x44\x65\x76\x69\x6C\x69\x73\x68\x20\x52\x65\x64\x70\x69\x6E\x68\x65\x65\x6C\xEF\xBD\x9E", 3, "time signature in empty measure is lost"},
-			{"\xE3\x81\xA8\xE3\x81\xA6\xE3\x82\x82\xE3\x81\x99\xE3\x81\xB0\xE3\x82\x89\xE3\x81\x97\xE3\x81\x84\x32\x30\x32\x30", 0, "tilt values clamped to valid range (±1000)"},
-			{"\xE3\x83\x8F\xE3\x83\x94\xE3\x83\xA9\xE3\x82\xAD\xE2\x86\x92injection!!", -1, "laser sections with small gaps cannot be preserved"},
-			{"\xE7\xB9\x9D\xE4\xB8\x8A\xE3\x83\xB4\xE7\xB9\x9D\xEF\xBD\xA9\xE7\xB9\xA7\xEF\xBD\xAD\xE7\xAB\x8A\xE6\xAE\xB5njection!!hogehogeaa", -1, "laser sections with small gaps (BOM-less UTF-8 encoding issue)"},
-			{"\xD0\xA6\xD0\xB0\xD1\x80\xD1\x8C-\xD0\x9F\xD1\x83\xD1\x88\xD0\xBA\xD0\xB0", -1, "laser sections with small gaps cannot be preserved"},
-			{"Zepter", 3, "closely spaced laser effect pulse events are lost in conversion"},
-		}};
-
-		for (const auto& skipEntry : kSkipList) {
-			if (kson1.meta.title == skipEntry.title) {
-				if (skipEntry.difficultyIdx == -1 || kson1.meta.difficulty.idx == skipEntry.difficultyIdx) {
-					WARN("Skipping " << filename << " (" << skipEntry.reason << ")");
-					return;
-				}
-			}
-		}
-
 		// kson1 → ksh2
 		std::ostringstream ossKsh;
 		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
