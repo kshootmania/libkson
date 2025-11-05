@@ -1119,19 +1119,11 @@ namespace
 						const auto& [nextRy, nextPoint] = *nextItr;
 						if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
 						{
-							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.vf, nextPoint.v.v } });
+							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
 							const auto nextNextItr = std::next(nextItr);
-							if (nextNextItr == data.points.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.vf))
+							if (nextNextItr == data.points.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.v))
 							{
 								++itr;
-								// If nextNextPoint is the last point and has same value as nextPoint, skip it too
-								const auto nextNextNextItr = (nextNextItr != data.points.cend()) ? std::next(nextNextItr) : nextNextItr;
-								if (nextNextItr != data.points.cend() &&
-									nextNextNextItr == data.points.cend() &&
-									AlmostEquals(nextNextItr->second.v.v, nextPoint.v.vf))
-								{
-									++itr;
-								}
 							}
 							continue;
 						}
