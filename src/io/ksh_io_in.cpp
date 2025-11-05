@@ -391,6 +391,11 @@ namespace
 		return isUTF8;
 	}
 
+	double RoundToKSHDoubleValue(double value)
+	{
+		return std::round(value * 1000.0) / 1000.0;
+	}
+
 	bool InsertBPMChange(ByPulse<double>& bpmChanges, Pulse time, std::string_view value, std::int32_t kshVersionInt = 0)
 	{
 		if (value.find('-') != std::string_view::npos)
@@ -399,6 +404,7 @@ namespace
 		}
 
 		double bpm = ParseNumeric<double>(value);
+		bpm = RoundToKSHDoubleValue(bpm);
 
 		// Apply BPM limit for ver >= 130 (65535.0)
 		if (kshVersionInt >= kVerBPMLimitAdded)
@@ -1824,7 +1830,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "zoom_top")
 					{
-						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(std::string_view(value).substr(0, zoomMaxChar)));
 						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomTop.contains(time)))
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomTop, time, dValue);
@@ -1832,7 +1838,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "zoom_bottom")
 					{
-						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(std::string_view(value).substr(0, zoomMaxChar)));
 						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomBottom.contains(time)))
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomBottom, time, dValue);
@@ -1840,7 +1846,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "zoom_side")
 					{
-						const double dValue = ParseNumeric<double>(std::string_view(value).substr(0, zoomMaxChar));
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(std::string_view(value).substr(0, zoomMaxChar)));
 						if (std::abs(dValue) <= zoomAbsMax || (kshVersionInt < 167 && chartData.camera.cam.body.zoomSide.contains(time)))
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.zoomSide, time, dValue);
@@ -1848,7 +1854,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "center_split")
 					{
-						const double dValue = ParseNumeric<double>(value);
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(value));
 						if (std::abs(dValue) <= kCenterSplitAbsMax)
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
@@ -1861,7 +1867,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "rotation_deg")
 					{
-						const double dValue = ParseNumeric<double>(value);
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(value));
 						if (std::abs(dValue) <= kRotationDegAbsMax)
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);
@@ -1873,7 +1879,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 						if (IsTiltValueManual(value))
 						{
-							const double dValue = ParseNumeric<double>(value);
+							const double rawValue = ParseNumeric<double>(value);
+							const double dValue = RoundToKSHDoubleValue(rawValue);
 							if (std::abs(dValue) <= kManualTiltAbsMax)
 							{
 								// Check for immediate change (consecutive tilt values at the same pulse)
@@ -1918,7 +1925,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 					}
 					else if (key == "chokkakuvol")
 					{
-						const double dValue = ParseNumeric<double>(value) / 100;
+						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(value)) / 100;
 						chartData.audio.keySound.laser.vol.insert_or_assign(time, dValue);
 					}
 					else if (key == "chokkakuse")
@@ -2380,11 +2387,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 			if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 			{
 				TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
-				point.v.v *= kToLegacyScale;
+				point.v.v = RoundToKSHDoubleValue(point.v.v * kToLegacyScale);
 				// Only scale vf if it's a double value (not AutoTiltType)
 				if (std::holds_alternative<double>(point.v.vf))
 				{
-					std::get<double>(point.v.vf) *= kToLegacyScale;
+					std::get<double>(point.v.vf) = RoundToKSHDoubleValue(std::get<double>(point.v.vf) * kToLegacyScale);
 				}
 			}
 		}

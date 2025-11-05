@@ -225,13 +225,19 @@ namespace
 		stream.write(reinterpret_cast<const char*>(bom), sizeof(bom));
 	}
 
-	// Format double value (remove trailing zeros)
-	std::string FormatDouble(double value, std::int32_t precision = 6)
+	// Round double value to 3 decimal places (0.001 precision) for KSH format
+	double RoundToKSHDoubleValue(double value)
 	{
-		value = RemoveFloatingPointError(value);
+		return std::round(value * 1000.0) / 1000.0;
+	}
+
+	// Format double value (remove trailing zeros)
+	std::string FormatDouble(double value)
+	{
+		value = RoundToKSHDoubleValue(value);
 
 		std::ostringstream oss;
-		oss << std::fixed << std::setprecision(precision) << value;
+		oss << std::fixed << std::setprecision(3) << value;
 		std::string str = oss.str();
 
 		// Remove trailing zeros
@@ -1658,13 +1664,13 @@ namespace
 			const auto& graphPoint = chartData.camera.cam.body.rotationDeg.at(pulse);
 
 			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
-			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
+			stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedV)) << "\r\n";
 
 			// Output vf on next line if different from v
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
 				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
-				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
+				stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedVf)) << "\r\n";
 			}
 
 			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
