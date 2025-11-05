@@ -10,7 +10,7 @@
 extern std::string g_assetsDir;
 extern std::filesystem::path g_exeDir;
 
-TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]") {
+TEST_CASE("KSON I/O lossless test (bundled charts)", "[kson_io][kson_lossless][bundled]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
 
@@ -80,7 +80,7 @@ TEST_CASE("KSON I/O round-trip (bundled charts)", "[ksh_io][kson_io][round_trip]
     }
 }
 
-TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][gram]") {
+TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][bundled]") {
 	auto chart = kson::LoadKSONChartData(g_assetsDir + "/Gram_ex.kson");
 	REQUIRE(chart.error == kson::ErrorType::None);
 
@@ -223,7 +223,7 @@ TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][gram]") {
 	}
 }
 
-TEST_CASE("KSON I/O round-trip (all songs)", "[.][ksh_io][kson_io][round_trip][all_songs]") {
+TEST_CASE("KSON I/O lossless test (all songs)", "[.][kson_io][kson_lossless][all_songs]") {
     auto testRoundTrip = [](const std::string& filename) {
         auto chart1 = kson::LoadKSHChartData(filename);
 
@@ -738,70 +738,7 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 	}
 }
 
-TEST_CASE("KSH Export round-trip", "[ksh_io][export][round_trip]") {
-	auto testExportRoundTrip = [](const std::string& filename) {
-		// Load original KSH
-		auto chart1 = kson::LoadKSHChartData(filename);
-
-		if (chart1.error != kson::ErrorType::None) {
-			std::cerr << "Error loading KSH file: " << filename << std::endl;
-			std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
-			std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
-			for (const auto& warning : chart1.warnings) {
-				std::cerr << "  - " << warning << std::endl;
-			}
-		}
-		REQUIRE(chart1.error == kson::ErrorType::None);
-
-		// Export to KSH
-		std::ostringstream oss1;
-		const kson::ErrorType saveResult1 = kson::SaveKSHChartData(oss1, chart1);
-		REQUIRE(saveResult1 == kson::ErrorType::None);
-		std::string kshString1 = oss1.str();
-		REQUIRE(!kshString1.empty());
-
-		// Load exported KSH
-		std::istringstream iss1(kshString1);
-		auto chart2 = kson::LoadKSHChartData(iss1);
-		REQUIRE(chart2.error == kson::ErrorType::None);
-
-		// Compare basic properties
-		REQUIRE(chart1.meta.title == chart2.meta.title);
-		REQUIRE(chart1.meta.artist == chart2.meta.artist);
-		REQUIRE(chart1.meta.chartAuthor == chart2.meta.chartAuthor);
-		REQUIRE(chart1.meta.difficulty.idx == chart2.meta.difficulty.idx);
-		REQUIRE(chart1.meta.level == chart2.meta.level);
-
-		// Compare note counts
-		for (int i = 0; i < kson::kNumBTLanes; ++i) {
-			REQUIRE(chart1.note.bt[i].size() == chart2.note.bt[i].size());
-		}
-		for (int i = 0; i < kson::kNumFXLanes; ++i) {
-			REQUIRE(chart1.note.fx[i].size() == chart2.note.fx[i].size());
-		}
-		for (int i = 0; i < kson::kNumLaserLanes; ++i) {
-			REQUIRE(chart1.note.laser[i].size() == chart2.note.laser[i].size());
-		}
-	};
-
-	SECTION("Gram[LT]") {
-		testExportRoundTrip(g_assetsDir + "/Gram_lt.ksh");
-	}
-
-	SECTION("Gram[CH]") {
-		testExportRoundTrip(g_assetsDir + "/Gram_ch.ksh");
-	}
-
-	SECTION("Gram[EX]") {
-		testExportRoundTrip(g_assetsDir + "/Gram_ex.ksh");
-	}
-
-	SECTION("Gram[IN]") {
-		testExportRoundTrip(g_assetsDir + "/Gram_in.ksh");
-	}
-}
-
-TEST_CASE("KSH Export KSON round-trip", "[ksh_io][export][kson_round_trip]") {
+TEST_CASE("KSH I/O lossless test (bundled charts)", "[ksh_io][kson_io][ksh_lossless][bundled]") {
 	auto testKSONRoundTrip = [](const std::string& filename) {
 		// ksh1 → kson1
 		auto kson1 = kson::LoadKSHChartData(filename);
@@ -884,7 +821,7 @@ TEST_CASE("KSH Export KSON round-trip", "[ksh_io][export][kson_round_trip]") {
 	}
 }
 
-TEST_CASE("KSH Export KSON round-trip (all songs)", "[.][ksh_io][export][kson_round_trip][all_songs]") {
+TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossless][all_songs]") {
 	auto testKSONRoundTrip = [](const std::string& filename) {
 		// ksh1 → kson1
 		auto kson1 = kson::LoadKSHChartData(filename);
