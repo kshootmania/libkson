@@ -1875,8 +1875,10 @@ namespace
 		// Laser notes
 		for (std::int32_t laneIdx = 0; laneIdx < kNumLaserLanes; ++laneIdx)
 		{
-			for (const auto& seg : laserSegments[laneIdx])
+			const auto& segments = laserSegments[laneIdx];
+			for (std::size_t segIdx = 0; segIdx < segments.size(); ++segIdx)
 			{
+				const auto& seg = segments[segIdx];
 				updateGCD(seg.startPulse);
 				updateGCD(seg.startPulse + seg.length);
 
@@ -1890,6 +1892,20 @@ namespace
 				if (endPulse >= measureStart && endPulse < measureEnd)
 				{
 					shouldDoubleResolution = true;
+				}
+
+				// Gaps between laser sections require GCD points to prevent sections from merging
+				if (seg.isSectionStart && segIdx > 0)
+				{
+					const auto& prevSeg = segments[segIdx - 1];
+					const Pulse prevSegEnd = prevSeg.startPulse + prevSeg.length;
+					const Pulse gap = seg.startPulse - prevSegEnd;
+
+					if (gap > 0)
+					{
+						const Pulse gapMidPoint = prevSegEnd + gap / 2;
+						updateGCD(gapMidPoint);
+					}
 				}
 			}
 		}
