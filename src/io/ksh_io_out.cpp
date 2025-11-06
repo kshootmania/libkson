@@ -982,17 +982,30 @@ namespace
 					{
 						const auto& [nextRelPulse, nextPoint] = *nextIt;
 						const Pulse distanceToNext = nextRelPulse - relPulse;
+						const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
+
 						if (distanceToNext < kPreferredSlamLength)
 						{
-							slamLength = distanceToNext;
+							// If next point has same value as slam end, shorten slam to allow next point to be output
+							// This preserves the intermediate point in lossless roundtrip
+							if (nextStartValue == endValue)
+							{
+								slamLength = distanceToNext / 2;
+								if (slamLength < 1)
+								{
+									slamLength = 1;
+								}
+							}
+							else
+							{
+								slamLength = distanceToNext;
+							}
 						}
 						else
 						{
 							// Special handling for short gaps to avoid roundtrip issues
 							// If gap <= 1/16 and next point value differs from slam end value,
 							// use shorter slam length to prevent the gap from being detected as a slam
-							const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
-
 							if (distanceToNext <= kPulse1_16 && nextStartValue != endValue)
 							{
 								if (distanceToNext > kPreferredSlamLength + kPulse1_48)
@@ -2056,7 +2069,12 @@ namespace
 		// Apply doubling for long notes/lasers (v1 compatibility)
 		if (division < measureLength)
 		{
-			division *= (1 + (shouldDoubleResolution ? 1 : 0));
+			const int doubled = division * (1 + (shouldDoubleResolution ? 1 : 0));
+			// Only apply doubling if it divides measureLength evenly
+			if (measureLength % doubled == 0)
+			{
+				division = doubled;
+			}
 		}
 
 		// Ensure division divides measureLength evenly
