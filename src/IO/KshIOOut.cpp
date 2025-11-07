@@ -2095,7 +2095,7 @@ namespace
 		}
 
 		// Calculate division in KSON resolution (960) to preserve all note timings
-		std::int32_t division = gcd > 0 ? measureLength / gcd : measureLength;
+		std::int32_t division = gcd > 0 ? static_cast<std::int32_t>(measureLength / gcd) : static_cast<std::int32_t>(measureLength);
 
 		// Apply doubling for long notes/lasers (v1 compatibility)
 		if (division < measureLength)
@@ -2111,7 +2111,7 @@ namespace
 		// Ensure division divides measureLength evenly
 		if (measureLength % division != 0)
 		{
-			division = measureLength;
+			division = static_cast<std::int32_t>(measureLength);
 		}
 
 		// Ensure division is at least 1
@@ -2123,7 +2123,7 @@ namespace
 		// Limit division to reasonable range (use measureLength as max)
 		if (division > measureLength)
 		{
-			return measureLength;
+			return static_cast<std::int32_t>(measureLength);
 		}
 
 		return division;
