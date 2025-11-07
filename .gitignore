@@ -394,3 +394,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 **/build/
+**/.DS_Store
+*.md
+!README.md
