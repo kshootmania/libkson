@@ -1,4 +1,5 @@
 ﻿#include "kson/Util/TimingUtils.hpp"
+#include <optional>
 #include <cassert>
 
 kson::Pulse kson::TimeSigOneMeasurePulse(const TimeSig& timeSig)
