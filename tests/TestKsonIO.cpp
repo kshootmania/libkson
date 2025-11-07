@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <kson/kson.hpp>
-#include <kson/io/ksh_io.hpp>
-#include <kson/io/kson_io.hpp>
+#include <kson/IO/KshIO.hpp>
+#include <kson/IO/KsonIO.hpp>
 #include <kson/third_party/nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>

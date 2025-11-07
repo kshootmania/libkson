@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,47 +19,47 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\kson\audio\audio_info.hpp" />
-    <ClInclude Include="include\kson\audio\audio_effect.hpp" />
-    <ClInclude Include="include\kson\audio\bgm_info.hpp" />
-    <ClInclude Include="include\kson\audio\key_sound.hpp" />
-    <ClInclude Include="include\kson\beat\beat_info.hpp" />
-    <ClInclude Include="include\kson\beat\time_sig.hpp" />
-    <ClInclude Include="include\kson\bg\bg_info.hpp" />
-    <ClInclude Include="include\kson\camera\cam.hpp" />
-    <ClInclude Include="include\kson\camera\camera_info.hpp" />
-    <ClInclude Include="include\kson\camera\tilt.hpp" />
-    <ClInclude Include="include\kson\common\common.hpp" />
-    <ClInclude Include="include\kson\chart_data.hpp" />
-    <ClInclude Include="include\kson\compat\compat_info.hpp" />
-    <ClInclude Include="include\kson\editor\editor_info.hpp" />
-    <ClInclude Include="include\kson\encoding\encoding.hpp" />
-    <ClInclude Include="include\kson\error.hpp" />
-    <ClInclude Include="include\kson\gauge\gauge_info.hpp" />
-    <ClInclude Include="include\kson\io\ksh_io.hpp" />
-    <ClInclude Include="include\kson\io\kson_io.hpp" />
+    <ClInclude Include="include\kson\Audio\AudioInfo.hpp" />
+    <ClInclude Include="include\kson\Audio\AudioEffect.hpp" />
+    <ClInclude Include="include\kson\Audio\BGMInfo.hpp" />
+    <ClInclude Include="include\kson\Audio\KeySound.hpp" />
+    <ClInclude Include="include\kson\Beat\BeatInfo.hpp" />
+    <ClInclude Include="include\kson\Beat\TimeSig.hpp" />
+    <ClInclude Include="include\kson\BG\BGInfo.hpp" />
+    <ClInclude Include="include\kson\Camera\Cam.hpp" />
+    <ClInclude Include="include\kson\Camera\CameraInfo.hpp" />
+    <ClInclude Include="include\kson\Camera\Tilt.hpp" />
+    <ClInclude Include="include\kson\Common\Common.hpp" />
+    <ClInclude Include="include\kson\ChartData.hpp" />
+    <ClInclude Include="include\kson\Compat\CompatInfo.hpp" />
+    <ClInclude Include="include\kson\Editor\EditorInfo.hpp" />
+    <ClInclude Include="include\kson\Encoding\Encoding.hpp" />
+    <ClInclude Include="include\kson\Error.hpp" />
+    <ClInclude Include="include\kson\Gauge\GaugeInfo.hpp" />
+    <ClInclude Include="include\kson\IO\KshIO.hpp" />
+    <ClInclude Include="include\kson\IO\KsonIO.hpp" />
     <ClInclude Include="include\kson\kson.hpp" />
-    <ClInclude Include="include\kson\meta\meta_info.hpp" />
-    <ClInclude Include="include\kson\note\note_info.hpp" />
-    <ClInclude Include="include\kson\util\graph_curve.hpp" />
-    <ClInclude Include="include\kson\util\graph_utils.hpp" />
-    <ClInclude Include="include\kson\util\tilt_utils.hpp" />
-    <ClInclude Include="include\kson\util\timing_utils.hpp" />
+    <ClInclude Include="include\kson\Meta\MetaInfo.hpp" />
+    <ClInclude Include="include\kson\Note\NoteInfo.hpp" />
+    <ClInclude Include="include\kson\Util\GraphCurve.hpp" />
+    <ClInclude Include="include\kson\Util\GraphUtils.hpp" />
+    <ClInclude Include="include\kson\Util\TiltUtils.hpp" />
+    <ClInclude Include="include\kson\Util\TimingUtils.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\audio\audio_effect.cpp" />
-    <ClCompile Include="src\audio\bgm_info.cpp" />
-    <ClCompile Include="src\camera\tilt.cpp" />
-    <ClCompile Include="src\compat\compat_info.cpp" />
-    <ClCompile Include="src\encoding\encoding_win.cpp" />
-    <ClCompile Include="src\error.cpp" />
-    <ClCompile Include="src\io\ksh_io_in.cpp" />
-    <ClCompile Include="src\io\ksh_io_out.cpp" />
-    <ClCompile Include="src\io\kson_io.cpp" />
-    <ClCompile Include="src\util\graph_curve.cpp" />
-    <ClCompile Include="src\util\graph_utils.cpp" />
-    <ClCompile Include="src\util\tilt_utils.cpp" />
-    <ClCompile Include="src\util\timing_utils.cpp" />
+    <ClCompile Include="src\Audio\AudioEffect.cpp" />
+    <ClCompile Include="src\Audio\BGMInfo.cpp" />
+    <ClCompile Include="src\Camera\Tilt.cpp" />
+    <ClCompile Include="src\Compat\CompatInfo.cpp" />
+    <ClCompile Include="src\Encoding\EncodingWin.cpp" />
+    <ClCompile Include="src\Error.cpp" />
+    <ClCompile Include="src\IO\KshIOIn.cpp" />
+    <ClCompile Include="src\IO\KshIOOut.cpp" />
+    <ClCompile Include="src\IO\KsonIO.cpp" />
+    <ClCompile Include="src\Util\GraphCurve.cpp" />
+    <ClCompile Include="src\Util\GraphUtils.cpp" />
+    <ClCompile Include="src\Util\TiltUtils.cpp" />
+    <ClCompile Include="src\Util\TimingUtils.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

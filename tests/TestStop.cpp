@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <kson/kson.hpp>
-#include <kson/util/graph_utils.hpp>
+#include <kson/Util/GraphUtils.hpp>
 
 TEST_CASE("BakeStopIntoScrollSpeed with no stop", "[stop][scroll_speed]")
 {

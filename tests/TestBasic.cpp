@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <kson/kson.hpp>
-#include <kson/util/timing_utils.hpp>
-#include <kson/util/graph_utils.hpp>
+#include <kson/Util/TimingUtils.hpp>
+#include <kson/Util/GraphUtils.hpp>
 
 TEST_CASE("Basic Chart Data", "[chart]") {
 	SECTION("Empty ChartData initialization") {

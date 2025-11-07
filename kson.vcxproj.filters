@@ -72,123 +72,123 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\kson\common\common.hpp">
+    <ClInclude Include="include\kson\Common\Common.hpp">
       <Filter>Header Files\common</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\beat\beat_info.hpp">
+    <ClInclude Include="include\kson\Beat\BeatInfo.hpp">
       <Filter>Header Files\beat</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\beat\time_sig.hpp">
+    <ClInclude Include="include\kson\Beat\TimeSig.hpp">
       <Filter>Header Files\beat</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\audio\bgm_info.hpp">
+    <ClInclude Include="include\kson\Audio\BGMInfo.hpp">
       <Filter>Header Files\audio</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\audio\key_sound.hpp">
+    <ClInclude Include="include\kson\Audio\KeySound.hpp">
       <Filter>Header Files\audio</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\audio\audio_effect.hpp">
+    <ClInclude Include="include\kson\Audio\AudioEffect.hpp">
       <Filter>Header Files\audio</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\camera\tilt.hpp">
+    <ClInclude Include="include\kson\Camera\Tilt.hpp">
       <Filter>Header Files\camera</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\camera\cam.hpp">
+    <ClInclude Include="include\kson\Camera\Cam.hpp">
       <Filter>Header Files\camera</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\bg\bg_info.hpp">
+    <ClInclude Include="include\kson\BG\BGInfo.hpp">
       <Filter>Header Files\bg</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\chart_data.hpp">
+    <ClInclude Include="include\kson\ChartData.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\note\note_info.hpp">
+    <ClInclude Include="include\kson\Note\NoteInfo.hpp">
       <Filter>Header Files\note</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\gauge\gauge_info.hpp">
+    <ClInclude Include="include\kson\Gauge\GaugeInfo.hpp">
       <Filter>Header Files\gauge</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\audio\audio_info.hpp">
+    <ClInclude Include="include\kson\Audio\AudioInfo.hpp">
       <Filter>Header Files\audio</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\camera\camera_info.hpp">
+    <ClInclude Include="include\kson\Camera\CameraInfo.hpp">
       <Filter>Header Files\camera</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\meta\meta_info.hpp">
+    <ClInclude Include="include\kson\Meta\MetaInfo.hpp">
       <Filter>Header Files\meta</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\util\graph_curve.hpp">
+    <ClInclude Include="include\kson\Util\GraphCurve.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\util\timing_utils.hpp">
+    <ClInclude Include="include\kson\Util\TimingUtils.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\io\ksh_io.hpp">
+    <ClInclude Include="include\kson\IO\KshIO.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\encoding\encoding.hpp">
+    <ClInclude Include="include\kson\Encoding\Encoding.hpp">
       <Filter>Header Files\encoding</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\io\kson_io.hpp">
+    <ClInclude Include="include\kson\IO\KsonIO.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\util\graph_utils.hpp">
+    <ClInclude Include="include\kson\Util\GraphUtils.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\util\tilt_utils.hpp">
+    <ClInclude Include="include\kson\Util\TiltUtils.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\editor\editor_info.hpp">
+    <ClInclude Include="include\kson\Editor\EditorInfo.hpp">
       <Filter>Header Files\editor</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\compat\compat_info.hpp">
+    <ClInclude Include="include\kson\Compat\CompatInfo.hpp">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="include\kson\kson.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\error.hpp">
+    <ClInclude Include="include\kson\Error.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\util\timing_utils.cpp">
+    <ClCompile Include="src\Util\TimingUtils.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\encoding\encoding_win.cpp">
+    <ClCompile Include="src\Encoding\EncodingWin.cpp">
       <Filter>Source Files\encoding</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\graph_curve.cpp">
+    <ClCompile Include="src\Util\GraphCurve.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\graph_utils.cpp">
+    <ClCompile Include="src\Util\GraphUtils.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\tilt_utils.cpp">
+    <ClCompile Include="src\Util\TiltUtils.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="src\camera\tilt.cpp">
+    <ClCompile Include="src\Camera\Tilt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\ksh_io_in.cpp">
+    <ClCompile Include="src\IO\KshIOIn.cpp">
       <Filter>Source Files\io</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\ksh_io_out.cpp">
+    <ClCompile Include="src\IO\KshIOOut.cpp">
       <Filter>Source Files\io</Filter>
     </ClCompile>
-    <ClCompile Include="src\io\kson_io.cpp">
+    <ClCompile Include="src\IO\KsonIO.cpp">
       <Filter>Source Files\io</Filter>
     </ClCompile>
-    <ClCompile Include="src\audio\audio_effect.cpp">
+    <ClCompile Include="src\Audio\AudioEffect.cpp">
       <Filter>Source Files\audio</Filter>
     </ClCompile>
-    <ClCompile Include="src\audio\bgm_info.cpp">
+    <ClCompile Include="src\Audio\BGMInfo.cpp">
       <Filter>Source Files\audio</Filter>
     </ClCompile>
-    <ClCompile Include="src\error.cpp">
+    <ClCompile Include="src\Error.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\compat\compat_info.cpp">
+    <ClCompile Include="src\Compat\CompatInfo.cpp">
       <Filter>Source Files\compat</Filter>
     </ClCompile>
   </ItemGroup>
