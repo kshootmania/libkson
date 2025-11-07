@@ -1903,8 +1903,23 @@ namespace
 
 					if (gap > 0)
 					{
-						const Pulse gapMidPoint = prevSegEnd + gap / 2;
-						updateGCD(gapMidPoint);
+						const bool prevEndInMeasure = (prevSegEnd >= measureStart && prevSegEnd < measureEnd);
+						const bool nextStartInMeasure = (seg.startPulse >= measureStart && seg.startPulse < measureEnd);
+
+						if (prevEndInMeasure && nextStartInMeasure)
+						{
+							const Pulse prevEndRel = prevSegEnd - measureStart;
+							const Pulse nextStartRel = seg.startPulse - measureStart;
+							const Pulse prevEndGridPos = (prevEndRel / gcd) * gcd;
+							const Pulse nextStartGridPos = (nextStartRel / gcd) * gcd;
+
+							// Add midpoint only if current GCD cannot represent the gap
+							if (prevEndGridPos == nextStartGridPos)
+							{
+								const Pulse gapMidPoint = prevSegEnd + gap / 2;
+								updateGCD(gapMidPoint);
+							}
+						}
 					}
 				}
 			}
