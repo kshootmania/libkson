@@ -681,13 +681,10 @@ namespace
 		}
 	};
 
-	struct PreparedLaneSpin;
-
 	struct LaserSectionData
 	{
 		ByRelPulse<GraphPoint> points;
 		bool wide = false;
-		ByRelPulse<PreparedLaneSpin> laneSpins;
 
 		void addPoint(RelPulse relTime, double value)
 		{
@@ -1084,12 +1081,6 @@ namespace
 			}
 		}
 
-		void addLaneSpin(Pulse time, const PreparedLaneSpin& laneSpin)
-		{
-			const RelPulse relTime = time - m_inserter.startTime();
-			m_inserter.data().laneSpins.emplace(relTime, laneSpin);
-		}
-
 		bool wide() const
 		{
 			return m_inserter.prepared() && m_inserter.data().wide;
@@ -1140,54 +1131,6 @@ namespace
 						.v = convertedGraphSection,
 						.w = data.wide ? kLaserXScale2x : kLaserXScale1x,
 					});
-
-				if (inserted)
-				{
-					// Publish prepared lane spin
-					for (const auto& [relPulse, laneSpin] : data.laneSpins)
-					{
-						if (data.points.contains(relPulse) && laneSpin.isValid())
-						{
-							assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
-							const std::int32_t d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1;
-							switch (laneSpin.type)
-							{
-								case PreparedLaneSpin::Type::kNormal:
-									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.spin.emplace(
-										time + relPulse,
-										CamPatternInvokeSpin{
-											.d = d,
-											.length = laneSpin.duration,
-										});
-									break;
-								case PreparedLaneSpin::Type::kHalf:
-									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
-										time + relPulse,
-										CamPatternInvokeSpin{
-											.d = d,
-											.length = laneSpin.duration,
-										});
-									break;
-								case PreparedLaneSpin::Type::kSwing:
-									m_pTargetChartData->camera.cam.pattern.laser.slamEvent.swing.emplace(
-										time + relPulse,
-										CamPatternInvokeSwing{
-											.d = d,
-											.length = laneSpin.duration,
-											.v = {
-												.scale = static_cast<double>(laneSpin.swingAmplitude),
-												.repeat = laneSpin.swingRepeat,
-												.decayOrder = laneSpin.swingDecayOrder,
-											},
-										});
-									break;
-
-								default:
-									break;
-							}
-						}
-					}
-				}
 			}
 		}
 
@@ -2129,10 +2072,42 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 							const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKSHSpinStr(buf.substr(j));
 							if (laneSpin.isValid())
 							{
-								// Assign to the laser point if valid
-								for (auto& lane : preparedLongNoteArray.laser)
+								// Add spin/swing directly to chartData (independent of laser sections)
+								assert(laneSpin.direction != PreparedLaneSpin::Direction::kUnspecified);
+								const std::int32_t d = (laneSpin.direction == PreparedLaneSpin::Direction::kLeft) ? -1 : 1;
+								switch (laneSpin.type)
 								{
-									lane.addLaneSpin(time, laneSpin);
+								case PreparedLaneSpin::Type::kNormal:
+									chartData.camera.cam.pattern.laser.slamEvent.spin.emplace(
+										time,
+										CamPatternInvokeSpin{
+											.d = d,
+											.length = laneSpin.duration,
+										});
+									break;
+								case PreparedLaneSpin::Type::kHalf:
+									chartData.camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
+										time,
+										CamPatternInvokeSpin{
+											.d = d,
+											.length = laneSpin.duration,
+										});
+									break;
+								case PreparedLaneSpin::Type::kSwing:
+									chartData.camera.cam.pattern.laser.slamEvent.swing.emplace(
+										time,
+										CamPatternInvokeSwing{
+											.d = d,
+											.length = laneSpin.duration,
+											.v = {
+												.scale = static_cast<double>(laneSpin.swingAmplitude),
+												.repeat = laneSpin.swingRepeat,
+												.decayOrder = laneSpin.swingDecayOrder,
+											},
+										});
+									break;
+								default:
+									break;
 								}
 							}
 						}
