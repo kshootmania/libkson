@@ -932,46 +932,12 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 	}
 }
 
-TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]") {
-	// Known failing files (relative paths from songs/SFES2022/)
-	const std::set<std::string> knownFailures = {
-		"024/1_Turbulence/4_in.ksh",
-		"024/1_Turbulence/2_ch.ksh",
-		"024/1_Turbulence/1_lt.ksh",
-		"024/3_Prototype_Mirage/4_in.ksh",
-		"024/3_Prototype_Mirage/2_ch.ksh",
-		"024/3_Prototype_Mirage/3_ex.ksh",
-		"024/3_Prototype_Mirage/1_lt.ksh",
-		"023/Externus/in.ksh",
-		"015/Splash/Splash_ADV.ksh",
-		"015/Splash/Splash_EXH.ksh",
-		"012/pessimism/pessimism_IN.ksh",
-		"013/RuiNAre/EX.ksh",
-		"013/the_oscillation/IN.ksh",
-		"013/the_oscillation/EX.ksh",
-		"013/always_feel_the_same/EX.ksh",
-		"008/03_R_D/R_D_in.ksh",
-		"001/Diana/Diana_EX.ksh",
-		"001/Indecisive/Indecisive_IN.ksh",
-		"006/miasmatheory/miasma1.ksh",
-		"006/orphen/orphen2.ksh",
-		"006/lamentia/lamentia2.ksh",
-		"020/liberAge/liberage_n.ksh",
-		"018/Lagurus/Lagurus_IN.ksh",
-		"018/Lagurus/Lagurus_EX.ksh",
-		"018/Half_Moon/Half_Moon_EX.ksh",
-		"011/CASE1_Missing_Zeppelin/EX.ksh",
-		"011/I_believe_in_RAW_STYLE/IN.ksh",
-		"029/Witchs_Curse/1_lt.ksh",
-		"010/desire drive_Electro_Swing_Remix/EX.ksh",
-		"010/Autumn_Fire/IN.ksh",
-		"019/2_bad_night/4_in.ksh",
-		"021/01_BulbBubble/IN.ksh",
-		"032/over/lt.ksh",
-		"032/over/ch.ksh",
-		"002/2himitunorojiuranightdisco/IN.ksh",
-	};
-
+// Common function for KSH round-trip tests on song directories
+static void RunKSHRoundTripTest(
+	const std::string& testName,
+	const std::string& dirName,
+	const std::set<std::string>& knownFailures)
+{
 	// Filter KSH lines for comparison
 	auto filterKSHLines = [](const std::string& kshContent) -> std::vector<std::string> {
 		std::vector<std::string> lines;
@@ -1103,103 +1069,198 @@ TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]"
 		return originalFiltered == resultFiltered;
 	};
 
-	std::filesystem::path sfes2022Path = g_exeDir / "../../../kshootmania/App/songs/SFES2022";
-	sfes2022Path = std::filesystem::weakly_canonical(sfes2022Path);
-	if (!std::filesystem::exists(sfes2022Path) || !std::filesystem::is_directory(sfes2022Path)) {
-		WARN("SFES2022 directory not found, skipping test");
+	std::filesystem::path targetPath = g_exeDir / ("../../../kshootmania/App/songs/" + dirName);
+	targetPath = std::filesystem::weakly_canonical(targetPath);
+	if (!std::filesystem::exists(targetPath) || !std::filesystem::is_directory(targetPath)) {
+		WARN(dirName + " directory not found, skipping test");
 		return;
 	}
 
-	SECTION("All KSH files in SFES2022 directory") {
-		std::vector<std::string> kshFiles;
-		std::string searchCmd = "find \"" + sfes2022Path.string() + "\" -name \"*.ksh\" 2>/dev/null";
-		FILE* pipe = popen(searchCmd.c_str(), "r");
-		if (pipe) {
-			char buffer[1024];
-			while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-				std::string filename = buffer;
-				if (!filename.empty() && filename.back() == '\n') {
-					filename.pop_back();
-				}
-				if (!filename.empty()) {
-					kshFiles.push_back(filename);
-				}
+	std::vector<std::string> kshFiles;
+	std::string searchCmd = "find \"" + targetPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
+	FILE* pipe = popen(searchCmd.c_str(), "r");
+	if (pipe) {
+		char buffer[1024];
+		while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+			std::string filename = buffer;
+			if (!filename.empty() && filename.back() == '\n') {
+				filename.pop_back();
 			}
-			pclose(pipe);
+			if (!filename.empty()) {
+				kshFiles.push_back(filename);
+			}
+		}
+		pclose(pipe);
+	}
+
+	if (kshFiles.empty()) {
+		WARN("No KSH files found in " + dirName + " directory");
+		return;
+	}
+
+	int passed = 0;
+	int failed = 0;
+	int knownFailureCount = 0;
+	std::vector<std::string> unexpectedFailures;
+	std::vector<std::string> unexpectedSuccesses;
+
+	for (const auto& file : kshFiles) {
+		// Extract relative path from target directory
+		std::string relativePath = file;
+		size_t dirPos = relativePath.find("/" + dirName + "/");
+		if (dirPos != std::string::npos) {
+			relativePath = relativePath.substr(dirPos + dirName.length() + 2);
 		}
 
-		if (kshFiles.empty()) {
-			WARN("No KSH files found in SFES2022 directory");
-			return;
+		bool success = false;
+		try {
+			success = testKSHRoundTrip(file);
+		} catch (const std::exception& e) {
+			success = false;
 		}
 
-		int passed = 0;
-		int failed = 0;
-		int knownFailureCount = 0;
-		std::vector<std::string> unexpectedFailures;
-		std::vector<std::string> unexpectedSuccesses;
-
-		for (const auto& file : kshFiles) {
-			// Extract relative path from SFES2022/
-			std::string relativePath = file;
-			size_t sfes2022Pos = relativePath.find("/SFES2022/");
-			if (sfes2022Pos != std::string::npos) {
-				relativePath = relativePath.substr(sfes2022Pos + 10); // "/SFES2022/" = 10 chars
+		if (success) {
+			passed++;
+			if (knownFailures.count(relativePath) > 0) {
+				unexpectedSuccesses.push_back(relativePath);
 			}
-
-			bool success = false;
-			try {
-				success = testKSHRoundTrip(file);
-			} catch (const std::exception& e) {
-				success = false;
-			}
-
-			if (success) {
-				passed++;
-				if (knownFailures.count(relativePath) > 0) {
-					unexpectedSuccesses.push_back(relativePath);
-				}
+		} else {
+			failed++;
+			if (knownFailures.count(relativePath) == 0) {
+				unexpectedFailures.push_back(relativePath);
 			} else {
-				failed++;
-				if (knownFailures.count(relativePath) == 0) {
-					unexpectedFailures.push_back(relativePath);
-				} else {
-					knownFailureCount++;
-				}
+				knownFailureCount++;
 			}
-		}
-
-		int total = passed + failed;
-		int totalExcludingKnownFailures = total - knownFailureCount;
-		int passedExcludingKnownFailures = passed + unexpectedSuccesses.size();
-		double successRateExcludingKnown = totalExcludingKnownFailures > 0
-			? (100.0 * passedExcludingKnownFailures / totalExcludingKnownFailures)
-			: 0.0;
-		double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
-
-		bool testSuccess = unexpectedFailures.empty();
-		std::cerr << "\n=== SFES2022 Round-Trip Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
-		std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
-			<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
-		std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
-		std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
-		std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
-
-		if (!unexpectedSuccesses.empty()) {
-			std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
-			for (const auto& file : unexpectedSuccesses) {
-				std::cerr << "  - " << file << std::endl;
-			}
-		}
-
-		if (!unexpectedFailures.empty()) {
-			std::cerr << "\nUnexpected failures (NEW REGRESSIONS):" << std::endl;
-			for (const auto& file : unexpectedFailures) {
-				std::cerr << "  - " << file << std::endl;
-			}
-			REQUIRE(unexpectedFailures.empty());
 		}
 	}
+
+	int total = passed + failed;
+	int totalExcludingKnownFailures = total - knownFailureCount;
+	int passedExcludingKnownFailures = passed + unexpectedSuccesses.size();
+	double successRateExcludingKnown = totalExcludingKnownFailures > 0
+		? (100.0 * passedExcludingKnownFailures / totalExcludingKnownFailures)
+		: 0.0;
+	double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
+
+	bool testSuccess = unexpectedFailures.empty();
+	std::cerr << "\n=== " << testName << " Round-Trip Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
+	std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
+		<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
+	std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+	std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
+	std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+
+	if (!unexpectedSuccesses.empty()) {
+		std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
+		for (const auto& file : unexpectedSuccesses) {
+			std::cerr << "  - " << file << std::endl;
+		}
+	}
+
+	if (!unexpectedFailures.empty()) {
+		std::cerr << "\nUnexpected failures (NEW REGRESSIONS):" << std::endl;
+		for (const auto& file : unexpectedFailures) {
+			std::cerr << "  - " << file << std::endl;
+		}
+		REQUIRE(unexpectedFailures.empty());
+	}
+}
+
+TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]") {
+	// Known failing files (relative paths from songs/SFES2022/)
+	const std::set<std::string> knownFailures = {
+		"024/1_Turbulence/4_in.ksh",
+		"024/1_Turbulence/2_ch.ksh",
+		"024/1_Turbulence/1_lt.ksh",
+		"024/3_Prototype_Mirage/4_in.ksh",
+		"024/3_Prototype_Mirage/2_ch.ksh",
+		"024/3_Prototype_Mirage/3_ex.ksh",
+		"024/3_Prototype_Mirage/1_lt.ksh",
+		"023/Externus/in.ksh",
+		"015/Splash/Splash_ADV.ksh",
+		"015/Splash/Splash_EXH.ksh",
+		"012/pessimism/pessimism_IN.ksh",
+		"013/RuiNAre/EX.ksh",
+		"013/the_oscillation/IN.ksh",
+		"013/the_oscillation/EX.ksh",
+		"013/always_feel_the_same/EX.ksh",
+		"008/03_R_D/R_D_in.ksh",
+		"001/Diana/Diana_EX.ksh",
+		"001/Indecisive/Indecisive_IN.ksh",
+		"006/miasmatheory/miasma1.ksh",
+		"006/orphen/orphen2.ksh",
+		"006/lamentia/lamentia2.ksh",
+		"020/liberAge/liberage_n.ksh",
+		"018/Lagurus/Lagurus_IN.ksh",
+		"018/Lagurus/Lagurus_EX.ksh",
+		"018/Half_Moon/Half_Moon_EX.ksh",
+		"011/CASE1_Missing_Zeppelin/EX.ksh",
+		"011/I_believe_in_RAW_STYLE/IN.ksh",
+		"029/Witchs_Curse/1_lt.ksh",
+		"010/desire drive_Electro_Swing_Remix/EX.ksh",
+		"010/Autumn_Fire/IN.ksh",
+		"019/2_bad_night/4_in.ksh",
+		"021/01_BulbBubble/IN.ksh",
+		"032/over/lt.ksh",
+		"032/over/ch.ksh",
+		"002/2himitunorojiuranightdisco/IN.ksh",
+	};
+
+	RunKSHRoundTripTest("SFES2022", "SFES2022", knownFailures);
+}
+
+TEST_CASE("KSH I/O round-trip test (SFES2020)", "[.][ksh_io][kson_io][sfes2020]") {
+	// Known failing files (relative paths from songs/SFES2020/)
+	const std::set<std::string> knownFailures = {
+		"046/03/inf.ksh",
+		"013/02_9318054/9318054_ex.ksh",
+		"022/03_murderdoll/murderdoll_ex.ksh",
+		"022/02_avesta/avesta_in.ksh",
+		"025/Ruten/Rut_ex.ksh",
+		"025/The_Rats_in_the_Walls/Rats_in.ksh",
+		"025/70_Minutes_Fighters/70m_ch.ksh",
+		"025/70_Minutes_Fighters/70m_lt.ksh",
+		"025/70_Minutes_Fighters/70m_in.ksh",
+		"025/70_Minutes_Fighters/70m_ex.ksh",
+		"049/2_picopicotmg/picopicotmg_kiritan_tohu.ksh",
+		"049/3_tamago_tetsuaji/tamago_tetsuaji_tmmgdn.ksh",
+		"049/3_tamago_tetsuaji/tamago_tetsuaji_india.ksh",
+		"049/3_tamago_tetsuaji/tamago_tetsuaji_mokyu.ksh",
+		"049/1_tamago/tamago_ogamat.ksh",
+		"040/3_starrydarkbluesky/4_in.ksh",
+		"037/MoVe/MoVe_INF.ksh",
+		"039/Addict/IN.ksh",
+		"027/PlanetProbe/LT.ksh",
+		"018/VectorZero/In.ksh",
+		"044/Neva_eh/Neva_eh_4.ksh",
+		"044/Neva_eh/Neva_eh_3.ksh",
+		"043/2_goodbye_katsura/2_ch.ksh",
+		"043/2_goodbye_katsura/3_ex.ksh",
+		"043/3_emodec/2_ch.ksh",
+		"043/3_emodec/3_ex.ksh",
+		"043/3_emodec/1_lt.ksh",
+		"017/3_Nightmares/Nightmares_EX.ksh",
+		"017/3_Nightmares/Nightmares_IN.ksh",
+		"017/3_Nightmares/Nightmares_CH.ksh",
+		"017/2_AllWeponsFullDrive/AllWeponsFullDrive_in.ksh",
+		"028/03_Momonjes_Defilee/IN.ksh",
+		"010/phonautograph/IN.ksh",
+		"026/02_mini_lonesomewarcry/lonesome_warcry_lt.ksh",
+		"026/01_mini_cosmiclightparade/cosmic_lightparade_ex.ksh",
+		"019/Executor/nov.ksh",
+		"019/Executor/mxm.ksh",
+		"019/Executor/exh.ksh",
+		"019/Executor/adv.ksh",
+		"035/shou/1_LT.ksh",
+		"034/1_kikagaku/kikagaku_lt.ksh",
+		"034/1_kikagaku/kikagaku_ch.ksh",
+		"034/1_kikagaku/kikagaku_in.ksh",
+		"034/2_sakura_sakura/sakura_sakura_in.ksh",
+		"034/2_sakura_sakura/sakura_sakura_ex.ksh",
+		"034/2_sakura_sakura/sakura_sakura_ch.ksh",
+	};
+
+	RunKSHRoundTripTest("SFES2020", "SFES2020", knownFailures);
 }
 
 TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
