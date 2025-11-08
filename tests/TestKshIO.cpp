@@ -1045,30 +1045,6 @@ TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]"
 				}
 			}
 
-			// Remove spin (@) and swing (S<>) patterns because they are removed during KSON conversion when not associated with a laser
-			if (line.find('@') != std::string::npos ||
-			    (line.size() > 2 && line[0] == 'S' && (line[1] == '<' || line[1] == '>'))) {
-				std::string result;
-				for (size_t i = 0; i < line.size(); ++i) {
-					if (line[i] == '@') {
-						// Skip spin (@X) pattern
-						if (i + 1 < line.size() && (line[i+1] == '(' || line[i+1] == '<' || line[i+1] == '>')) {
-							i++;
-							while (i < line.size() && isdigit(line[i])) i++;
-							i--;
-						}
-					} else if (i + 1 < line.size() && line[i] == 'S' && (line[i+1] == '<' || line[i+1] == '>')) {
-						// Skip swing (S<>) pattern
-						i++;
-						while (i < line.size() && (isdigit(line[i]) || line[i] == ':')) i++;
-						i--;
-					} else {
-						result += line[i];
-					}
-				}
-				line = result;
-			}
-
 			filtered.push_back(line);
 		}
 
@@ -1159,6 +1135,7 @@ TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]"
 
 		int passed = 0;
 		int failed = 0;
+		int knownFailureCount = 0;
 		std::vector<std::string> unexpectedFailures;
 		std::vector<std::string> unexpectedSuccesses;
 
@@ -1186,16 +1163,27 @@ TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]"
 				failed++;
 				if (knownFailures.count(relativePath) == 0) {
 					unexpectedFailures.push_back(relativePath);
+				} else {
+					knownFailureCount++;
 				}
 			}
 		}
 
 		int total = passed + failed;
+		int totalExcludingKnownFailures = total - knownFailureCount;
+		int passedExcludingKnownFailures = passed + unexpectedSuccesses.size();
+		double successRateExcludingKnown = totalExcludingKnownFailures > 0
+			? (100.0 * passedExcludingKnownFailures / totalExcludingKnownFailures)
+			: 0.0;
 		double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
 
-		std::cerr << "\n=== SFES2022 Round-Trip Test Results ===" << std::endl;
-		std::cerr << "Passed: " << passed << " (" << static_cast<int>(successRate) << "%)" << std::endl;
-		std::cerr << "Failed: " << failed << " (" << (100 - static_cast<int>(successRate)) << "%)" << std::endl;
+		bool testSuccess = unexpectedFailures.empty();
+		std::cerr << "\n=== SFES2022 Round-Trip Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
+		std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
+			<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
+		std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+		std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
+		std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
 
 		if (!unexpectedSuccesses.empty()) {
 			std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
