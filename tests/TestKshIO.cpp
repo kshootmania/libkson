@@ -932,6 +932,288 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 	}
 }
 
+TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]") {
+	// Known failing files (relative paths from songs/SFES2022/)
+	const std::set<std::string> knownFailures = {
+		"024/1_Turbulence/4_in.ksh",
+		"024/1_Turbulence/2_ch.ksh",
+		"024/1_Turbulence/1_lt.ksh",
+		"024/3_Prototype_Mirage/4_in.ksh",
+		"024/3_Prototype_Mirage/2_ch.ksh",
+		"024/3_Prototype_Mirage/3_ex.ksh",
+		"024/3_Prototype_Mirage/1_lt.ksh",
+		"023/Externus/in.ksh",
+		"015/Splash/Splash_ADV.ksh",
+		"015/Splash/Splash_EXH.ksh",
+		"012/pessimism/pessimism_IN.ksh",
+		"013/RuiNAre/EX.ksh",
+		"013/the_oscillation/IN.ksh",
+		"013/the_oscillation/EX.ksh",
+		"013/always_feel_the_same/EX.ksh",
+		"008/03_R_D/R_D_in.ksh",
+		"001/Diana/Diana_EX.ksh",
+		"001/Indecisive/Indecisive_IN.ksh",
+		"006/miasmatheory/miasma1.ksh",
+		"006/orphen/orphen2.ksh",
+		"006/lamentia/lamentia2.ksh",
+		"020/liberAge/liberage_n.ksh",
+		"018/Lagurus/Lagurus_IN.ksh",
+		"018/Lagurus/Lagurus_EX.ksh",
+		"018/Half_Moon/Half_Moon_EX.ksh",
+		"011/CASE1_Missing_Zeppelin/EX.ksh",
+		"011/I_believe_in_RAW_STYLE/IN.ksh",
+		"029/Witchs_Curse/1_lt.ksh",
+		"010/desire drive_Electro_Swing_Remix/EX.ksh",
+		"010/Autumn_Fire/IN.ksh",
+		"019/2_bad_night/4_in.ksh",
+		"021/01_BulbBubble/IN.ksh",
+		"032/over/lt.ksh",
+		"032/over/ch.ksh",
+		"002/2himitunorojiuranightdisco/IN.ksh",
+	};
+
+	// Filter KSH lines for comparison
+	auto filterKSHLines = [](const std::string& kshContent) -> std::vector<std::string> {
+		std::vector<std::string> lines;
+		std::istringstream iss(kshContent);
+		std::string line;
+		while (std::getline(iss, line)) {
+			if (!line.empty() && line.back() == '\r') {
+				line.pop_back();
+			}
+			lines.push_back(line);
+		}
+
+		std::vector<std::string> filtered;
+		const std::vector<std::string> ignorePrefixes = {
+			"//", "title=", "title_img=", "artist=", "artist_img=", "effect=",
+			"illustrator=", "jacket=", "level=", "difficulty=", "m=", "o=", "v=",
+			"vo=", "mvol=", "bg=", "layer=", "po=", "plength=", "pfiltergain=",
+			"filtertype=", "chokkakuautovol=", "chokkakuvol=", "chokkakuse=",
+			"icon=", "ver=", "fx-l=", "fx-r=", "#define", "information=",
+			"filter:", "fx:",
+		};
+
+		for (auto line : lines) {
+			std::string stripped = line;
+			size_t start = stripped.find_first_not_of(" \t\r\n");
+			if (start == std::string::npos) {
+				stripped = "";
+			} else {
+				size_t end = stripped.find_last_not_of(" \t\r\n");
+				stripped = stripped.substr(start, end - start + 1);
+			}
+
+			bool shouldIgnore = false;
+			for (const auto& prefix : ignorePrefixes) {
+				if (stripped.rfind(prefix, 0) == 0) {
+					shouldIgnore = true;
+					break;
+				}
+			}
+			if (shouldIgnore) continue;
+
+			// Normalize fx-l_se/fx-r_se values
+			if (line.find("fx-l_se=") != std::string::npos || line.find("fx-r_se=") != std::string::npos) {
+				size_t eqPos = line.find('=');
+				if (eqPos != std::string::npos) {
+					std::string keyPart = line.substr(0, eqPos);
+					std::string valuePart = line.substr(eqPos + 1);
+					std::vector<std::string> elements;
+					size_t pos = 0;
+					while (pos < valuePart.size()) {
+						size_t nextPos = valuePart.find(';', pos);
+						if (nextPos == std::string::npos) {
+							elements.push_back(valuePart.substr(pos));
+							break;
+						}
+						elements.push_back(valuePart.substr(pos, nextPos - pos));
+						pos = nextPos + 1;
+					}
+					if (elements.size() > 2) {
+						elements.resize(2);
+					}
+					if (elements.size() == 2 && elements[1] == "100") {
+						elements.resize(1);
+					}
+					std::string normalizedValue;
+					for (size_t i = 0; i < elements.size(); ++i) {
+						if (i > 0) normalizedValue += ";";
+						normalizedValue += elements[i];
+					}
+					line = keyPart + "=" + normalizedValue;
+				}
+			}
+
+			// Remove spin (@) and swing (S<>) patterns because they are removed during KSON conversion when not associated with a laser
+			if (line.find('@') != std::string::npos ||
+			    (line.size() > 2 && line[0] == 'S' && (line[1] == '<' || line[1] == '>'))) {
+				std::string result;
+				for (size_t i = 0; i < line.size(); ++i) {
+					if (line[i] == '@') {
+						// Skip spin (@X) pattern
+						if (i + 1 < line.size() && (line[i+1] == '(' || line[i+1] == '<' || line[i+1] == '>')) {
+							i++;
+							while (i < line.size() && isdigit(line[i])) i++;
+							i--;
+						}
+					} else if (i + 1 < line.size() && line[i] == 'S' && (line[i+1] == '<' || line[i+1] == '>')) {
+						// Skip swing (S<>) pattern
+						i++;
+						while (i < line.size() && (isdigit(line[i]) || line[i] == ':')) i++;
+						i--;
+					} else {
+						result += line[i];
+					}
+				}
+				line = result;
+			}
+
+			filtered.push_back(line);
+		}
+
+		// Remove trailing empty measures
+		while (filtered.size() >= 2) {
+			std::string last = filtered.back();
+			std::string secondLast = filtered[filtered.size() - 2];
+			size_t s1 = last.find_first_not_of(" \t\r\n");
+			if (s1 != std::string::npos) {
+				size_t e1 = last.find_last_not_of(" \t\r\n");
+				last = last.substr(s1, e1 - s1 + 1);
+			}
+			size_t s2 = secondLast.find_first_not_of(" \t\r\n");
+			if (s2 != std::string::npos) {
+				size_t e2 = secondLast.find_last_not_of(" \t\r\n");
+				secondLast = secondLast.substr(s2, e2 - s2 + 1);
+			}
+			if (last == "--" && secondLast == "0000|00|--") {
+				filtered.pop_back();
+				filtered.pop_back();
+			} else {
+				break;
+			}
+		}
+
+		return filtered;
+	};
+
+	auto testKSHRoundTrip = [&filterKSHLines](const std::string& filename) -> bool {
+		std::ifstream originalFile(filename);
+		if (!originalFile) return false;
+		std::string originalContent((std::istreambuf_iterator<char>(originalFile)),
+		                            std::istreambuf_iterator<char>());
+
+		// ksh1 -> kson
+		auto kson1 = kson::LoadKSHChartData(filename);
+		if (kson1.error != kson::ErrorType::None) {
+			return false;
+		}
+
+		// kson -> ksh2
+		std::ostringstream ossKsh;
+		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		if (saveKshResult != kson::ErrorType::None) {
+			return false;
+		}
+		std::string kshString = ossKsh.str();
+		if (kshString.empty()) {
+			return false;
+		}
+
+		// Compare ksh1 and ksh2 (filtered)
+		auto originalFiltered = filterKSHLines(originalContent);
+		auto resultFiltered = filterKSHLines(kshString);
+
+		return originalFiltered == resultFiltered;
+	};
+
+	std::filesystem::path sfes2022Path = g_exeDir / "../../../kshootmania/App/songs/SFES2022";
+	sfes2022Path = std::filesystem::weakly_canonical(sfes2022Path);
+	if (!std::filesystem::exists(sfes2022Path) || !std::filesystem::is_directory(sfes2022Path)) {
+		WARN("SFES2022 directory not found, skipping test");
+		return;
+	}
+
+	SECTION("All KSH files in SFES2022 directory") {
+		std::vector<std::string> kshFiles;
+		std::string searchCmd = "find \"" + sfes2022Path.string() + "\" -name \"*.ksh\" 2>/dev/null";
+		FILE* pipe = popen(searchCmd.c_str(), "r");
+		if (pipe) {
+			char buffer[1024];
+			while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+				std::string filename = buffer;
+				if (!filename.empty() && filename.back() == '\n') {
+					filename.pop_back();
+				}
+				if (!filename.empty()) {
+					kshFiles.push_back(filename);
+				}
+			}
+			pclose(pipe);
+		}
+
+		if (kshFiles.empty()) {
+			WARN("No KSH files found in SFES2022 directory");
+			return;
+		}
+
+		int passed = 0;
+		int failed = 0;
+		std::vector<std::string> unexpectedFailures;
+		std::vector<std::string> unexpectedSuccesses;
+
+		for (const auto& file : kshFiles) {
+			// Extract relative path from SFES2022/
+			std::string relativePath = file;
+			size_t sfes2022Pos = relativePath.find("/SFES2022/");
+			if (sfes2022Pos != std::string::npos) {
+				relativePath = relativePath.substr(sfes2022Pos + 10); // "/SFES2022/" = 10 chars
+			}
+
+			bool success = false;
+			try {
+				success = testKSHRoundTrip(file);
+			} catch (const std::exception& e) {
+				success = false;
+			}
+
+			if (success) {
+				passed++;
+				if (knownFailures.count(relativePath) > 0) {
+					unexpectedSuccesses.push_back(relativePath);
+				}
+			} else {
+				failed++;
+				if (knownFailures.count(relativePath) == 0) {
+					unexpectedFailures.push_back(relativePath);
+				}
+			}
+		}
+
+		int total = passed + failed;
+		double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
+
+		std::cerr << "\n=== SFES2022 Round-Trip Test Results ===" << std::endl;
+		std::cerr << "Passed: " << passed << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+		std::cerr << "Failed: " << failed << " (" << (100 - static_cast<int>(successRate)) << "%)" << std::endl;
+
+		if (!unexpectedSuccesses.empty()) {
+			std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
+			for (const auto& file : unexpectedSuccesses) {
+				std::cerr << "  - " << file << std::endl;
+			}
+		}
+
+		if (!unexpectedFailures.empty()) {
+			std::cerr << "\nUnexpected failures (NEW REGRESSIONS):" << std::endl;
+			for (const auto& file : unexpectedFailures) {
+				std::cerr << "  - " << file << std::endl;
+			}
+			REQUIRE(unexpectedFailures.empty());
+		}
+	}
+}
+
 TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
 {
 	kson::ChartData chartData;
