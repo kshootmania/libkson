@@ -1893,35 +1893,6 @@ namespace
 				{
 					shouldDoubleResolution = true;
 				}
-
-				// Gaps between laser sections require GCD points to prevent sections from merging
-				if (seg.isSectionStart && segIdx > 0)
-				{
-					const auto& prevSeg = segments[segIdx - 1];
-					const Pulse prevSegEnd = prevSeg.startPulse + prevSeg.length;
-					const Pulse gap = seg.startPulse - prevSegEnd;
-
-					if (gap > 0)
-					{
-						const bool prevEndInMeasure = (prevSegEnd >= measureStart && prevSegEnd < measureEnd);
-						const bool nextStartInMeasure = (seg.startPulse >= measureStart && seg.startPulse < measureEnd);
-
-						if (prevEndInMeasure && nextStartInMeasure)
-						{
-							const Pulse prevEndRel = prevSegEnd - measureStart;
-							const Pulse nextStartRel = seg.startPulse - measureStart;
-							const Pulse prevEndGridPos = (prevEndRel / gcd) * gcd;
-							const Pulse nextStartGridPos = (nextStartRel / gcd) * gcd;
-
-							// Add midpoint only if current GCD cannot represent the gap
-							if (prevEndGridPos == nextStartGridPos)
-							{
-								const Pulse gapMidPoint = prevSegEnd + gap / 2;
-								updateGCD(gapMidPoint);
-							}
-						}
-					}
-				}
 			}
 		}
 
@@ -2097,14 +2068,24 @@ namespace
 		// Calculate division in KSON resolution (960) to preserve all note timings
 		std::int32_t division = gcd > 0 ? static_cast<std::int32_t>(measureLength / gcd) : static_cast<std::int32_t>(measureLength);
 
-		// Apply doubling for long notes/lasers (v1 compatibility)
-		if (division < measureLength)
+		// Apply doubling for long notes/lasers
+		if (division < measureLength && shouldDoubleResolution)
 		{
-			const int doubled = division * (1 + (shouldDoubleResolution ? 1 : 0));
+			const int doubled = division * 2;
 			// Only apply doubling if it divides measureLength evenly
 			if (measureLength % doubled == 0)
 			{
 				division = doubled;
+			}
+			// If 1 line = 15 pulses (1/64th), try tripling when doubling doesn't work
+			// Without this, Heliodor[EX] (SFES2022) kson->ksh->kson roundtrip causes unexpected laser section merging
+			else if (measureLength / division == 15)
+			{
+				const int tripled = division * 3;
+				if (measureLength % tripled == 0)
+				{
+					division = tripled;
+				}
 			}
 		}
 
