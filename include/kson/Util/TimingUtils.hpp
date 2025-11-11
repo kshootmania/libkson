@@ -53,7 +53,7 @@ namespace kson
 
 	const TimeSig& TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache);
 
-	double GetModeBPM(const BeatInfo& beatInfo);
+	double GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse);
 
 	double GetEffectiveStdBPM(const ChartData& chartData);
 

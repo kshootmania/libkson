@@ -314,7 +314,7 @@ kson::Pulse kson::LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>&
 	return y + ry;
 }
 
-double kson::GetModeBPM(const BeatInfo& beatInfo)
+double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 {
 	constexpr double kErrorBPM = 120.0;
 
@@ -335,6 +335,12 @@ double kson::GetModeBPM(const BeatInfo& beatInfo)
 	std::optional<std::int32_t> prevBPMInt;
 	for (const auto& [y, bpm] : beatInfo.bpm)
 	{
+		// BPM changes after lastPulse are ignored
+		if (y > lastPulse)
+		{
+			break;
+		}
+
 		if (y < prevY)
 		{
 			assert(false && "y must be larger than or equal to prevY in beatInfo.bpm");
@@ -349,6 +355,12 @@ double kson::GetModeBPM(const BeatInfo& beatInfo)
 		prevBPMInt = static_cast<std::int32_t>(bpm);
 	}
 
+	// Add duration for the last BPM change
+	if (prevBPMInt.has_value() && prevY <= lastPulse)
+	{
+		bpmTotalPulses[prevBPMInt.value()] += lastPulse - prevY;
+	}
+
 	if (bpmTotalPulses.empty())
 	{
 		// Only one BPM change exists
@@ -361,10 +373,17 @@ double kson::GetModeBPM(const BeatInfo& beatInfo)
 	}
 
 	// Find BPM with largest total pulse duration
+	// If tied, prefer higher BPM value
 	const auto itr = std::max_element(
 		bpmTotalPulses.begin(),
 		bpmTotalPulses.end(),
-		[](const auto& a, const auto& b) { return a.second < b.second; });
+		[](const auto& a, const auto& b) {
+			if (a.second != b.second)
+			{
+				return a.second < b.second; // Compare by pulse duration
+			}
+			return a.first < b.first; // If tied, prefer higher BPM
+		});
 
 	if (itr == bpmTotalPulses.end())
 	{
@@ -378,5 +397,12 @@ double kson::GetModeBPM(const BeatInfo& beatInfo)
 
 double kson::GetEffectiveStdBPM(const ChartData& chartData)
 {
-	return chartData.meta.stdBPM > 0.0 ? chartData.meta.stdBPM : GetModeBPM(chartData.beat);
+	if (chartData.meta.stdBPM > 0.0)
+	{
+		return chartData.meta.stdBPM;
+	}
+
+	// Calculate mode BPM using last note position as the end point
+	const Pulse lastPulse = LastNoteEndY(chartData.note);
+	return GetModeBPM(chartData.beat, lastPulse);
 }

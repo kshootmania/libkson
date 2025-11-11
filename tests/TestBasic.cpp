@@ -105,6 +105,82 @@ TEST_CASE("Timing Utilities", "[timing]") {
 		REQUIRE(kson::SecToPulse(0.5, beat, cache) == 240);
 		REQUIRE(kson::SecToPulse(2.0, beat, cache) == 960);
 	}
+
+	SECTION("GetModeBPM") {
+		kson::BeatInfo beat;
+
+		// Single BPM
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 120.0);
+		beat.timeSig[0] = kson::TimeSig{4, 4};
+		REQUIRE(kson::GetModeBPM(beat, 1920) == Approx(120.0));
+
+		// Multiple BPMs with different durations
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 120.0);
+		beat.bpm.emplace(480, 180.0);
+		beat.bpm.emplace(960, 120.0);
+		// 120: 0-480 + 960-1920 = 1440 pulses, 180: 480-960 = 480 pulses
+		REQUIRE(kson::GetModeBPM(beat, 1920) == Approx(120.0));
+
+		// Tied durations - higher BPM preferred
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 120.0);
+		beat.bpm.emplace(480, 180.0);
+		beat.bpm.emplace(1440, 150.0);
+		// 180 and 150 both have 960 pulses, higher BPM (180) wins
+		REQUIRE(kson::GetModeBPM(beat, 2400) == Approx(180.0));
+
+		// Repeated BPM values accumulate
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 200.0);
+		beat.bpm.emplace(240, 150.0);
+		beat.bpm.emplace(720, 200.0);
+		beat.bpm.emplace(1200, 180.0);
+		beat.bpm.emplace(2160, 150.0);
+		// 150: 480 + 840 = 1320, 180: 960, 200: 720
+		REQUIRE(kson::GetModeBPM(beat, 3000) == Approx(150.0));
+
+		// Decimal values round to same integer
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 150.2);
+		beat.bpm.emplace(480, 150.7);
+		beat.bpm.emplace(960, 180.0);
+		// Both 150.2 and 150.7 count as 150
+		REQUIRE(kson::GetModeBPM(beat, 1200) == Approx(150.0));
+
+		// BPM changes after lastPulse are ignored
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 120.0);
+		beat.bpm.emplace(480, 180.0);
+		beat.bpm.emplace(1200, 150.0);
+		// Both 120 and 180 have 480 pulses, higher BPM (180) wins
+		REQUIRE(kson::GetModeBPM(beat, 960) == Approx(180.0));
+	}
+
+	SECTION("GetEffectiveStdBPM") {
+		kson::ChartData chart;
+
+		// Explicit stdBPM takes precedence
+		chart.meta.stdBPM = 175.0;
+		chart.beat.bpm.clear();
+		chart.beat.bpm.emplace(0, 120.0);
+		chart.beat.bpm.emplace(480, 180.0);
+		chart.beat.bpm.emplace(960, 120.0);
+		chart.beat.timeSig[0] = kson::TimeSig{4, 4};
+		chart.note.bt[0][0] = kson::Interval{480};
+		chart.note.bt[1][960] = kson::Interval{480};
+		REQUIRE(kson::GetEffectiveStdBPM(chart) == Approx(175.0));
+
+		// Without explicit stdBPM, calculate mode BPM up to last note
+		chart.meta.stdBPM = 0.0;
+		// Last note ends at 960+480=1440, so 120 has 960 pulses, 180 has 480 pulses
+		REQUIRE(kson::GetEffectiveStdBPM(chart) == Approx(120.0));
+
+		// Negative stdBPM treated as unset
+		chart.meta.stdBPM = -1.0;
+		REQUIRE(kson::GetEffectiveStdBPM(chart) == Approx(120.0));
+	}
 }
 
 TEST_CASE("Graph Utilities", "[graph]") {
