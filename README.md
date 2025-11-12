@@ -3,12 +3,12 @@ K-Shoot MANIA chart file (.ksh/.kson) parser library written in C++20
 
 ## Status
 - [x] KSH file loading (compatible with `171`)
-- [ ] KSH file saving
-- [ ] KSON file loading
-- [x] KSON file saving (compatible with `0.9.0-beta1`)
+- [x] KSH file saving
+- [x] KSON file loading
+- [x] KSON file saving (compatible with `0.9.0`)
 
 ## KSH/KSON file format specification
-See this repository: https://github.com/m4saka/ksm-chart-format-spec
+See this repository: https://github.com/kshootmania/ksm-chart-format
 
 ## Usage
 ### Library
@@ -43,10 +43,14 @@ Almost all variables are the same as in the KSON specification, but the followin
 - All unsigned numbers in KSON specification are stored as signed numbers.
 
 ### ksh2kson tool
-ksh2kson is a command line tool that converts KSH files to KSON files. Converted KSON files are saved in the same folder with the extension ".kson".
+ksh2kson is a command line tool that converts KSH file to KSON. Converted KSON is output to stdout.
 
 ```bash
-$ ./ksh2kson [KSH file(s)...]
+$ ./ksh2kson [KSH file] > [KSON file]
+
+    or
+
+$ cat [KSH file] | ./ksh2kson > [KSON file]
 ```
 
 ## Compilation
@@ -63,6 +67,10 @@ $ cmake --build build
 ## Dependency
 - [nlohmann/json](https://github.com/nlohmann/json) (included in `include/kson/third_party/nlohmann/json.hpp`)
 - iconv (Linux/macOS)
+
+## Contributors
+
+@m4saka, @123jimin
 
 ## License
 MIT License
