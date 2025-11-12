@@ -7,29 +7,30 @@ namespace kson
 {
 	double EvaluateCurve(double a, double b, double x)
 	{
-		// Curve formula:
+		// Quadratic bezier curve evaluation
+		// Curve formula is as follows (where 0 <= a, b, x <= 1):
 		//   f(x) = 2(1-t)tb + t^2
 		//   t = (a - sqrt(a^2 + x - 2ax)) / (-1 + 2a)
-		//   where 0 <= a, b, x <= 1
+		// Note that this doesn't work when a is 0.5 or near it (both numerator and denominator approaches zero)
+		// In this case, an alternative formula (obtained by multiplying the conjugate) for t can be used:
+		//   t = x / (a + sqrt(a^2 + x - 2ax))
+		// This formula works as long as both x and a are far from zero.
 
 		a = std::clamp(a, 0.0, 1.0);
 		b = std::clamp(b, 0.0, 1.0);
 		x = std::clamp(x, 0.0, 1.0);
 
-		// Handle edge case: a == 0.5 makes denominator zero (fallback to linear)
-		if (AlmostEquals(a, 0.5))
+		// Computes sqrt(a^2 + x - 2ax), 0 when the discriminant is negative
+		const double dSqrt = [a, x]()
 		{
-			return x;
-		}
+			const double discriminant = a * a + x - 2.0 * a * x;
+			return discriminant >= 0.0 ? std::sqrt(discriminant) : 0.0;
+		}();
 
-		const double discriminant = a * a + x - 2.0 * a * x;
-		if (discriminant < 0.0)
-		{
-			// Invalid value (fallback to linear)
-			return x;
-		}
+		const double t = a < 0.25 ? 
+			(a - dSqrt) / (-1.0 + 2.0 * a) :
+			x / (a + dSqrt);
 
-		const double t = (a - std::sqrt(discriminant)) / (-1.0 + 2.0 * a);
 		const double result = 2.0 * (1.0 - t) * t * b + t * t;
 
 		return std::clamp(result, 0.0, 1.0);
