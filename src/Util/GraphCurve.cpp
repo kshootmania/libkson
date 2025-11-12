@@ -21,7 +21,8 @@ namespace kson
 		x = std::clamp(x, 0.0, 1.0);
 
 		// Computes sqrt(a^2 + x - 2ax), 0 when the discriminant is negative
-		const double dSqrt = [a, x](){
+		const double dSqrt = [a, x]()
+		{
 			const double discriminant = a * a + x - 2.0 * a * x;
 			return discriminant >= 0.0 ? std::sqrt(discriminant) : 0.0;
 		}();

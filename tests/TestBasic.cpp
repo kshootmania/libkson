@@ -200,7 +200,8 @@ TEST_CASE("Graph Utilities", "[graph]") {
 	}
 
 	SECTION("Graph with linear curve control point") {
-		for (const double value : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+		for (const double value : {0.0, 0.25, 0.5, 0.75, 1.0})
+		{
 			kson::Graph graph;
 			
 			graph.emplace(0, kson::GraphPoint{0.0, {value, value}});
