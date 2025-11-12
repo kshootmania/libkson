@@ -102,7 +102,7 @@ namespace kson
 		// Returns true if this represents a linear interpolation (no curve)
 		bool isLinear() const
 		{
-			return a == 0.0 && b == 0.0;
+			return a == b;
 		}
 	};
 

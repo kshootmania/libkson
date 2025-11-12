@@ -199,6 +199,16 @@ TEST_CASE("Graph Utilities", "[graph]") {
 		REQUIRE(kson::GraphValueAt(graph, 720) == Approx(1.0));
 	}
 
+	SECTION("Graph with linear curve control point") {
+		for (const float value : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+			kson::Graph graph;
+			
+			graph.emplace(0, kson::GraphPoint{0.0, {value, value}});
+			graph.emplace(480, 1.0);
+
+			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(0.5));
+		}
+	}
 }
 
 TEST_CASE("Note Data", "[note]") {
