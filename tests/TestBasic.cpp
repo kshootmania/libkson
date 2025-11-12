@@ -200,13 +200,51 @@ TEST_CASE("Graph Utilities", "[graph]") {
 	}
 
 	SECTION("Graph with linear curve control point") {
-		for (const float value : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+		for (const double value : {0.0, 0.25, 0.5, 0.75, 1.0}) {
 			kson::Graph graph;
 			
 			graph.emplace(0, kson::GraphPoint{0.0, {value, value}});
 			graph.emplace(480, 1.0);
 
 			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(0.5));
+		}
+	}
+
+	SECTION("Graph with common curve control points") {
+		// Strong ease-in curve
+		{
+			kson::Graph graph;
+			
+			graph.emplace(0, kson::GraphPoint{0.0, {1.0, 0.0}});
+			graph.emplace(480, 1.0);
+
+			REQUIRE(kson::GraphValueAt(graph, 120) == Approx(1.75 - std::sqrt(3.0)));
+			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(1.50 - std::sqrt(2.0)));
+			REQUIRE(kson::GraphValueAt(graph, 360) == Approx(0.25));
+		}
+
+		// Strong ease-out curve
+		{
+			kson::Graph graph;
+			
+			graph.emplace(0, kson::GraphPoint{0.0, {0.0, 1.0}});
+			graph.emplace(480, 1.0);
+
+			REQUIRE(kson::GraphValueAt(graph, 120) == Approx(0.75));
+			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(std::sqrt(2.0) - 0.50));
+			REQUIRE(kson::GraphValueAt(graph, 360) == Approx(std::sqrt(3.0) - 0.75));
+		}
+
+		// Weak ease-out curve, flat end
+		{
+			kson::Graph graph;
+			
+			graph.emplace(0, kson::GraphPoint{0.0, {0.5, 1.0}});
+			graph.emplace(480, 1.0);
+
+			REQUIRE(kson::GraphValueAt(graph, 120) == Approx(0.4375));
+			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(0.7500));
+			REQUIRE(kson::GraphValueAt(graph, 360) == Approx(0.9375));
 		}
 	}
 }
