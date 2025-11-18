@@ -1459,12 +1459,12 @@ namespace
 	}
 }
 
-MetaChartData kson::LoadKSHMetaChartData(std::istream& stream)
+kson::MetaChartData kson::LoadKSHMetaChartData(std::istream& stream)
 {
 	return CreateChartDataFromMetaDataStream<MetaChartData>(stream, nullptr);
 }
 
-MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
+kson::MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -2367,7 +2367,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	return chartData;
 }
 
-ChartData kson::LoadKSHChartData(const std::string& filePath)
+kson::ChartData kson::LoadKSHChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{

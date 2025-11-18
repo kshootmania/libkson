@@ -1113,7 +1113,11 @@ namespace
 		return result;
 	}
 
-	MetaInfo ParseMetaInfo(const nlohmann::json& j, ChartData& chartData)
+	template <typename ChartDataType>
+	MetaInfo ParseMetaInfo(const nlohmann::json& j, ChartDataType& chartData)
+#ifdef __cpp_concepts
+		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
+#endif
 	{
 		MetaInfo meta;
 		
@@ -1338,7 +1342,12 @@ namespace
 		return note;
 	}
 
-	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, ChartData& chartData)
+	template <typename ChartDataType>
+	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, ChartDataType& chartData)
+#ifdef __cpp_concepts
+		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
+#endif
+
 	{
 		BGMPreviewInfo preview;
 		preview.offset = GetWithDefault<std::int32_t>(j, "offset", 0);
@@ -1376,6 +1385,20 @@ namespace
 			bgm.legacy = ParseLegacyBGMInfo(j["legacy"], chartData);
 		}
 		
+		return bgm;
+	}
+
+	MetaBGMInfo ParseMetaBGMInfo(const nlohmann::json& j, MetaChartData& chartData)
+	{
+		MetaBGMInfo bgm;
+		bgm.filename = GetWithDefault<std::string>(j, "filename", "");
+		bgm.vol = GetWithDefault<double>(j, "vol", 1.0);
+
+		if (j.contains("preview"))
+		{
+			bgm.preview = ParseBGMPreviewInfo(j["preview"], chartData);
+		}
+
 		return bgm;
 	}
 
@@ -1722,6 +1745,18 @@ namespace
 		return audio;
 	}
 
+	MetaAudioInfo ParseMetaAudioInfo(const nlohmann::json& j, MetaChartData& chartData)
+	{
+		MetaAudioInfo audio;
+
+		if (j.contains("bgm"))
+		{
+			audio.bgm = ParseMetaBGMInfo(j["bgm"], chartData);
+		}
+
+		return audio;
+	}
+
 	CamGraphs ParseCamGraphs(const nlohmann::json& j, ChartData& chartData)
 	{
 		CamGraphs graphs;
@@ -2048,39 +2083,78 @@ namespace
 	}
 }
 
-kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
+kson::MetaChartData kson::LoadKSONMetaChartData(std::istream& stream)
 {
+	MetaChartData chartData;
+
 	if (!stream.good())
 	{
-		return ErrorType::GeneralIOError;
+		chartData.error = ErrorType::GeneralIOError;
+		return chartData;
 	}
 
-	nlohmann::json json = nlohmann::json::object();
-	Write(json, "format_version", kKSONFormatVersion);
-	Write(json, "meta", ToJSON(chartData.meta));
-	Write(json, "beat", ToJSON(chartData.beat));
-	Write(json, "gauge", ToJSON(chartData.gauge));
-	Write(json, "note", ToJSON(chartData.note));
-	Write(json, "audio", ToJSON(chartData.audio));
-	Write(json, "camera", ToJSON(chartData.camera));
-	Write(json, "bg", ToJSON(chartData.bg));
-	Write(json, "editor", ToJSON(chartData.editor));
-	Write(json, "compat", ToJSON(chartData.compat));
-	Write(json, "impl", chartData.impl);
+	try
+	{
+		nlohmann::json j;
+		stream >> j;
 
-	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
+		// format_versionフィールドの必須チェック
+		if (!j.contains("format_version"))
+		{
+			chartData.error = ErrorType::KSONParseError;
+			chartData.warnings.push_back("Missing required field: format_version");
+			return chartData;
+		}
 
-	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+		if (!j["format_version"].is_number_integer())
+		{
+			chartData.error = ErrorType::KSONParseError;
+			chartData.warnings.push_back("Invalid format_version: must be an integer");
+			return chartData;
+		}
+
+		// Parse each component
+		if (j.contains("meta"))
+		{
+			chartData.meta = ParseMetaInfo<MetaChartData>(j["meta"], chartData);
+		}
+
+		if (j.contains("audio"))
+		{
+			chartData.audio = ParseMetaAudioInfo(j["audio"], chartData);
+		}
+
+		chartData.error = ErrorType::None;
+	}
+	catch (const nlohmann::json::parse_error& e)
+	{
+		chartData.error = ErrorType::KSONParseError;
+		chartData.warnings.push_back("JSON parse error: " + std::string(e.what()));
+	}
+	catch (const nlohmann::json::type_error& e)
+	{
+		chartData.error = ErrorType::KSONParseError;
+		chartData.warnings.push_back("JSON type error: " + std::string(e.what()));
+	}
+	catch (const std::exception& e)
+	{
+		chartData.error = ErrorType::UnknownError;
+		chartData.warnings.push_back("Unexpected error: " + std::string(e.what()));
+	}
+
+	return chartData;
 }
 
-kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
+kson::MetaChartData kson::LoadKSONMetaChartData(const std::string& filePath)
 {
-	std::ofstream ofs(filePath);
-	if (!ofs.good())
+	std::ifstream ifs(filePath);
+	if (!ifs.good())
 	{
-		return ErrorType::CouldNotOpenOutputFileStream;
+		MetaChartData chartData;
+		chartData.error = ErrorType::CouldNotOpenInputFileStream;
+		return chartData;
 	}
-	return kson::SaveKSONChartData(ofs, chartData);
+	return kson::LoadKSONMetaChartData(ifs);
 }
 
 kson::ChartData kson::LoadKSONChartData(std::istream& stream)
@@ -2195,5 +2269,40 @@ kson::ChartData kson::LoadKSONChartData(const std::string& filePath)
 		return chartData;
 	}
 	return kson::LoadKSONChartData(ifs);
+}
+
+kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
+{
+	if (!stream.good())
+	{
+		return ErrorType::GeneralIOError;
+	}
+
+	nlohmann::json json = nlohmann::json::object();
+	Write(json, "format_version", kKSONFormatVersion);
+	Write(json, "meta", ToJSON(chartData.meta));
+	Write(json, "beat", ToJSON(chartData.beat));
+	Write(json, "gauge", ToJSON(chartData.gauge));
+	Write(json, "note", ToJSON(chartData.note));
+	Write(json, "audio", ToJSON(chartData.audio));
+	Write(json, "camera", ToJSON(chartData.camera));
+	Write(json, "bg", ToJSON(chartData.bg));
+	Write(json, "editor", ToJSON(chartData.editor));
+	Write(json, "compat", ToJSON(chartData.compat));
+	Write(json, "impl", chartData.impl);
+
+	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
+
+	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+}
+
+kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
+{
+	std::ofstream ofs(filePath);
+	if (!ofs.good())
+	{
+		return ErrorType::CouldNotOpenOutputFileStream;
+	}
+	return kson::SaveKSONChartData(ofs, chartData);
 }
 #endif
