@@ -865,7 +865,7 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 		nlohmann::json json1 = nlohmann::json::parse(ksonString1);
 		nlohmann::json json2 = nlohmann::json::parse(ksonString2);
 
-		// KSH→KSON→KSH→KSONなので、KSHで表現可能な情報は全て一致するはず
+		// KSH->KSON->KSH->KSON, so all lines representable in KSH should match
 		INFO("File: " << filename);
 		REQUIRE(json1["format_version"] == json2["format_version"]);
 		REQUIRE(json1["meta"] == json2["meta"]);

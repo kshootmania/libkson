@@ -2098,7 +2098,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream)
 		nlohmann::json j;
 		stream >> j;
 
-		// format_versionフィールドの必須チェック
+		// Check for required format_version field
 		if (!j.contains("format_version"))
 		{
 			chartData.error = ErrorType::KSONParseError;
