@@ -72,8 +72,10 @@ namespace kson
 	using TiltValue = std::variant<AutoTiltType, TiltGraphPoint>;
 
 	// Get scale value from AutoTiltType
-	double GetAutoTiltScale(AutoTiltType type);
+	[[nodiscard]]
+	double GetAutoTiltScale(AutoTiltType type) noexcept;
 
 	// Check if AutoTiltType is a keep type
-	bool IsKeepAutoTiltType(AutoTiltType type);
+	[[nodiscard]]
+	bool IsKeepAutoTiltType(AutoTiltType type) noexcept;
 }

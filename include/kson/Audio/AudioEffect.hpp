@@ -22,8 +22,10 @@ namespace kson
 		PeakingFilter,
 	};
 
+	[[nodiscard]]
 	AudioEffectType StrToAudioEffectType(std::string_view str);
 
+	[[nodiscard]]
 	std::string_view AudioEffectTypeToStr(AudioEffectType type);
 
 	using AudioEffectParams = Dict<std::string>;
@@ -43,11 +45,14 @@ namespace kson
 		Dict<FXLane<AudioEffectParams>> longEvent;
 
 		// Note: This is inefficient, so be careful when using it
+		[[nodiscard]]
 		bool defContains(std::string_view name) const;
 
 		// Note: This is inefficient, so be careful when using it
+		[[nodiscard]]
 		const AudioEffectDef& defByName(std::string_view name) const;
 
+		[[nodiscard]]
 		Dict<AudioEffectDef> defAsDict() const;
 	};
 

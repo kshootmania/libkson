@@ -1,5 +1,6 @@
 ﻿#include "kson/Error.hpp"
 
+[[nodiscard]]
 const char *kson::GetErrorString(kson::ErrorType errorType)
 {
 	switch (errorType)

@@ -41,6 +41,7 @@ namespace
 	};
 }
 
+[[nodiscard]]
 kson::AudioEffectType kson::StrToAudioEffectType(std::string_view str)
 {
 	if (s_strToAudioEffectType.contains(str))
@@ -53,6 +54,7 @@ kson::AudioEffectType kson::StrToAudioEffectType(std::string_view str)
 	}
 }
 
+[[nodiscard]]
 std::string_view kson::AudioEffectTypeToStr(AudioEffectType type)
 {
 	if (s_audioEffectTypeToStr.contains(type))
@@ -65,12 +67,14 @@ std::string_view kson::AudioEffectTypeToStr(AudioEffectType type)
 	}
 }
 
+[[nodiscard]]
 bool kson::AudioEffectFXInfo::defContains(std::string_view name) const
 {
 	// Note: This is inefficient, so we recommend caching the result of defAsDict if this is used often
 	return std::any_of(def.begin(), def.end(), [name](const auto& kvp) { return kvp.name == name; });
 }
 
+[[nodiscard]]
 const AudioEffectDef& kson::AudioEffectFXInfo::defByName(std::string_view name) const
 {
 	// Note: This is inefficient, so we recommend caching the result of defAsDict if this is used often
@@ -82,6 +86,7 @@ const AudioEffectDef& kson::AudioEffectFXInfo::defByName(std::string_view name) 
 	return it->v;
 }
 
+[[nodiscard]]
 Dict<AudioEffectDef> kson::AudioEffectFXInfo::defAsDict() const
 {
 	Dict<AudioEffectDef> ret;
@@ -92,6 +97,7 @@ Dict<AudioEffectDef> kson::AudioEffectFXInfo::defAsDict() const
 	return ret;
 }
 
+[[nodiscard]]
 bool kson::AudioEffectLaserInfo::defContains(std::string_view name) const
 {
 	// Note: If you call this function frequently, it's recommended to first call defAsDict to get the dictionary and use it,
@@ -99,6 +105,7 @@ bool kson::AudioEffectLaserInfo::defContains(std::string_view name) const
 	return std::any_of(def.begin(), def.end(), [name](const auto& kvp) { return kvp.name == name; });
 }
 
+[[nodiscard]]
 const AudioEffectDef& kson::AudioEffectLaserInfo::defByName(std::string_view name) const
 {
 	// Note: If you call this function frequently, it's recommended to first call defAsDict to get the dictionary and use it,
@@ -111,6 +118,7 @@ const AudioEffectDef& kson::AudioEffectLaserInfo::defByName(std::string_view nam
 	return it->v;
 }
 
+[[nodiscard]]
 Dict<AudioEffectDef> kson::AudioEffectLaserInfo::defAsDict() const
 {
 	Dict<AudioEffectDef> ret;

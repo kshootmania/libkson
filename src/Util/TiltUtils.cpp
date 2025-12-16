@@ -2,6 +2,7 @@
 #include "kson/Util/GraphCurve.hpp"
 #include <variant>
 
+[[nodiscard]]
 std::optional<double> kson::ManualTiltValueAt(const ByPulse<TiltValue>& tiltValue, Pulse currentPulse)
 {
 	if (tiltValue.empty())
@@ -55,6 +56,7 @@ std::optional<double> kson::ManualTiltValueAt(const ByPulse<TiltValue>& tiltValu
 	}
 }
 
+[[nodiscard]]
 double kson::AutoTiltScaleAt(const ByPulse<TiltValue>& tiltValue, Pulse currentPulse)
 {
 	if (tiltValue.empty())
@@ -74,6 +76,7 @@ double kson::AutoTiltScaleAt(const ByPulse<TiltValue>& tiltValue, Pulse currentP
 	return 1.0;
 }
 
+[[nodiscard]]
 bool kson::AutoTiltKeepAt(const ByPulse<TiltValue>& tiltValue, Pulse currentPulse)
 {
 	if (tiltValue.empty())

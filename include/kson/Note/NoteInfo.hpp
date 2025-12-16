@@ -3,8 +3,8 @@
 
 namespace kson
 {
-	constexpr std::int32_t kLaserXScale1x = 1;
-	constexpr std::int32_t kLaserXScale2x = 2;
+	inline constexpr std::int32_t kLaserXScale1x = 1;
+	inline constexpr std::int32_t kLaserXScale2x = 2;
 
 	struct LaserSection
 	{
@@ -13,7 +13,8 @@ namespace kson
 		std::int32_t w = kLaserXScale1x; // 1-2, sets whether the laser section is 2x-widen or not
 
 		// Returns 2x-widen or not
-		bool wide() const
+		[[nodiscard]]
+		bool wide() const noexcept
 		{
 			return w == kLaserXScale2x;
 		}

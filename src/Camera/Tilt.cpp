@@ -1,6 +1,7 @@
 ﻿#include "kson/Camera/Tilt.hpp"
 
-double kson::GetAutoTiltScale(AutoTiltType type)
+[[nodiscard]]
+double kson::GetAutoTiltScale(AutoTiltType type) noexcept
 {
 	switch (type)
 	{
@@ -20,7 +21,8 @@ double kson::GetAutoTiltScale(AutoTiltType type)
 	}
 }
 
-bool kson::IsKeepAutoTiltType(AutoTiltType type)
+[[nodiscard]]
+bool kson::IsKeepAutoTiltType(AutoTiltType type) noexcept
 {
 	return type == AutoTiltType::kKeepNormal ||
 		type == AutoTiltType::kKeepBigger ||

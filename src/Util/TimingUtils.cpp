@@ -2,11 +2,13 @@
 #include <optional>
 #include <cassert>
 
+[[nodiscard]]
 kson::Pulse kson::TimeSigOneMeasurePulse(const TimeSig& timeSig)
 {
 	return kResolution4 * static_cast<Pulse>(timeSig.n) / static_cast<Pulse>(timeSig.d);
 }
 
+[[nodiscard]]
 kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 {
 	// There must be at least one tempo change
@@ -60,11 +62,13 @@ kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 	return cache;
 }
 
+[[nodiscard]]
 double kson::PulseToMs(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return PulseToSec(pulse, beatInfo, cache) * 1000;
 }
 
+[[nodiscard]]
 double kson::PulseToSec(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest BPM change
@@ -77,11 +81,13 @@ double kson::PulseToSec(Pulse pulse, const BeatInfo& beatInfo, const TimingCache
 	return cache.bpmChangeSec.at(nearestBPMChangePulse) + static_cast<double>(pulse - nearestBPMChangePulse) / kResolution * 60 / nearestBPM;
 }
 
+[[nodiscard]]
 double kson::PulseDoubleToMs(double pulseDouble, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return PulseDoubleToSec(pulseDouble, beatInfo, cache) * 1000;
 }
 
+[[nodiscard]]
 double kson::PulseDoubleToSec(double pulseDouble, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest BPM change
@@ -94,11 +100,13 @@ double kson::PulseDoubleToSec(double pulseDouble, const BeatInfo& beatInfo, cons
 	return cache.bpmChangeSec.at(nearestBPMChangePulse) + (pulseDouble - static_cast<double>(nearestBPMChangePulse)) / kResolution * 60 / nearestBPM;
 }
 
+[[nodiscard]]
 kson::Pulse kson::MsToPulse(double ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return SecToPulse(ms / 1000, beatInfo, cache);
 }
 
+[[nodiscard]]
 kson::Pulse kson::SecToPulse(double sec, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest tempo change
@@ -114,11 +122,13 @@ kson::Pulse kson::SecToPulse(double sec, const BeatInfo& beatInfo, const TimingC
 	return pulse;
 }
 
+[[nodiscard]]
 double kson::MsToPulseDouble(double ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return SecToPulseDouble(ms / 1000, beatInfo, cache);
 }
 
+[[nodiscard]]
 double kson::SecToPulseDouble(double sec, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest tempo change
@@ -134,6 +144,7 @@ double kson::SecToPulseDouble(double sec, const BeatInfo& beatInfo, const Timing
 	return pulseDouble;
 }
 
+[[nodiscard]]
 std::int64_t kson::PulseToMeasureIdx(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -149,16 +160,19 @@ std::int64_t kson::PulseToMeasureIdx(Pulse pulse, const BeatInfo& beatInfo, cons
 	return measureCount;
 }
 
+[[nodiscard]]
 std::int64_t kson::MsToMeasureIdx(double ms, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return SecToMeasureIdx(ms / 1000, beatInfo, cache);
 }
 
+[[nodiscard]]
 std::int64_t kson::SecToMeasureIdx(double sec, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return PulseToMeasureIdx(SecToPulse(sec, beatInfo, cache), beatInfo, cache);
 }
 
+[[nodiscard]]
 kson::Pulse kson::MeasureIdxToPulse(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -174,6 +188,7 @@ kson::Pulse kson::MeasureIdxToPulse(std::int64_t measureIdx, const BeatInfo& bea
 	return pulse;
 }
 
+[[nodiscard]]
 kson::Pulse kson::MeasureValueToPulse(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -190,6 +205,7 @@ kson::Pulse kson::MeasureValueToPulse(double measureValue, const BeatInfo& beatI
 	return pulse;
 }
 
+[[nodiscard]]
 double kson::MeasureValueToPulseDouble(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -206,26 +222,31 @@ double kson::MeasureValueToPulseDouble(double measureValue, const BeatInfo& beat
 	return pulseDouble;
 }
 
+[[nodiscard]]
 double kson::MeasureIdxToMs(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return MeasureIdxToSec(measureIdx, beatInfo, cache) * 1000;
 }
 
+[[nodiscard]]
 double kson::MeasureIdxToSec(std::int64_t measureIdx, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return PulseToSec(MeasureIdxToPulse(measureIdx, beatInfo, cache), beatInfo, cache);
 }
 
+[[nodiscard]]
 double kson::MeasureValueToMs(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return MeasureValueToSec(measureValue, beatInfo, cache) * 1000;
 }
 
+[[nodiscard]]
 double kson::MeasureValueToSec(double measureValue, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	return PulseToSec(MeasureValueToPulse(measureValue, beatInfo, cache), beatInfo, cache);
 }
 
+[[nodiscard]]
 bool kson::IsBarLinePulse(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -238,6 +259,7 @@ bool kson::IsBarLinePulse(Pulse pulse, const BeatInfo& beatInfo, const TimingCac
 	return ((pulse - nearestTimeSigChangePulse) % TimeSigOneMeasurePulse(nearestTimeSig)) == 0;
 }
 
+[[nodiscard]]
 double kson::TempoAt(Pulse pulse, const BeatInfo& beatInfo)
 {
 	// Fetch the nearest BPM change
@@ -245,6 +267,7 @@ double kson::TempoAt(Pulse pulse, const BeatInfo& beatInfo)
 	return ValueItrAt(beatInfo.bpm, pulse)->second;
 }
 
+[[nodiscard]]
 const kson::TimeSig& kson::TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, const TimingCache& cache)
 {
 	// Fetch the nearest time signature change
@@ -254,6 +277,7 @@ const kson::TimeSig& kson::TimeSigAt(Pulse pulse, const BeatInfo& beatInfo, cons
 	return beatInfo.timeSig.at(nearestTimeSigChangeMeasureIdx);
 }
 
+[[nodiscard]]
 kson::Pulse kson::LastNoteEndY(const kson::NoteInfo& noteInfo)
 {
 	auto maxPulse = kson::Pulse{ 0 };
@@ -284,6 +308,7 @@ kson::Pulse kson::LastNoteEndY(const kson::NoteInfo& noteInfo)
 	return maxPulse;
 }
 
+[[nodiscard]]
 kson::Pulse kson::LastNoteEndYButtonLane(const kson::ByPulse<kson::Interval>& lane)
 {
 	if (lane.empty())
@@ -296,6 +321,7 @@ kson::Pulse kson::LastNoteEndYButtonLane(const kson::ByPulse<kson::Interval>& la
 	return y + lastNote.length;
 }
 
+[[nodiscard]]
 kson::Pulse kson::LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>& lane)
 {
 	if (lane.empty())
@@ -314,6 +340,7 @@ kson::Pulse kson::LastNoteEndYLaserLane(const kson::ByPulse<kson::LaserSection>&
 	return y + ry;
 }
 
+[[nodiscard]]
 double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 {
 	constexpr double kErrorBPM = 120.0;
@@ -395,6 +422,7 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 	return static_cast<double>(modeBPM);
 }
 
+[[nodiscard]]
 double kson::GetEffectiveStdBPM(const ChartData& chartData)
 {
 	if (chartData.meta.stdBPM > 0.0)

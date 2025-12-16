@@ -15,22 +15,22 @@
 
 namespace kson
 {
-	constexpr std::int32_t kNumBTLanes = 4;
-	constexpr std::int32_t kNumFXLanes = 2;
-	constexpr std::int32_t kNumLaserLanes = 2;
+	inline constexpr std::int32_t kNumBTLanes = 4;
+	inline constexpr std::int32_t kNumFXLanes = 2;
+	inline constexpr std::int32_t kNumLaserLanes = 2;
 
-	constexpr std::size_t kNumBTLanesSZ = std::size_t{ kNumBTLanes };
-	constexpr std::size_t kNumFXLanesSZ = std::size_t{ kNumFXLanes };
-	constexpr std::size_t kNumLaserLanesSZ = std::size_t{ kNumLaserLanes };
+	inline constexpr std::size_t kNumBTLanesSZ = std::size_t{ kNumBTLanes };
+	inline constexpr std::size_t kNumFXLanesSZ = std::size_t{ kNumFXLanes };
+	inline constexpr std::size_t kNumLaserLanesSZ = std::size_t{ kNumLaserLanes };
 
 	using Pulse = std::int64_t;
 	using RelPulse = std::int64_t;
 
-	constexpr Pulse kResolution = 240;
-	constexpr Pulse kResolution4 = kResolution * 4;
+	inline constexpr Pulse kResolution = 240;
+	inline constexpr Pulse kResolution4 = kResolution * 4;
 
 	// Curve subdivision interval for pre-conversion
-	constexpr Pulse kCurveSubdivisionInterval = kResolution / 16;
+	inline constexpr Pulse kCurveSubdivisionInterval = kResolution / 16;
 
 	// The difference between Pulse and RelPulse is only for annotation
 	static_assert(std::is_same_v<Pulse, RelPulse>);
@@ -100,7 +100,8 @@ namespace kson
 		}
 
 		// Returns true if this represents a linear interpolation (no curve)
-		bool isLinear() const
+		[[nodiscard]]
+		bool isLinear() const noexcept
 		{
 			return a == b;
 		}
@@ -160,6 +161,7 @@ namespace kson
 	}
 
 	template <typename T, typename U>
+	[[nodiscard]]
 	U ValueAtOrDefault(const std::map<T, U>& map, T key, const U& defaultValue)
 	{
 		const auto itr = ValueItrAt(map, key);
@@ -171,6 +173,7 @@ namespace kson
 	}
 
 	template <typename T>
+	[[nodiscard]]
 	std::size_t CountInRange(const ByPulse<T>& map, Pulse start, Pulse end)
 	{
 		static_assert(std::is_signed_v<Pulse>);
@@ -186,6 +189,7 @@ namespace kson
 	}
 
 	template <typename T>
+	[[nodiscard]]
 	auto FirstInRange(const ByPulse<T>& map, Pulse start, Pulse end)
 	{
 		static_assert(std::is_signed_v<Pulse>);
@@ -199,7 +203,7 @@ namespace kson
 		return itr;
 	}
 
-	inline double RemoveFloatingPointError(double value)
+	inline double RemoveFloatingPointError(double value) noexcept
 	{
 		// Round the value to eight decimal places (e.g. "0.700000004" -> "0.7")
 		const double rounded = std::round(value * 1e8) / 1e8;
@@ -216,7 +220,8 @@ namespace kson
 		}
 	}
 
-	inline bool AlmostEquals(double a, double b)
+	[[nodiscard]]
+	inline bool AlmostEquals(double a, double b) noexcept
 	{
 		return std::round(a * 1e8) == std::round(b * 1e8);
 	}

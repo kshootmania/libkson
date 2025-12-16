@@ -1,10 +1,12 @@
 ﻿#include "kson/Audio/BGMInfo.hpp"
 
+[[nodiscard]]
 bool kson::LegacyBGMInfo::empty() const
 {
 	return filenameF.empty() && filenameP.empty() && filenameFP.empty();
 }
 
+[[nodiscard]]
 std::vector<std::string> kson::LegacyBGMInfo::toStrArray() const
 {
 	if (!filenameFP.empty())

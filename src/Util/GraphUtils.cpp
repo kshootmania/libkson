@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 
+[[nodiscard]]
 double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 {
 	if (graph.empty())
@@ -43,6 +44,7 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	return std::lerp(point1.v.vf, point2.v.v, curveValue);
 }
 
+[[nodiscard]]
 kson::Graph kson::BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPulse<RelPulse>& stop)
 {
 	if (stop.empty())

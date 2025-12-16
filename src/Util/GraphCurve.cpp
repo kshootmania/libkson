@@ -5,6 +5,7 @@
 
 namespace kson
 {
+	[[nodiscard]]
 	double EvaluateCurve(double a, double b, double x)
 	{
 		// Quadratic bezier curve evaluation
@@ -36,6 +37,7 @@ namespace kson
 		return std::clamp(result, 0.0, 1.0);
 	}
 
+	[[nodiscard]]
 	double EvaluateCurve(const GraphCurveValue& curve, double x)
 	{
 		if (curve.isLinear())
@@ -45,6 +47,7 @@ namespace kson
 		return EvaluateCurve(curve.a, curve.b, x);
 	}
 
+	[[nodiscard]]
 	Graph ExpandCurveSegments(const Graph& graph, Pulse subdivisionInterval)
 	{
 		if (subdivisionInterval <= 0)
@@ -107,6 +110,7 @@ namespace kson
 		return result;
 	}
 
+	[[nodiscard]]
 	GraphSection ExpandCurveSegments(const GraphSection& graphSection, RelPulse subdivisionInterval)
 	{
 		if (subdivisionInterval <= 0)
@@ -169,6 +173,7 @@ namespace kson
 		return result;
 	}
 
+	[[nodiscard]]
 	LaserSection ExpandCurveSegments(const LaserSection& laserSection, RelPulse subdivisionInterval)
 	{
 		if (subdivisionInterval <= 0)

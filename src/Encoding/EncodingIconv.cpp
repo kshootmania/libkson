@@ -4,6 +4,7 @@
 #include <cerrno>
 #include <iconv.h>
 
+[[nodiscard]]
 std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 {
 	// Convert Shift-JIS (CP932) to UTF-8

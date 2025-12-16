@@ -24,6 +24,12 @@ target_include_directories(kson_test PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
+if(KSON_WITHOUT_JSON_DEPENDENCY)
+    target_compile_definitions(kson_test
+        PUBLIC KSON_WITHOUT_JSON_DEPENDENCY
+    )
+endif()
+
 # Link libraries
 target_link_libraries(kson_test 
     PRIVATE 

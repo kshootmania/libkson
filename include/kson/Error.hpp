@@ -19,5 +19,6 @@ namespace kson
 		UnknownError = 90000,
 	};
 
+	[[nodiscard]]
 	const char *GetErrorString(ErrorType errorType);
 }

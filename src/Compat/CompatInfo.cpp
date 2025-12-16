@@ -1,6 +1,7 @@
 ﻿#include "kson/Compat/CompatInfo.hpp"
 #include <cstdlib>
 
+[[nodiscard]]
 bool kson::CompatInfo::isKSHVersionOlderThan(int kshVersionInt) const
 {
 	if (kshVersion.empty())

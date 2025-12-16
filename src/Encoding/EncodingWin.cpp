@@ -11,6 +11,7 @@ namespace
 	constexpr UINT kShiftJISCodePage = 932;
 }
 
+[[nodiscard]]
 std::string kson::Encoding::ShiftJISToUTF8(std::string_view shiftJISStr)
 {
 	// Convert Shift-JIS to UTF-16
