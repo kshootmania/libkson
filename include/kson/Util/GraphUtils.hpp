@@ -5,11 +5,14 @@
 
 namespace kson
 {
+	[[nodiscard]]
 	double GraphValueAt(const Graph& graph, Pulse pulse);
 
+	[[nodiscard]]
 	Graph BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPulse<RelPulse>& stop);
 
 	template <class GS>
+	[[nodiscard]]
 	typename ByPulse<GS>::const_iterator GraphSectionAt(const ByPulse<GS>& graphSections, Pulse pulse)
 #ifdef __cpp_concepts
 		requires std::is_same_v<GS, GraphSection> || std::is_same_v<GS, LaserSection>
@@ -27,6 +30,7 @@ namespace kson
 	}
 
 	template <class GS>
+	[[nodiscard]]
 	std::optional<double> GraphSectionValueAt(const ByPulse<GS>& graphSections, Pulse pulse)
 #ifdef __cpp_concepts
 		requires std::is_same_v<GS, GraphSection> || std::is_same_v<GS, LaserSection>
@@ -71,6 +75,7 @@ namespace kson
 	}
 
 	template <class GS>
+	[[nodiscard]]
 	double GraphSectionValueAtWithDefault(const ByPulse<GS>& graphSections, Pulse pulse, double defaultValue)
 #ifdef __cpp_concepts
 		requires std::is_same_v<GS, GraphSection> || std::is_same_v<GS, LaserSection>
@@ -88,6 +93,7 @@ namespace kson
 	}
 
 	template <class GS>
+	[[nodiscard]]
 	std::optional<GraphPoint> GraphPointAt(const ByPulse<GS>& graphSections, Pulse pulse)
 	{
 		if (graphSections.empty())
