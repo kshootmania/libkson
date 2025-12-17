@@ -15,6 +15,7 @@ namespace kson
 		std::string kshVersion;
 		KSHUnknownInfo kshUnknown;
 
+		[[nodiscard]]
 		bool isKSHVersionOlderThan(int kshVersionInt) const;
 	};
 }

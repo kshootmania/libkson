@@ -13,6 +13,7 @@ namespace kson
 		std::int32_t w = kLaserXScale1x; // 1-2, sets whether the laser section is 2x-widen or not
 
 		// Returns 2x-widen or not
+		[[nodiscard]]
 		bool wide() const
 		{
 			return w == kLaserXScale2x;
