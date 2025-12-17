@@ -70,7 +70,7 @@ $ cmake --build build
 
 ## Contributors
 
-@m4saka, @123jimin
+@m4saka, @123jimin, @mikomikotaishi
 
 ## License
 MIT License
