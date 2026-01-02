@@ -330,9 +330,11 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 	}
 
 	// Calculate total pulse duration for each BPM value
-	std::unordered_map<std::int32_t, RelPulse> bpmTotalPulses;
+	// BPM is multiplied by kBPMScale to preserve up to 3 decimal places
+	constexpr std::int64_t kBPMScale = 1000;
+	std::unordered_map<std::int64_t, RelPulse> bpmTotalPulses;
 	Pulse prevY = Pulse{ 0 };
-	std::optional<std::int32_t> prevBPMInt;
+	std::optional<std::int64_t> prevBPMInt;
 	for (const auto& [y, bpm] : beatInfo.bpm)
 	{
 		// BPM changes after lastPulse are ignored
@@ -352,7 +354,7 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 		}
 
 		prevY = y;
-		prevBPMInt = static_cast<std::int32_t>(bpm);
+		prevBPMInt = static_cast<std::int64_t>(bpm * kBPMScale);
 	}
 
 	// Add duration for the last BPM change
@@ -366,7 +368,7 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 		// Only one BPM change exists
 		if (prevBPMInt.has_value())
 		{
-			return static_cast<double>(prevBPMInt.value());
+			return static_cast<double>(prevBPMInt.value()) / kBPMScale;
 		}
 		assert(false && "bpmTotalPulses must not be empty");
 		return kErrorBPM;
@@ -392,7 +394,7 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 	}
 
 	const auto& [modeBPM, modeBPMTotalPulse] = *itr;
-	return static_cast<double>(modeBPM);
+	return static_cast<double>(modeBPM) / kBPMScale;
 }
 
 double kson::GetEffectiveStdBPM(const ChartData& chartData)

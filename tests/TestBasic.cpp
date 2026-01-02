@@ -141,13 +141,21 @@ TEST_CASE("Timing Utilities", "[timing]") {
 		// 150: 480 + 840 = 1320, 180: 960, 200: 720
 		REQUIRE(kson::GetModeBPM(beat, 3000) == Approx(150.0));
 
-		// Decimal values round to same integer
+		// Decimal values are distinguished up to 3 decimal places
 		beat.bpm.clear();
 		beat.bpm.emplace(0, 150.2);
 		beat.bpm.emplace(480, 150.7);
 		beat.bpm.emplace(960, 180.0);
-		// Both 150.2 and 150.7 count as 150
-		REQUIRE(kson::GetModeBPM(beat, 1200) == Approx(150.0));
+		// 150.2 and 150.7 each have 480 pulses, higher BPM (150.7) wins
+		REQUIRE(kson::GetModeBPM(beat, 1200) == Approx(150.7));
+
+		// 4th decimal place is ignored (truncated to 3 decimal places)
+		beat.bpm.clear();
+		beat.bpm.emplace(0, 150.1231);
+		beat.bpm.emplace(480, 150.1239);
+		beat.bpm.emplace(960, 120.0);
+		// 150.1231 and 150.1239 both become 150.123: 960 pulses, 120.0: 240 pulses
+		REQUIRE(kson::GetModeBPM(beat, 1200) == Approx(150.123).epsilon(0.0001));
 
 		// BPM changes after lastPulse are ignored
 		beat.bpm.clear();
