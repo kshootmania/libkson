@@ -1,6 +1,6 @@
 ﻿#include "kson/Util/TimingUtils.hpp"
 #include <optional>
-#include <cassert>
+#include <iostream>
 
 kson::Pulse kson::TimeSigOneMeasurePulse(const TimeSig& timeSig)
 {
@@ -9,17 +9,26 @@ kson::Pulse kson::TimeSigOneMeasurePulse(const TimeSig& timeSig)
 
 kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 {
-	// There must be at least one tempo change
-	assert(beatInfo.bpm.size() > 0);
+	BeatInfo beatInfoClone = beatInfo;
 
-	// Tempo at zero position must be set
-	assert(beatInfo.bpm.contains(0));
+	// Ensure there is at least one tempo change at zero
+	if (beatInfoClone.bpm.empty())
+	{
+		std::cerr << "[kson warning] CreateTimingCache: BPM is empty, using default 120.0" << std::endl;
+		beatInfoClone.bpm.emplace(0, 120.0);
+	}
+	else if (!beatInfoClone.bpm.contains(0))
+	{
+		std::cerr << "[kson warning] CreateTimingCache: BPM at pulse 0 is missing, using first value" << std::endl;
+		beatInfoClone.bpm.emplace(0, beatInfoClone.bpm.begin()->second);
+	}
 
-	// There must be at least one time signature change
-	assert(beatInfo.timeSig.size() > 0);
-
-	// Time signature at zero position must be set
-	assert(beatInfo.timeSig.contains(0));
+	// Ensure there is at least one time signature change at zero
+	if (!beatInfoClone.timeSig.contains(0))
+	{
+		std::cerr << "[kson warning] CreateTimingCache: Time signature at measure 0 is missing, using default 4/4" << std::endl;
+		beatInfoClone.timeSig.emplace(0, TimeSig{ 4, 4 });
+	}
 
 	TimingCache cache;
 
@@ -34,8 +43,8 @@ kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 	// Calculate sec for each tempo change
 	{
 		double sec = 0.0;
-		auto prevItr = beatInfo.bpm.cbegin();
-		for (auto itr = std::next(prevItr); itr != beatInfo.bpm.cend(); ++itr)
+		auto prevItr = beatInfoClone.bpm.cbegin();
+		for (auto itr = std::next(prevItr); itr != beatInfoClone.bpm.cend(); ++itr)
 		{
 			sec += static_cast<double>(itr->first - prevItr->first) / kResolution * 60 / prevItr->second;
 			cache.bpmChangeSec[itr->first] = sec;
@@ -47,8 +56,8 @@ kson::TimingCache kson::CreateTimingCache(const BeatInfo& beatInfo)
 	// Calculate measure count for each time signature change
 	{
 		Pulse pulse = 0;
-		auto prevItr = beatInfo.timeSig.cbegin();
-		for (auto itr = std::next(prevItr); itr != beatInfo.timeSig.cend(); ++itr)
+		auto prevItr = beatInfoClone.timeSig.cbegin();
+		for (auto itr = std::next(prevItr); itr != beatInfoClone.timeSig.cend(); ++itr)
 		{
 			pulse += (itr->first - prevItr->first) * TimeSigOneMeasurePulse(prevItr->second);
 			cache.timeSigChangePulse[itr->first] = pulse;
