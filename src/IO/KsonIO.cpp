@@ -553,7 +553,7 @@ namespace
 		nlohmann::json j = nlohmann::json::object();
 		WriteByPulse(j, "bpm", d.bpm);
 		WriteTimeSigByMeasureIdx(j, "time_sig", d.timeSig);
-		WriteGraph(j, "scroll_speed", d.scrollSpeed);
+		WriteGraph(j, "scroll_speed", d.scrollSpeed, 1.0);
 		WriteByPulse(j, "stop", d.stop);
 		return j;
 	}
