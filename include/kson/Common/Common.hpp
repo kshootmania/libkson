@@ -203,6 +203,18 @@ namespace kson
 		return itr;
 	}
 
+	template <typename T>
+	[[nodiscard]]
+	auto IntervalAt(const ByPulse<T>& map, Pulse pulse)
+	{
+		const auto itr = ValueItrAt(map, pulse);
+		if (itr != map.end() && itr->first <= pulse && pulse < itr->first + itr->second.length)
+		{
+			return itr;
+		}
+		return map.end();
+	}
+
 	[[nodiscard]]
 	inline double RemoveFloatingPointError(double value)
 	{
