@@ -47,4 +47,7 @@ namespace kson
 
 		std::vector<std::string> warnings;
 	};
+
+	[[nodiscard]]
+	ChartData CreateEditorDefaultChartData();
 }
