@@ -1805,6 +1805,27 @@ TEST_CASE("BPM clamping on KSH output", "[ksh_io][bpm_output]") {
 	}
 }
 
+TEST_CASE("KSH bg output deduplication", "[ksh_io][bg]") {
+	kson::ChartData chartData;
+	chartData.meta.title = "test";
+
+	SECTION("Different bg filenames outputs both") {
+		chartData.bg.legacy.bg[0].filename = "bg1";
+		chartData.bg.legacy.bg[1].filename = "bg2";
+		std::ostringstream oss;
+		kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(oss.str().find("bg=bg1;bg2") != std::string::npos);
+	}
+
+	SECTION("Same bg filenames outputs only one") {
+		chartData.bg.legacy.bg[0].filename = "bg1";
+		chartData.bg.legacy.bg[1].filename = "bg1";
+		std::ostringstream oss;
+		kson::SaveKSHChartData(oss, chartData);
+		REQUIRE(oss.str().find("bg=bg1\r\n") != std::string::npos);
+	}
+}
+
 TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 	constexpr kson::Pulse kMeasurePulse = kson::kResolution4;
 

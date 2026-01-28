@@ -677,7 +677,8 @@ namespace
 			stream << "bg=" << bg.legacy.bg[0].filename;
 
 			// Second bg (when gauge >= 70%)
-			if (bg.legacy.bg.size() > 1 && !bg.legacy.bg[1].filename.empty())
+			if (bg.legacy.bg.size() > 1 && !bg.legacy.bg[1].filename.empty() &&
+				bg.legacy.bg[0].filename != bg.legacy.bg[1].filename)
 			{
 				stream << ";" << bg.legacy.bg[1].filename;
 			}
