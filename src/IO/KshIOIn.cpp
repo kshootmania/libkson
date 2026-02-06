@@ -783,11 +783,22 @@ namespace
 
 			auto& data = m_inserter.data();
 
-			// Always publish long_event when fx-l=/fx-r= is explicitly specified (for round-trip compatibility)
-			// This function is only called when fx-l=/fx-r= exists, so we don't need to check for value changes
-			if (!audioEffectStr.empty() || m_inserter.prepared())
+			if (isLegacyChar)
 			{
-				publishLongFXAudioEffectEvent(time, audioEffectStr, audioEffectParamStr);
+				// For legacy characters, only publish long_event when the audio effect or its parameters change
+				if (data.audioEffectStr != audioEffectStr || data.audioEffectParamStr != audioEffectParamStr)
+				{
+					publishLongFXAudioEffectEvent(time, audioEffectStr, audioEffectParamStr);
+				}
+			}
+			else
+			{
+				// Always publish long_event when fx-l=/fx-r= is explicitly specified (for round-trip compatibility)
+				// This function is only called when fx-l=/fx-r= exists, so we don't need to check for value changes
+				if (!audioEffectStr.empty() || m_inserter.prepared())
+				{
+					publishLongFXAudioEffectEvent(time, audioEffectStr, audioEffectParamStr);
+				}
 			}
 
 			data.audioEffectStr = audioEffectStr;
