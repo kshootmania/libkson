@@ -1879,7 +1879,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKs
 					}
 					else if (key == "rotation_deg")
 					{
-						const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(value));
+						const double dValue = ParseNumeric<double>(value);
 						if (std::abs(dValue) <= kRotationDegAbsMax)
 						{
 							InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDeg, time, dValue);

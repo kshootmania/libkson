@@ -1789,7 +1789,7 @@ namespace
 					.message = "rotation_deg value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
 				});
 			}
-			stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedV)) << "\r\n";
+			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
@@ -1803,7 +1803,7 @@ namespace
 						.message = "rotation_deg vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
 					});
 				}
-				stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedVf)) << "\r\n";
+				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
 			}
 
 			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
