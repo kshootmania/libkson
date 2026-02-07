@@ -1059,6 +1059,7 @@ namespace
 		ChartData* m_pTargetChartData = nullptr;
 		KshParserDiag* m_pKshDiag = nullptr;
 		std::size_t m_targetLaneIdx = 0;
+		bool m_sub32thSlamReported = false;
 
 	public:
 		PreparedLaserSection() = default;
@@ -1099,7 +1100,7 @@ namespace
 			return m_inserter.prepared() && m_inserter.data().wide;
 		}
 
-		void publishLaserNote()
+		void publishLaserNote(std::int64_t lineNo)
 		{
 			if (auto result = m_inserter.publish())
 			{
@@ -1123,9 +1124,14 @@ namespace
 						const auto& [nextRy, nextPoint] = *nextItr;
 						if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
 						{
-							if (m_pKshDiag && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
+							if (m_pKshDiag && !m_sub32thSlamReported && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
 							{
-								m_pKshDiag->hasSub32thSlamLasers = true;
+								m_pKshDiag->warnings.push_back({
+									.type = KshWarningType::Sub32thSlamLasers,
+									.message = "Sub-1/32th laser slam detected. Resaving as KSH will lose the original slam lengths.",
+									.lineNo = lineNo,
+								});
+								m_sub32thSlamReported = true;
 							}
 							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
 							const auto nextNextItr = std::next(nextItr);
@@ -1248,7 +1254,7 @@ namespace
 	};
 
 	template <typename ChartDataType>
-	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8, KshParserDiag* pKshDiag = nullptr)
+	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8, KshParserDiag* pKshDiag = nullptr, std::int64_t* pFileLineNo = nullptr)
 #ifdef __cpp_concepts
 		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
 #endif
@@ -1270,16 +1276,23 @@ namespace
 		{
 			if (pKshDiag)
 			{
-				pKshDiag->warnings.push_back("The option line \"title=...\" must be placed at the beginning of a KSH chart file.");
+				pKshDiag->warnings.push_back({
+					.type = KshWarningType::TitleNotAtBeginning,
+					.message = "The option line \"title=...\" must be placed at the beginning of a KSH chart file.",
+					.lineNo = 1,
+				});
 			}
 		}
 
 		// Read header lines and create meta data hash map
 		[[maybe_unused]] bool barLineExists = false;
 		std::unordered_map<std::string, std::string> metaDataHashMap;
+		std::int64_t headerLineNo = 0;
 		std::string line;
 		while (std::getline(stream, line, '\n'))
 		{
+			++headerLineNo;
+
 			// Eliminate CR
 			if (!line.empty() && *line.crbegin() == '\r')
 			{
@@ -1326,6 +1339,11 @@ namespace
 		if (!barLineExists)
 		{
 			return { .error = ErrorType::GeneralChartFormatError };
+		}
+
+		if (pFileLineNo)
+		{
+			*pFileLineNo = headerLineNo;
 		}
 
 		// .ksh files must have "title=" line
@@ -1479,6 +1497,29 @@ namespace
 	}
 }
 
+bool kson::KshParserDiag::hasSub32thSlamLasers() const
+{
+	for (const auto& w : warnings)
+	{
+		if (w.type == KshWarningType::Sub32thSlamLasers)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+std::vector<std::string> kson::KshParserDiag::toStrings() const
+{
+	std::vector<std::string> result;
+	result.reserve(warnings.size());
+	for (const auto& w : warnings)
+	{
+		result.push_back("line " + std::to_string(w.lineNo) + ": " + w.message);
+	}
+	return result;
+}
+
 MetaChartData kson::LoadKSHMetaChartData(std::istream& stream)
 {
 	return CreateChartDataFromMetaDataStream<MetaChartData>(stream, nullptr);
@@ -1515,7 +1556,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 
 	// Load chart meta data
 	bool isUTF8;
-	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8, pKshDiag);
+	std::int64_t fileLineNo = 0;
+	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8, pKshDiag, &fileLineNo);
 	if (chartData.error != ErrorType::None)
 	{
 		return chartData;
@@ -1529,7 +1571,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 	else
 	{
 		currentTimeSig = { .n = 4, .d = 4 };
-		pKshDiag->warnings.push_back("Loaded KSH chart data must have time signature at zero pulse.");
+		pKshDiag->warnings.push_back({
+			.type = KshWarningType::MissingTimeSigAtZero,
+			.message = "Loaded KSH chart data must have time signature at zero pulse.",
+			.lineNo = fileLineNo,
+		});
 	}
 
 	const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
@@ -1567,6 +1613,8 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 	std::string line;
 	while (std::getline(stream, line, '\n'))
 	{
+		++fileLineNo;
+
 		// Eliminate CR
 		if (!line.empty() && *line.crbegin() == '\r')
 		{
@@ -1673,7 +1721,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 
 				if (!params.contains("type"))
 				{
-					pKshDiag->warnings.push_back("Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.");
+					pKshDiag->warnings.push_back({
+						.type = KshWarningType::AudioEffectMissingType,
+						.message = "Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.",
+						.lineNo = fileLineNo,
+					});
 					continue;
 				}
 
@@ -1681,7 +1733,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 				params.erase("type");
 				if (!s_audioEffectTypeTable.contains(type))
 				{
-					pKshDiag->warnings.push_back("Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type");
+					pKshDiag->warnings.push_back({
+						.type = KshWarningType::AudioEffectInvalidType,
+						.message = "Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type",
+						.lineNo = fileLineNo,
+					});
 					continue;
 				}
 
@@ -2059,7 +2115,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 							switch (buf[j])
 							{
 							case '-': // Empty
-								preparedLaserSectionRef.publishLaserNote();
+								preparedLaserSectionRef.publishLaserNote(fileLineNo);
 								preparedLaserSectionRef.clear();
 								break;
 							case ':': // Connection
@@ -2194,21 +2250,29 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 	{
 		if (preparedBTNote.prepared())
 		{
-			pKshDiag->warnings.push_back("Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").");
+			pKshDiag->warnings.push_back({
+				.type = KshWarningType::UncommittedBTNote,
+				.message = "Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").",
+				.lineNo = fileLineNo,
+			});
 		}
 	}
 	for (const auto& preparedFXNote : preparedLongNoteArray.fx)
 	{
 		if (preparedFXNote.prepared())
 		{
-			pKshDiag->warnings.push_back("Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").");
+			pKshDiag->warnings.push_back({
+				.type = KshWarningType::UncommittedFXNote,
+				.message = "Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").",
+				.lineNo = fileLineNo,
+			});
 		}
 	}
 
 	// The prepared laser section is published only when the laser lane is blank ("-"), so there can be unpublished laser sections here
 	for (auto& preparedFXSection : preparedLongNoteArray.laser)
 	{
-		preparedFXSection.publishLaserNote();
+		preparedFXSection.publishLaserNote(fileLineNo);
 	}
 
 	// Apply buffered curves to lasers
@@ -2262,7 +2326,11 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 
 		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified)
 		{
-			pKshDiag->warnings.push_back("Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.");
+			pKshDiag->warnings.push_back({
+				.type = KshWarningType::UndefinedAudioEffect,
+				.message = "Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.",
+				.lineNo = fileLineNo,
+			});
 		}
 
 		if (type == AudioEffectType::Unspecified)

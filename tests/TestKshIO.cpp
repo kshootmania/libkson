@@ -2275,7 +2275,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 
 	SECTION("Sub-32th slam triggers flag") {
@@ -2288,7 +2288,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
-		REQUIRE(kshDiag.hasSub32thSlamLasers);
+		REQUIRE(kshDiag.hasSub32thSlamLasers());
 	}
 
 	SECTION("No slam lasers does not trigger flag") {
@@ -2306,7 +2306,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 
 	SECTION("Normal slope laser does not trigger flag") {
@@ -2328,7 +2328,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 }
 

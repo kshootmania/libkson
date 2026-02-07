@@ -774,7 +774,7 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
 		REQUIRE(ksonDiag.warnings.size() > 0);
-		REQUIRE(ksonDiag.warnings[0] == "Missing required field: format_version");
+		REQUIRE(ksonDiag.warnings[0].type == kson::KsonWarningType::MissingFormatVersion);
 	}
 
 	SECTION("Invalid format_version type (string)") {
@@ -798,7 +798,7 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
 		REQUIRE(ksonDiag.warnings.size() > 0);
-		REQUIRE(ksonDiag.warnings[0] == "Invalid format_version: must be an integer");
+		REQUIRE(ksonDiag.warnings[0].type == kson::KsonWarningType::InvalidFormatVersion);
 	}
 
 	SECTION("Valid format_version") {
