@@ -134,7 +134,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         })";
         
         std::istringstream stream(ksonData);
-        kson::KsonParserDiag ksonDiag;
+        kson::KsonLoadingDiag ksonDiag;
         auto chart = kson::LoadKSONChartData(stream, &ksonDiag);
 
         REQUIRE(chart.error == kson::ErrorType::KSONParseError);
@@ -150,7 +150,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         })";
 
         std::istringstream stream(ksonData);
-        kson::KsonParserDiag ksonDiag;
+        kson::KsonLoadingDiag ksonDiag;
         auto chart = kson::LoadKSONChartData(stream, &ksonDiag);
 
         REQUIRE(chart.error == kson::ErrorType::KSONParseError);
@@ -769,12 +769,12 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 		})";
 
 		std::istringstream iss(ksonData);
-		kson::KsonParserDiag ksonDiag;
+		kson::KsonLoadingDiag ksonDiag;
 		kson::ChartData chart = kson::LoadKSONChartData(iss, &ksonDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
 		REQUIRE(ksonDiag.warnings.size() > 0);
-		REQUIRE(ksonDiag.warnings[0].type == kson::KsonWarningType::MissingFormatVersion);
+		REQUIRE(ksonDiag.warnings[0].type == kson::KsonLoadingWarningType::MissingFormatVersion);
 	}
 
 	SECTION("Invalid format_version type (string)") {
@@ -793,12 +793,12 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 		})";
 
 		std::istringstream iss(ksonData);
-		kson::KsonParserDiag ksonDiag;
+		kson::KsonLoadingDiag ksonDiag;
 		kson::ChartData chart = kson::LoadKSONChartData(iss, &ksonDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
 		REQUIRE(ksonDiag.warnings.size() > 0);
-		REQUIRE(ksonDiag.warnings[0].type == kson::KsonWarningType::InvalidFormatVersion);
+		REQUIRE(ksonDiag.warnings[0].type == kson::KsonLoadingWarningType::InvalidFormatVersion);
 	}
 
 	SECTION("Valid format_version") {

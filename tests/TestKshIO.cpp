@@ -2270,7 +2270,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(32);
 		std::istringstream stream(kshData);
 
-		kson::KshParserDiag kshDiag;
+		kson::KshLoadingDiag kshDiag;
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
@@ -2282,7 +2282,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(48);
 		std::istringstream stream(kshData);
 
-		kson::KshParserDiag kshDiag;
+		kson::KshLoadingDiag kshDiag;
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
@@ -2300,7 +2300,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 			"--\n";
 		std::istringstream stream(kshData);
 
-		kson::KshParserDiag kshDiag;
+		kson::KshLoadingDiag kshDiag;
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
@@ -2321,7 +2321,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 			"--\n";
 		std::istringstream stream(kshData);
 
-		kson::KshParserDiag kshDiag;
+		kson::KshLoadingDiag kshDiag;
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);

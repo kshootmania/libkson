@@ -1,4 +1,5 @@
 #pragma once
+#include "IDiag.hpp"
 #include "WarningScope.hpp"
 #include <cstdint>
 #include <string>
@@ -6,7 +7,7 @@
 
 namespace kson
 {
-	enum class KshWarningType
+	enum class KshLoadingWarningType
 	{
 		TitleNotAtBeginning,
 		MissingTimeSigAtZero,
@@ -18,18 +19,18 @@ namespace kson
 		Sub32thSlamLasers,
 	};
 
-	struct KshWarning
+	struct KshLoadingWarning
 	{
-		KshWarningType type;
+		KshLoadingWarningType type;
 		WarningScope scope;
 		std::string message;
 		std::int64_t lineNo;
 	};
 
-	struct KshParserDiag
+	struct KshLoadingDiag : IDiag
 	{
-		std::vector<KshWarning> warnings;
+		std::vector<KshLoadingWarning> warnings;
 
-		std::vector<std::string> toStrings() const;
+		std::vector<std::string> toStrings() const override;
 	};
 }

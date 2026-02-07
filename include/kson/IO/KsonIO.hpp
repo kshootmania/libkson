@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/ChartData.hpp"
-#include "kson/IO/KsonParserDiag.hpp"
+#include "kson/IO/KsonLoadingDiag.hpp"
 
 namespace kson
 {
@@ -11,8 +11,8 @@ namespace kson
 
 	ErrorType SaveKSONChartData(const std::string& filePath, const ChartData& chartData);
 
-	ChartData LoadKSONChartData(std::istream& stream, KsonParserDiag* pKsonDiag = nullptr);
+	ChartData LoadKSONChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
 
-	ChartData LoadKSONChartData(const std::string& filePath, KsonParserDiag* pKsonDiag = nullptr);
+	ChartData LoadKSONChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag = nullptr);
 }
 #endif

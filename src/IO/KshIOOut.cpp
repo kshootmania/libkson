@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <numeric>
 #include <cmath>
-#include <iostream>
 #include <limits>
 
 namespace
@@ -1806,7 +1805,7 @@ namespace
 	}
 
 	// Calculate optimal division for a measure
-	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength, std::vector<std::string>& warnings)
+	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength, KshSavingDiag* pKshSavingDiag)
 	{
 		const Pulse measureEnd = measureStart + measureLength;
 		Pulse gcd = measureLength;
@@ -2112,7 +2111,7 @@ namespace
 	}
 
 	// Write measures
-	void WriteMeasures(std::ostream& stream, const ChartData& chartData, MeasureExportState& state, std::vector<std::string>& warnings)
+	void WriteMeasures(std::ostream& stream, const ChartData& chartData, MeasureExportState& state, KshSavingDiag* pKshSavingDiag)
 	{
 		// Check if legacy manual tilt scale should be used
 		// This matches the logic in ksh_io_in.cpp: ver < 170 && any abs(tilt) >= 10.0
@@ -2190,7 +2189,7 @@ namespace
 			}
 
 			// Calculate optimal division for this measure
-			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength, warnings);
+			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength, pKshSavingDiag);
 			const Pulse oneLinePulse = measureLength / division;
 
 			// Write each line
@@ -2278,7 +2277,7 @@ namespace
 	}
 }
 
-kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData)
+kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
 	if (!stream.good())
 	{
@@ -2288,23 +2287,16 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 	WriteBOM(stream);
 
 	MeasureExportState state;
-	std::vector<std::string> warnings;
 
 	// Write header and store the header BPM string in state
 	WriteHeader(stream, chartData, &state.headerBPMStr);
-	WriteMeasures(stream, chartData, state, warnings);
+	WriteMeasures(stream, chartData, state, pKshSavingDiag);
 	WriteAudioEffectDefinitions(stream, chartData);
-
-	// Output warnings to stderr
-	for (const auto& warning : warnings)
-	{
-		std::cerr << "Warning: " << warning << std::endl;
-	}
 
 	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
 }
 
-kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData)
+kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
 	std::ofstream ofs(filePath, std::ios_base::binary);
 	if (!ofs.good())
@@ -2312,8 +2304,19 @@ kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartD
 		return ErrorType::GeneralIOError;
 	}
 
-	const ErrorType result = SaveKSHChartData(ofs, chartData);
+	const ErrorType result = SaveKSHChartData(ofs, chartData, pKshSavingDiag);
 	ofs.close();
 
+	return result;
+}
+
+std::vector<std::string> kson::KshSavingDiag::toStrings() const
+{
+	std::vector<std::string> result;
+	result.reserve(warnings.size());
+	for (const auto& w : warnings)
+	{
+		result.push_back(w.message);
+	}
 	return result;
 }

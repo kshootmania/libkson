@@ -1057,14 +1057,14 @@ namespace
 	private:
 		PreparedInserter<LaserSectionData> m_inserter;
 		ChartData* m_pTargetChartData = nullptr;
-		KshParserDiag* m_pKshDiag = nullptr;
+		KshLoadingDiag* m_pKshDiag = nullptr;
 		std::size_t m_targetLaneIdx = 0;
 		bool m_sub32thSlamReported = false;
 
 	public:
 		PreparedLaserSection() = default;
 
-		PreparedLaserSection(ChartData* pTargetChartData, std::size_t targetLaneIdx, KshParserDiag* pKshDiag)
+		PreparedLaserSection(ChartData* pTargetChartData, std::size_t targetLaneIdx, KshLoadingDiag* pKshDiag)
 			: m_pTargetChartData(pTargetChartData)
 			, m_pKshDiag(pKshDiag)
 			, m_targetLaneIdx(targetLaneIdx)
@@ -1127,7 +1127,7 @@ namespace
 							if (m_pKshDiag && !m_sub32thSlamReported && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
 							{
 								m_pKshDiag->warnings.push_back({
-									.type = KshWarningType::Sub32thSlamLasers,
+									.type = KshLoadingWarningType::Sub32thSlamLasers,
 									.scope = WarningScope::EditorOnly,
 									.message = "Sub-1/32th laser slam detected. Resaving as KSH will lose the original slam lengths.",
 									.lineNo = lineNo,
@@ -1181,7 +1181,7 @@ namespace
 		std::array<PreparedLongFXNote, kNumFXLanesSZ> fx;
 		std::array<PreparedLaserSection, kNumLaserLanesSZ> laser;
 
-		PreparedLongNoteArray(ChartData* pTargetChartData, KshParserDiag* pKshDiag)
+		PreparedLongNoteArray(ChartData* pTargetChartData, KshLoadingDiag* pKshDiag)
 			: bt(MakePreparedLongNoteArray<PreparedLongBTNote, kNumBTLanesSZ>(pTargetChartData))
 			, fx(MakePreparedLongNoteArray<PreparedLongFXNote, kNumFXLanesSZ>(pTargetChartData))
 			, laser(MakePreparedLongNoteArray<PreparedLaserSection, kNumLaserLanesSZ>(pTargetChartData, pKshDiag))
@@ -1255,7 +1255,7 @@ namespace
 	};
 
 	template <typename ChartDataType>
-	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8, KshParserDiag* pKshDiag = nullptr, std::int64_t* pFileLineNo = nullptr)
+	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8, KshLoadingDiag* pKshDiag = nullptr, std::int64_t* pFileLineNo = nullptr)
 #ifdef __cpp_concepts
 		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
 #endif
@@ -1278,7 +1278,7 @@ namespace
 			if (pKshDiag)
 			{
 				pKshDiag->warnings.push_back({
-					.type = KshWarningType::TitleNotAtBeginning,
+					.type = KshLoadingWarningType::TitleNotAtBeginning,
 					.scope = WarningScope::EditorOnly,
 					.message = "The option line \"title=...\" must be placed at the beginning of a KSH chart file.",
 					.lineNo = 1,
@@ -1499,7 +1499,7 @@ namespace
 	}
 }
 
-std::vector<std::string> kson::KshParserDiag::toStrings() const
+std::vector<std::string> kson::KshLoadingDiag::toStrings() const
 {
 	std::vector<std::string> result;
 	result.reserve(warnings.size());
@@ -1531,9 +1531,9 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 	return LoadKSHMetaChartData(ifs);
 }
 
-kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKshDiag)
+kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKshDiag)
 {
-	KshParserDiag localDiag;
+	KshLoadingDiag localDiag;
 	if (!pKshDiag)
 	{
 		pKshDiag = &localDiag;
@@ -1562,7 +1562,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 	{
 		currentTimeSig = { .n = 4, .d = 4 };
 		pKshDiag->warnings.push_back({
-			.type = KshWarningType::MissingTimeSigAtZero,
+			.type = KshLoadingWarningType::MissingTimeSigAtZero,
 			.scope = WarningScope::PlayerAndEditor,
 			.message = "Loaded KSH chart data must have time signature at zero pulse.",
 			.lineNo = fileLineNo,
@@ -1713,7 +1713,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 				if (!params.contains("type"))
 				{
 					pKshDiag->warnings.push_back({
-						.type = KshWarningType::AudioEffectMissingType,
+						.type = KshLoadingWarningType::AudioEffectMissingType,
 						.scope = WarningScope::EditorOnly,
 						.message = "Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.",
 						.lineNo = fileLineNo,
@@ -1726,7 +1726,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 				if (!s_audioEffectTypeTable.contains(type))
 				{
 					pKshDiag->warnings.push_back({
-						.type = KshWarningType::AudioEffectInvalidType,
+						.type = KshLoadingWarningType::AudioEffectInvalidType,
 						.scope = WarningScope::EditorOnly,
 						.message = "Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type",
 						.lineNo = fileLineNo,
@@ -2244,7 +2244,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		if (preparedBTNote.prepared())
 		{
 			pKshDiag->warnings.push_back({
-				.type = KshWarningType::UncommittedBTNote,
+				.type = KshLoadingWarningType::UncommittedBTNote,
 				.scope = WarningScope::PlayerAndEditor,
 				.message = "Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").",
 				.lineNo = fileLineNo,
@@ -2256,7 +2256,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		if (preparedFXNote.prepared())
 		{
 			pKshDiag->warnings.push_back({
-				.type = KshWarningType::UncommittedFXNote,
+				.type = KshLoadingWarningType::UncommittedFXNote,
 				.scope = WarningScope::PlayerAndEditor,
 				.message = "Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").",
 				.lineNo = fileLineNo,
@@ -2322,7 +2322,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified)
 		{
 			pKshDiag->warnings.push_back({
-				.type = KshWarningType::UndefinedAudioEffect,
+				.type = KshLoadingWarningType::UndefinedAudioEffect,
 				.scope = WarningScope::EditorOnly,
 				.message = "Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.",
 				.lineNo = fileLineNo,
@@ -2457,7 +2457,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 	return chartData;
 }
 
-ChartData kson::LoadKSHChartData(const std::string& filePath, KshParserDiag* pKshDiag)
+ChartData kson::LoadKSHChartData(const std::string& filePath, KshLoadingDiag* pKshDiag)
 {
 	if (!std::filesystem::exists(filePath))
 	{

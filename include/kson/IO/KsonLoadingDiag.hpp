@@ -1,11 +1,12 @@
 #pragma once
+#include "IDiag.hpp"
 #include "WarningScope.hpp"
 #include <string>
 #include <vector>
 
 namespace kson
 {
-	enum class KsonWarningType
+	enum class KsonLoadingWarningType
 	{
 		InvalidGraphValueFormat,
 		InvalidByPulseEntryFormat,
@@ -20,17 +21,17 @@ namespace kson
 		UnexpectedError,
 	};
 
-	struct KsonWarning
+	struct KsonLoadingWarning
 	{
-		KsonWarningType type;
+		KsonLoadingWarningType type;
 		WarningScope scope;
 		std::string message;
 	};
 
-	struct KsonParserDiag
+	struct KsonLoadingDiag : IDiag
 	{
-		std::vector<KsonWarning> warnings;
+		std::vector<KsonLoadingWarning> warnings;
 
-		std::vector<std::string> toStrings() const;
+		std::vector<std::string> toStrings() const override;
 	};
 }
