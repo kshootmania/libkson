@@ -500,7 +500,7 @@ namespace
 
 	// Write BPM to header
 	// Returns the header BPM string that was output
-	std::string WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat)
+	std::string WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat, KshSavingDiag* pKshSavingDiag)
 	{
 		// If dispBPM is set, use it as-is
 		if (!dispBPM.empty())
@@ -521,10 +521,19 @@ namespace
 		// Check if single BPM
 		if (bpmMap.size() == 1)
 		{
-			double bpm = bpmMap.begin()->second;
+			const double originalBpm = bpmMap.begin()->second;
+			double bpm = originalBpm;
 			if (shouldClampBPM)
 			{
 				bpm = std::min(bpm, kBPMMax);
+				if (pKshSavingDiag && bpm != originalBpm)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::BpmClamped,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "BPM value " + std::to_string(originalBpm) + " clamped to " + std::to_string(kBPMMax),
+					});
+				}
 			}
 			std::string bpmStr = FormatDouble(bpm);
 			stream << "t=" << bpmStr << "\r\n";
@@ -541,6 +550,14 @@ namespace
 			if (shouldClampBPM)
 			{
 				clampedBPM = std::min(bpm, kBPMMax);
+				if (pKshSavingDiag && clampedBPM != bpm)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::BpmClamped,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "BPM value " + std::to_string(bpm) + " clamped to " + std::to_string(kBPMMax),
+					});
+				}
 			}
 			minBPM = std::min(minBPM, clampedBPM);
 			maxBPM = std::max(maxBPM, clampedBPM);
@@ -562,7 +579,7 @@ namespace
 	}
 
 	// Write header section
-	void WriteHeader(std::ostream& stream, const ChartData& chartData, std::string* headerBPMStr = nullptr)
+	void WriteHeader(std::ostream& stream, const ChartData& chartData, std::string* headerBPMStr = nullptr, KshSavingDiag* pKshSavingDiag = nullptr)
 	{
 		const auto& meta = chartData.meta;
 		const auto& audio = chartData.audio;
@@ -608,7 +625,7 @@ namespace
 		stream << "level=" << meta.level << "\r\n";
 
 		// BPM
-		std::string bpmStr = WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat);
+		std::string bpmStr = WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat, pKshSavingDiag);
 		if (headerBPMStr != nullptr)
 		{
 			*headerBPMStr = bpmStr;
@@ -1282,9 +1299,17 @@ namespace
 	}
 
 	// Write zoom parameter (zoom_top, zoom_bottom, zoom_side)
-	void WriteZoomParameter(std::ostream& stream, const std::string& paramName, const GraphPoint& graphPoint)
+	void WriteZoomParameter(std::ostream& stream, const std::string& paramName, const GraphPoint& graphPoint, KshSavingDiag* pKshSavingDiag)
 	{
 		const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
+		if (pKshSavingDiag && clampedV != graphPoint.v.v)
+		{
+			pKshSavingDiag->warnings.push_back({
+				.type = KshSavingWarningType::ZoomValueClamped,
+				.scope = WarningScope::EditorOnly,
+				.message = paramName + " value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+			});
+		}
 		const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
 		stream << paramName << "=" << zoomValue << "\r\n";
 
@@ -1292,6 +1317,14 @@ namespace
 		if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 		{
 			const double clampedVf = std::clamp(graphPoint.v.vf, -kZoomAbsMax, kZoomAbsMax);
+			if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.type = KshSavingWarningType::ZoomValueClamped,
+					.scope = WarningScope::EditorOnly,
+					.message = paramName + " vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+				});
+			}
 			const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
 			if (zoomValue != zoomValueFinal)
 			{
@@ -1306,7 +1339,7 @@ namespace
 	}
 
 	// Write note line
-	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt)
+	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
 	{
 		// Note: The output order below should be the same as v1's order (*command_save in kshooteditor.hsp) for better compatibility of internet ranking hashing
 
@@ -1334,11 +1367,20 @@ namespace
 
 		if (chartData.beat.bpm.contains(pulse))
 		{
-			double bpm = chartData.beat.bpm.at(pulse);
+			const double originalBpm = chartData.beat.bpm.at(pulse);
+			double bpm = originalBpm;
 			// Apply BPM limit for ver >= 130
 			if (!chartData.compat.isKSHVersionOlderThan(kVerBPMLimitAdded))
 			{
 				bpm = std::min(bpm, kBPMMax);
+				if (pKshSavingDiag && bpm != originalBpm)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::BpmClamped,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "BPM value " + std::to_string(originalBpm) + " clamped to " + std::to_string(kBPMMax),
+					});
+				}
 			}
 
 			std::string bpmStr = FormatDouble(bpm);
@@ -1386,12 +1428,28 @@ namespace
 			const auto& graphPoint = chartData.camera.cam.body.centerSplit.at(pulse);
 
 			const double clampedV = std::clamp(graphPoint.v.v, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+			if (pKshSavingDiag && clampedV != graphPoint.v.v)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.type = KshSavingWarningType::CenterSplitClamped,
+					.scope = WarningScope::EditorOnly,
+					.message = "center_split value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+				});
+			}
 			stream << "center_split=" << clampedV << "\r\n";
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
 				const double clampedVf = std::clamp(graphPoint.v.vf, -kCenterSplitAbsMax, kCenterSplitAbsMax);
+				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::CenterSplitClamped,
+						.scope = WarningScope::EditorOnly,
+						.message = "center_split vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+					});
+				}
 				stream << "center_split=" << clampedVf << "\r\n";
 			}
 
@@ -1581,7 +1639,16 @@ namespace
 					stream << "tilt_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
 				}
 
-				const double clampedV = std::clamp(graphPoint.v.v * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
+				const double scaledV = graphPoint.v.v * scale;
+				const double clampedV = std::clamp(scaledV, -kManualTiltAbsMax, kManualTiltAbsMax);
+				if (pKshSavingDiag && clampedV != scaledV)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::ManualTiltClamped,
+						.scope = WarningScope::EditorOnly,
+						.message = "tilt value " + std::to_string(scaledV) + " clamped to " + std::to_string(clampedV),
+					});
+				}
 				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
 
 				// Output vf on next line if v != vf (immediate change)
@@ -1590,7 +1657,16 @@ namespace
 					const double vfValue = std::get<double>(graphPoint.v.vf);
 					if (!AlmostEquals(graphPoint.v.v, vfValue))
 					{
-						const double clampedVf = std::clamp(vfValue * scale, -kManualTiltAbsMax, kManualTiltAbsMax);
+						const double scaledVf = vfValue * scale;
+						const double clampedVf = std::clamp(scaledVf, -kManualTiltAbsMax, kManualTiltAbsMax);
+						if (pKshSavingDiag && clampedVf != scaledVf)
+						{
+							pKshSavingDiag->warnings.push_back({
+								.type = KshSavingWarningType::ManualTiltClamped,
+								.scope = WarningScope::EditorOnly,
+								.message = "tilt vf value " + std::to_string(scaledVf) + " clamped to " + std::to_string(clampedVf),
+							});
+						}
 						stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
 					}
 				}
@@ -1610,17 +1686,17 @@ namespace
 
 		if (chartData.camera.cam.body.zoomTop.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_top", chartData.camera.cam.body.zoomTop.at(pulse));
+			WriteZoomParameter(stream, "zoom_top", chartData.camera.cam.body.zoomTop.at(pulse), pKshSavingDiag);
 		}
 
 		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_bottom", chartData.camera.cam.body.zoomBottom.at(pulse));
+			WriteZoomParameter(stream, "zoom_bottom", chartData.camera.cam.body.zoomBottom.at(pulse), pKshSavingDiag);
 		}
 
 		if (chartData.camera.cam.body.zoomSide.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_side", chartData.camera.cam.body.zoomSide.at(pulse));
+			WriteZoomParameter(stream, "zoom_side", chartData.camera.cam.body.zoomSide.at(pulse), pKshSavingDiag);
 		}
 
 		// Check for laser wide annotation changes before processing notes
@@ -1697,12 +1773,28 @@ namespace
 			const auto& graphPoint = chartData.camera.cam.body.rotationDeg.at(pulse);
 
 			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
+			if (pKshSavingDiag && clampedV != graphPoint.v.v)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.type = KshSavingWarningType::RotationDegClamped,
+					.scope = WarningScope::EditorOnly,
+					.message = "rotation_deg value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+				});
+			}
 			stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedV)) << "\r\n";
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
 				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
+				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::RotationDegClamped,
+						.scope = WarningScope::EditorOnly,
+						.message = "rotation_deg vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+					});
+				}
 				stream << "rotation_deg=" << static_cast<std::int32_t>(std::round(clampedVf)) << "\r\n";
 			}
 
@@ -1812,7 +1904,7 @@ namespace
 	}
 
 	// Calculate optimal division for a measure
-	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength, KshSavingDiag* pKshSavingDiag)
+	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength)
 	{
 		const Pulse measureEnd = measureStart + measureLength;
 		Pulse gcd = measureLength;
@@ -2196,7 +2288,7 @@ namespace
 			}
 
 			// Calculate optimal division for this measure
-			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength, pKshSavingDiag);
+			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength);
 			const Pulse oneLinePulse = measureLength / division;
 
 			// Write each line
@@ -2204,7 +2296,7 @@ namespace
 			{
 				const Pulse pulse = currentPulse + lineIdx * oneLinePulse;
 
-				WriteNoteLine(stream, chartData, laserSegments, pulse, oneLinePulse, state, useLegacyScaleForManualTilt);
+				WriteNoteLine(stream, chartData, laserSegments, pulse, oneLinePulse, state, useLegacyScaleForManualTilt, pKshSavingDiag);
 			}
 
 			stream << kMeasureSeparator << "\r\n";
@@ -2296,7 +2388,7 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 	MeasureExportState state;
 
 	// Write header and store the header BPM string in state
-	WriteHeader(stream, chartData, &state.headerBPMStr);
+	WriteHeader(stream, chartData, &state.headerBPMStr, pKshSavingDiag);
 	WriteMeasures(stream, chartData, state, pKshSavingDiag);
 	WriteAudioEffectDefinitions(stream, chartData);
 

@@ -6,8 +6,18 @@
 
 namespace kson
 {
+	enum class KshSavingWarningType
+	{
+		BpmClamped,
+		ZoomValueClamped,
+		CenterSplitClamped,
+		ManualTiltClamped,
+		RotationDegClamped,
+	};
+
 	struct KshSavingWarning
 	{
+		KshSavingWarningType type;
 		WarningScope scope;
 		std::string message;
 	};
