@@ -48,8 +48,6 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         auto chart = kson::LoadKSONChartData(stream);
         
         REQUIRE(chart.error == kson::ErrorType::None);
-        REQUIRE(chart.warnings.empty());
-        
         // Check metadata
         REQUIRE(chart.meta.title == "Test Song");
         REQUIRE(chart.meta.artist == "Test Artist");
@@ -91,8 +89,6 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         auto chart = kson::LoadKSONChartData(stream);
         
         REQUIRE(chart.error == kson::ErrorType::None);
-        REQUIRE(chart.warnings.empty());
-        
         // Check defaults
         REQUIRE(chart.meta.title.empty());
         REQUIRE(chart.meta.level == 1);
@@ -138,12 +134,13 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         })";
         
         std::istringstream stream(ksonData);
-        auto chart = kson::LoadKSONChartData(stream);
-        
+        kson::KsonParserDiag ksonDiag;
+        auto chart = kson::LoadKSONChartData(stream, &ksonDiag);
+
         REQUIRE(chart.error == kson::ErrorType::KSONParseError);
-        REQUIRE(!chart.warnings.empty());
+        REQUIRE(!ksonDiag.warnings.empty());
     }
-    
+
     SECTION("Type error in JSON") {
         std::string ksonData = R"({
             "format_version": 1,
@@ -151,12 +148,13 @@ TEST_CASE("KSON Loading", "[kson_io]") {
                 "level": "not a number"
             }
         })";
-        
+
         std::istringstream stream(ksonData);
-        auto chart = kson::LoadKSONChartData(stream);
-        
+        kson::KsonParserDiag ksonDiag;
+        auto chart = kson::LoadKSONChartData(stream, &ksonDiag);
+
         REQUIRE(chart.error == kson::ErrorType::KSONParseError);
-        REQUIRE(!chart.warnings.empty());
+        REQUIRE(!ksonDiag.warnings.empty());
     }
     
     SECTION("Load from file path") {
@@ -224,8 +222,6 @@ TEST_CASE("KSON Round-trip", "[kson_io]") {
         auto loaded = kson::LoadKSONChartData(iss);
         
         REQUIRE(loaded.error == kson::ErrorType::None);
-        REQUIRE(loaded.warnings.empty());
-        
         // Compare metadata
         REQUIRE(loaded.meta.title == original.meta.title);
         REQUIRE(loaded.meta.artist == original.meta.artist);
@@ -773,11 +769,12 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 		})";
 
 		std::istringstream iss(ksonData);
-		kson::ChartData chart = kson::LoadKSONChartData(iss);
+		kson::KsonParserDiag ksonDiag;
+		kson::ChartData chart = kson::LoadKSONChartData(iss, &ksonDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
-		REQUIRE(chart.warnings.size() > 0);
-		REQUIRE(chart.warnings[0] == "Missing required field: format_version");
+		REQUIRE(ksonDiag.warnings.size() > 0);
+		REQUIRE(ksonDiag.warnings[0] == "Missing required field: format_version");
 	}
 
 	SECTION("Invalid format_version type (string)") {
@@ -796,11 +793,12 @@ TEST_CASE("KSON format_version validation", "[kson_io]") {
 		})";
 
 		std::istringstream iss(ksonData);
-		kson::ChartData chart = kson::LoadKSONChartData(iss);
+		kson::KsonParserDiag ksonDiag;
+		kson::ChartData chart = kson::LoadKSONChartData(iss, &ksonDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::KSONParseError);
-		REQUIRE(chart.warnings.size() > 0);
-		REQUIRE(chart.warnings[0] == "Invalid format_version: must be an integer");
+		REQUIRE(ksonDiag.warnings.size() > 0);
+		REQUIRE(ksonDiag.warnings[0] == "Invalid format_version: must be an integer");
 	}
 
 	SECTION("Valid format_version") {

@@ -8,7 +8,6 @@ TEST_CASE("Basic Chart Data", "[chart]") {
 		kson::ChartData chart;
 
 		REQUIRE(chart.error == kson::ErrorType::None);
-		REQUIRE(chart.warnings.empty());
 		REQUIRE(chart.meta.title.empty());
 		REQUIRE(chart.meta.titleTranslit.empty());
 		REQUIRE(chart.meta.artist.empty());

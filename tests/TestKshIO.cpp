@@ -17,10 +17,6 @@ TEST_CASE("KSON I/O lossless test (bundled charts)", "[kson_io][kson_lossless][b
         if (chart1.error != kson::ErrorType::None) {
             std::cerr << "Error loading KSH file: " << filename << std::endl;
             std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
-            std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
-            for (const auto& warning : chart1.warnings) {
-                std::cerr << "  - " << warning << std::endl;
-            }
         }
         REQUIRE(chart1.error == kson::ErrorType::None);
         
@@ -230,10 +226,6 @@ TEST_CASE("KSON I/O lossless test (all songs)", "[.][kson_io][kson_lossless][all
         if (chart1.error != kson::ErrorType::None) {
             std::cerr << "Error loading KSH file: " << filename << std::endl;
             std::cerr << "Error code: " << static_cast<int>(chart1.error) << std::endl;
-            std::cerr << "Warnings count: " << chart1.warnings.size() << std::endl;
-            for (const auto& warning : chart1.warnings) {
-                std::cerr << "  - " << warning << std::endl;
-            }
         }
         REQUIRE(chart1.error == kson::ErrorType::None);
         
@@ -829,10 +821,6 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 		if (kson1.error != kson::ErrorType::None) {
 			std::cerr << "Error loading KSH file: " << filename << std::endl;
 			std::cerr << "Error code: " << static_cast<int>(kson1.error) << std::endl;
-			std::cerr << "Warnings count: " << kson1.warnings.size() << std::endl;
-			for (const auto& warning : kson1.warnings) {
-				std::cerr << "  - " << warning << std::endl;
-			}
 		}
 		REQUIRE(kson1.error == kson::ErrorType::None);
 		std::cerr << "Loaded KSH successfully: " << filename << std::endl;
@@ -2236,6 +2224,111 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		REQUIRE(point3.v.v == Approx(0.8));
 		REQUIRE(std::holds_alternative<kson::AutoTiltType>(point3.v.vf));
 		REQUIRE(std::get<kson::AutoTiltType>(point3.v.vf) == kson::AutoTiltType::kBigger);
+	}
+}
+
+TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
+	// Minimal KSH header
+	auto makeKshHeader = []() -> std::string {
+		return
+			"title=Test\n"
+			"artist=Test\n"
+			"effect=Test\n"
+			"jacket=\n"
+			"illustrator=\n"
+			"difficulty=light\n"
+			"level=1\n"
+			"t=120\n"
+			"beat=4/4\n"
+			"--\n";
+	};
+
+	// Generate a measure with a slam laser at the given line resolution
+	auto makeSlamMeasure = [](std::int32_t linesPerMeasure) -> std::string {
+		std::string result;
+		for (std::int32_t i = 0; i < linesPerMeasure; ++i)
+		{
+			if (i == 0)
+			{
+				result += "0000|00|0-\n";
+			}
+			else if (i == 1)
+			{
+				result += "0000|00|o-\n";
+			}
+			else
+			{
+				result += "0000|00|--\n";
+			}
+		}
+		result += "--\n";
+		return result;
+	};
+
+	SECTION("Standard 1/32th slam does not trigger flag") {
+		// 32 lines/measure = 30 pulses/line = exactly 1/32th
+		const std::string kshData = makeKshHeader() + makeSlamMeasure(32);
+		std::istringstream stream(kshData);
+
+		kson::KshParserDiag kshDiag;
+		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.note.laser[0].size() == 1);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
+	}
+
+	SECTION("Sub-32th slam triggers flag") {
+		// 48 lines/measure = 20 pulses/line < 30 pulses
+		const std::string kshData = makeKshHeader() + makeSlamMeasure(48);
+		std::istringstream stream(kshData);
+
+		kson::KshParserDiag kshDiag;
+		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.note.laser[0].size() == 1);
+		REQUIRE(kshDiag.hasSub32thSlamLasers);
+	}
+
+	SECTION("No slam lasers does not trigger flag") {
+		// Chart with no lasers
+		std::string kshData = makeKshHeader();
+		kshData +=
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"--\n";
+		std::istringstream stream(kshData);
+
+		kson::KshParserDiag kshDiag;
+		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
+	}
+
+	SECTION("Normal slope laser does not trigger flag") {
+		// Non-slam laser
+		std::string kshData = makeKshHeader();
+		kshData +=
+			"0000|00|0-\n"
+			"0000|00|:-\n"
+			"0000|00|:-\n"
+			"0000|00|o-\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"--\n";
+		std::istringstream stream(kshData);
+
+		kson::KshParserDiag kshDiag;
+		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers);
 	}
 }
 

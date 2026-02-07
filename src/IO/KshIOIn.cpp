@@ -1057,13 +1057,15 @@ namespace
 	private:
 		PreparedInserter<LaserSectionData> m_inserter;
 		ChartData* m_pTargetChartData = nullptr;
+		KshParserDiag* m_pKshDiag = nullptr;
 		std::size_t m_targetLaneIdx = 0;
 
 	public:
 		PreparedLaserSection() = default;
 
-		PreparedLaserSection(ChartData* pTargetChartData, std::size_t targetLaneIdx)
+		PreparedLaserSection(ChartData* pTargetChartData, std::size_t targetLaneIdx, KshParserDiag* pKshDiag)
 			: m_pTargetChartData(pTargetChartData)
+			, m_pKshDiag(pKshDiag)
 			, m_targetLaneIdx(targetLaneIdx)
 		{
 		}
@@ -1121,6 +1123,10 @@ namespace
 						const auto& [nextRy, nextPoint] = *nextItr;
 						if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
 						{
+							if (m_pKshDiag && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
+							{
+								m_pKshDiag->hasSub32thSlamLasers = true;
+							}
 							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
 							const auto nextNextItr = std::next(nextItr);
 							if (nextNextItr == data.points.cend() || nextNextItr->first - nextRy > laserSlamThreshold || AlmostEquals(nextNextItr->second.v.v, nextPoint.v.v))
@@ -1151,13 +1157,13 @@ namespace
 		}
 	};
 
-	template <class T, std::size_t N>
-	std::array<T, N> MakePreparedLongNoteArray(ChartData* pTargetChartData)
+	template <class T, std::size_t N, class... Args>
+	std::array<T, N> MakePreparedLongNoteArray(ChartData* pTargetChartData, Args... args)
 	{
 		std::array<T, N> arr;
 		for (std::size_t i = 0; i < N; ++i)
 		{
-			arr[i] = T(pTargetChartData, i);
+			arr[i] = T(pTargetChartData, i, args...);
 		}
 		return arr;
 	}
@@ -1168,10 +1174,10 @@ namespace
 		std::array<PreparedLongFXNote, kNumFXLanesSZ> fx;
 		std::array<PreparedLaserSection, kNumLaserLanesSZ> laser;
 
-		explicit PreparedLongNoteArray(ChartData* pTargetChartData)
+		PreparedLongNoteArray(ChartData* pTargetChartData, KshParserDiag* pKshDiag)
 			: bt(MakePreparedLongNoteArray<PreparedLongBTNote, kNumBTLanesSZ>(pTargetChartData))
 			, fx(MakePreparedLongNoteArray<PreparedLongFXNote, kNumFXLanesSZ>(pTargetChartData))
-			, laser(MakePreparedLongNoteArray<PreparedLaserSection, kNumLaserLanesSZ>(pTargetChartData))
+			, laser(MakePreparedLongNoteArray<PreparedLaserSection, kNumLaserLanesSZ>(pTargetChartData, pKshDiag))
 		{
 		}
 	};
@@ -1242,7 +1248,7 @@ namespace
 	};
 
 	template <typename ChartDataType>
-	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8)
+	ChartDataType CreateChartDataFromMetaDataStream(std::istream& stream, bool* pIsUTF8, KshParserDiag* pKshDiag = nullptr)
 #ifdef __cpp_concepts
 		requires std::is_same_v<ChartDataType, kson::ChartData> || std::is_same_v<ChartDataType, kson::MetaChartData>
 #endif
@@ -1262,7 +1268,10 @@ namespace
 		// First option line must be "title="
 		if (stream.peek() != 't')
 		{
-			chartData.warnings.push_back("The option line \"title=...\" must be placed at the beginning of a KSH chart file.");
+			if (pKshDiag)
+			{
+				pKshDiag->warnings.push_back("The option line \"title=...\" must be placed at the beginning of a KSH chart file.");
+			}
 		}
 
 		// Read header lines and create meta data hash map
@@ -1491,8 +1500,14 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 	return LoadKSHMetaChartData(ifs);
 }
 
-kson::ChartData kson::LoadKSHChartData(std::istream& stream)
+kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKshDiag)
 {
+	KshParserDiag localDiag;
+	if (!pKshDiag)
+	{
+		pKshDiag = &localDiag;
+	}
+
 	if (!stream.good())
 	{
 		return { .error = ErrorType::GeneralIOError };
@@ -1500,7 +1515,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 	// Load chart meta data
 	bool isUTF8;
-	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8);
+	ChartData chartData = CreateChartDataFromMetaDataStream<ChartData>(stream, &isUTF8, pKshDiag);
 	if (chartData.error != ErrorType::None)
 	{
 		return chartData;
@@ -1514,7 +1529,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	else
 	{
 		currentTimeSig = { .n = 4, .d = 4 };
-		chartData.warnings.push_back("Loaded KSH chart data must have time signature at zero pulse.");
+		pKshDiag->warnings.push_back("Loaded KSH chart data must have time signature at zero pulse.");
 	}
 
 	const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
@@ -1530,7 +1545,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	std::vector<BufCommentLine> commentLines;
 	std::vector<BufUnknownLine> unknownLines;
 	ByPulse<std::int32_t> relScrollSpeeds;
-	PreparedLongNoteArray preparedLongNoteArray(&chartData);
+	PreparedLongNoteArray preparedLongNoteArray(&chartData, pKshDiag);
 
 	// Curve values buffer (key: parameter name, value: pulse -> curve)
 	std::unordered_map<std::string, ByPulse<GraphCurveValue>> bufferedCurves;
@@ -1658,7 +1673,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 				if (!params.contains("type"))
 				{
-					chartData.warnings.push_back("Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.");
+					pKshDiag->warnings.push_back("Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.");
 					continue;
 				}
 
@@ -1666,7 +1681,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 				params.erase("type");
 				if (!s_audioEffectTypeTable.contains(type))
 				{
-					chartData.warnings.push_back("Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type");
+					pKshDiag->warnings.push_back("Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type");
 					continue;
 				}
 
@@ -2179,14 +2194,14 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	{
 		if (preparedBTNote.prepared())
 		{
-			chartData.warnings.push_back("Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").");
+			pKshDiag->warnings.push_back("Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").");
 		}
 	}
 	for (const auto& preparedFXNote : preparedLongNoteArray.fx)
 	{
 		if (preparedFXNote.prepared())
 		{
-			chartData.warnings.push_back("Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").");
+			pKshDiag->warnings.push_back("Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").");
 		}
 	}
 
@@ -2247,7 +2262,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 
 		if (!audioEffectName.empty() && type == AudioEffectType::Unspecified)
 		{
-			chartData.warnings.push_back("Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.");
+			pKshDiag->warnings.push_back("Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.");
 		}
 
 		if (type == AudioEffectType::Unspecified)
@@ -2378,7 +2393,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream)
 	return chartData;
 }
 
-ChartData kson::LoadKSHChartData(const std::string& filePath)
+ChartData kson::LoadKSHChartData(const std::string& filePath, KshParserDiag* pKshDiag)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -2391,5 +2406,5 @@ ChartData kson::LoadKSHChartData(const std::string& filePath)
 		return { .error = ErrorType::CouldNotOpenInputFileStream };
 	}
 
-	return LoadKSHChartData(ifs);
+	return LoadKSHChartData(ifs, pKshDiag);
 }

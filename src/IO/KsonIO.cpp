@@ -983,7 +983,7 @@ namespace
 		return std::nullopt;
 	}
 
-	GraphValue ParseGraphValue(const nlohmann::json& j, ChartData& chartData)
+	GraphValue ParseGraphValue(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		if (j.is_number())
 		{
@@ -995,15 +995,15 @@ namespace
 		}
 		else
 		{
-			chartData.warnings.push_back("Invalid graph value format");
+			pDiag->warnings.push_back("Invalid graph value format");
 			return GraphValue{ 0.0 };
 		}
 	}
 
-	GraphPoint ParseGraphPoint(const nlohmann::json& j, ChartData& chartData)
+	GraphPoint ParseGraphPoint(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		// Parse v (GraphValue)
-		GraphValue v = ParseGraphValue(j, chartData);
+		GraphValue v = ParseGraphValue(j, pDiag);
 
 		// Parse curve (GraphCurveValue) if present (3rd element)
 		GraphCurveValue curve{ 0.0, 0.0 };
@@ -1020,13 +1020,13 @@ namespace
 		const nlohmann::json& item,
 		std::size_t valueIdx,
 		std::size_t curveIdx,
-		ChartData& chartData)
+		KsonParserDiag* pDiag)
 	{
 		// Parse v (GraphValue)
 		GraphValue v{ 0.0 };
 		if (item.size() > valueIdx)
 		{
-			v = ParseGraphValue(item[valueIdx], chartData);
+			v = ParseGraphValue(item[valueIdx], pDiag);
 		}
 
 		// Parse curve (GraphCurveValue) if present
@@ -1040,7 +1040,7 @@ namespace
 	}
 
 	template<typename T>
-	ByPulse<T> ParseByPulse(const nlohmann::json& j, ChartData& chartData)
+	ByPulse<T> ParseByPulse(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		ByPulse<T> result;
 		if (!j.is_array())
@@ -1058,13 +1058,13 @@ namespace
 			}
 			else
 			{
-				chartData.warnings.push_back("Invalid ByPulse entry format");
+				pDiag->warnings.push_back("Invalid ByPulse entry format");
 			}
 		}
 		return result;
 	}
 
-	Graph ParseGraph(const nlohmann::json& j, ChartData& chartData)
+	Graph ParseGraph(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		Graph result;
 		if (!j.is_array())
@@ -1077,19 +1077,19 @@ namespace
 			if (item.is_array() && item.size() >= 2)
 			{
 				Pulse pulse = item[0].get<Pulse>();
-				GraphPoint point = ParseGraphPointFromArrayItem(item, 1, 2, chartData);
+				GraphPoint point = ParseGraphPointFromArrayItem(item, 1, 2, pDiag);
 				result[pulse] = point;
 			}
 			else
 			{
-				chartData.warnings.push_back("Invalid graph entry format");
+				pDiag->warnings.push_back("Invalid graph entry format");
 			}
 		}
 		return result;
 	}
 
 	template<typename T>
-	ByMeasureIdx<T> ParseByMeasureIdx(const nlohmann::json& j, ChartData& chartData)
+	ByMeasureIdx<T> ParseByMeasureIdx(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		ByMeasureIdx<T> result;
 		if (!j.is_array())
@@ -1107,13 +1107,13 @@ namespace
 			}
 			else
 			{
-				chartData.warnings.push_back("Invalid ByMeasureIdx entry format");
+				pDiag->warnings.push_back("Invalid ByMeasureIdx entry format");
 			}
 		}
 		return result;
 	}
 
-	MetaInfo ParseMetaInfo(const nlohmann::json& j, ChartData& chartData)
+	MetaInfo ParseMetaInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		MetaInfo meta;
 		
@@ -1152,13 +1152,13 @@ namespace
 		return meta;
 	}
 
-	BeatInfo ParseBeatInfo(const nlohmann::json& j, ChartData& chartData)
+	BeatInfo ParseBeatInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		BeatInfo beat;
 		
 		if (j.contains("bpm"))
 		{
-			beat.bpm = ParseByPulse<double>(j["bpm"], chartData);
+			beat.bpm = ParseByPulse<double>(j["bpm"], pDiag);
 		}
 		
 		if (j.contains("time_sig"))
@@ -1189,7 +1189,7 @@ namespace
 		// Parse scroll_speed
 		if (j.contains("scroll_speed"))
 		{
-			beat.scrollSpeed = ParseGraph(j["scroll_speed"], chartData);
+			beat.scrollSpeed = ParseGraph(j["scroll_speed"], pDiag);
 		}
 		else
 		{
@@ -1200,13 +1200,13 @@ namespace
 		// Parse stop
 		if (j.contains("stop"))
 		{
-			beat.stop = ParseByPulse<RelPulse>(j["stop"], chartData);
+			beat.stop = ParseByPulse<RelPulse>(j["stop"], pDiag);
 		}
 
 		return beat;
 	}
 
-	GaugeInfo ParseGaugeInfo(const nlohmann::json& j, ChartData& chartData)
+	GaugeInfo ParseGaugeInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		GaugeInfo gauge;
 		
@@ -1215,7 +1215,7 @@ namespace
 		return gauge;
 	}
 
-	void ParseLaneNotes(const nlohmann::json& j, ByPulse<Interval>& lane, ChartData& chartData)
+	void ParseLaneNotes(const nlohmann::json& j, ByPulse<Interval>& lane, KsonParserDiag* pDiag)
 	{
 		if (!j.is_array())
 		{
@@ -1239,12 +1239,12 @@ namespace
 			}
 			else
 			{
-				chartData.warnings.push_back("Invalid note entry format");
+				pDiag->warnings.push_back("Invalid note entry format");
 			}
 		}
 	}
 
-	void ParseLaserSection(const nlohmann::json& j, ByPulse<LaserSection>& lane, ChartData& chartData)
+	void ParseLaserSection(const nlohmann::json& j, ByPulse<LaserSection>& lane, KsonParserDiag* pDiag)
 	{
 		if (!j.is_array())
 		{
@@ -1267,7 +1267,7 @@ namespace
 						if (point.is_array() && point.size() >= 2)
 						{
 							RelPulse ry = point[0].get<RelPulse>();
-							GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, chartData);
+							GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, pDiag);
 							section.v[ry] = graphPoint;
 						}
 					}
@@ -1287,12 +1287,12 @@ namespace
 			}
 			else
 			{
-				chartData.warnings.push_back("Invalid laser section format");
+				pDiag->warnings.push_back("Invalid laser section format");
 			}
 		}
 	}
 
-	NoteInfo ParseNoteInfo(const nlohmann::json& j, ChartData& chartData)
+	NoteInfo ParseNoteInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		NoteInfo note;
 
@@ -1304,7 +1304,7 @@ namespace
 			{
 				for (std::size_t i = 0; i < btArray.size() && i < note.bt.size(); ++i)
 				{
-					ParseLaneNotes(btArray[i], note.bt[i], chartData);
+					ParseLaneNotes(btArray[i], note.bt[i], pDiag);
 				}
 			}
 		}
@@ -1317,7 +1317,7 @@ namespace
 			{
 				for (std::size_t i = 0; i < fxArray.size() && i < note.fx.size(); ++i)
 				{
-					ParseLaneNotes(fxArray[i], note.fx[i], chartData);
+					ParseLaneNotes(fxArray[i], note.fx[i], pDiag);
 				}
 			}
 		}
@@ -1330,7 +1330,7 @@ namespace
 			{
 				for (std::size_t i = 0; i < laserArray.size() && i < note.laser.size(); ++i)
 				{
-					ParseLaserSection(laserArray[i], note.laser[i], chartData);
+					ParseLaserSection(laserArray[i], note.laser[i], pDiag);
 				}
 			}
 		}
@@ -1338,7 +1338,7 @@ namespace
 		return note;
 	}
 
-	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, ChartData& chartData)
+	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		BGMPreviewInfo preview;
 		preview.offset = GetWithDefault<std::int32_t>(j, "offset", 0);
@@ -1346,7 +1346,7 @@ namespace
 		return preview;
 	}
 
-	LegacyBGMInfo ParseLegacyBGMInfo(const nlohmann::json& j, ChartData& chartData)
+	LegacyBGMInfo ParseLegacyBGMInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		LegacyBGMInfo legacy;
 		if (j.contains("fp_filenames") && j["fp_filenames"].is_array())
@@ -1359,7 +1359,7 @@ namespace
 		return legacy;
 	}
 
-	BGMInfo ParseBGMInfo(const nlohmann::json& j, ChartData& chartData)
+	BGMInfo ParseBGMInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		BGMInfo bgm;
 		bgm.filename = GetWithDefault<std::string>(j, "filename", "");
@@ -1368,12 +1368,12 @@ namespace
 		
 		if (j.contains("preview"))
 		{
-			bgm.preview = ParseBGMPreviewInfo(j["preview"], chartData);
+			bgm.preview = ParseBGMPreviewInfo(j["preview"], pDiag);
 		}
 		
 		if (j.contains("legacy"))
 		{
-			bgm.legacy = ParseLegacyBGMInfo(j["legacy"], chartData);
+			bgm.legacy = ParseLegacyBGMInfo(j["legacy"], pDiag);
 		}
 		
 		return bgm;
@@ -1406,7 +1406,7 @@ namespace
 		return AudioEffectType::Unspecified;
 	}
 
-	AudioEffectDef ParseAudioEffectDef(const nlohmann::json& j, ChartData& chartData)
+	AudioEffectDef ParseAudioEffectDef(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		AudioEffectDef def;
 		
@@ -1429,7 +1429,7 @@ namespace
 		return def;
 	}
 
-	AudioEffectFXInfo ParseAudioEffectFXInfo(const nlohmann::json& j, ChartData& chartData)
+	AudioEffectFXInfo ParseAudioEffectFXInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		AudioEffectFXInfo fx;
 		
@@ -1442,7 +1442,7 @@ namespace
 				{
 					AudioEffectDefKVP kvp;
 					kvp.name = item[0].get<std::string>();
-					kvp.v = ParseAudioEffectDef(item[1], chartData);
+					kvp.v = ParseAudioEffectDef(item[1], pDiag);
 					fx.def.push_back(kvp);
 				}
 			}
@@ -1459,7 +1459,7 @@ namespace
 					{
 						if (values.is_array())
 						{
-							fx.paramChange[effectName][paramName] = ParseByPulse<std::string>(values, chartData);
+							fx.paramChange[effectName][paramName] = ParseByPulse<std::string>(values, pDiag);
 						}
 					}
 				}
@@ -1513,7 +1513,7 @@ namespace
 		return fx;
 	}
 
-	AudioEffectLaserInfo ParseAudioEffectLaserInfo(const nlohmann::json& j, ChartData& chartData)
+	AudioEffectLaserInfo ParseAudioEffectLaserInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		AudioEffectLaserInfo laser;
 		
@@ -1526,7 +1526,7 @@ namespace
 				{
 					AudioEffectDefKVP kvp;
 					kvp.name = item[0].get<std::string>();
-					kvp.v = ParseAudioEffectDef(item[1], chartData);
+					kvp.v = ParseAudioEffectDef(item[1], pDiag);
 					laser.def.push_back(kvp);
 				}
 			}
@@ -1543,7 +1543,7 @@ namespace
 					{
 						if (values.is_array())
 						{
-							laser.paramChange[effectName][paramName] = ParseByPulse<std::string>(values, chartData);
+							laser.paramChange[effectName][paramName] = ParseByPulse<std::string>(values, pDiag);
 						}
 					}
 				}
@@ -1579,31 +1579,31 @@ namespace
 			const auto& legacyObj = j["legacy"];
 			if (legacyObj.contains("filter_gain") && legacyObj["filter_gain"].is_array())
 			{
-				laser.legacy.filterGain = ParseByPulse<double>(legacyObj["filter_gain"], chartData);
+				laser.legacy.filterGain = ParseByPulse<double>(legacyObj["filter_gain"], pDiag);
 			}
 		}
 
 		return laser;
 	}
 
-	AudioEffectInfo ParseAudioEffectInfo(const nlohmann::json& j, ChartData& chartData)
+	AudioEffectInfo ParseAudioEffectInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		AudioEffectInfo audioEffect;
 		
 		if (j.contains("fx"))
 		{
-			audioEffect.fx = ParseAudioEffectFXInfo(j["fx"], chartData);
+			audioEffect.fx = ParseAudioEffectFXInfo(j["fx"], pDiag);
 		}
 		
 		if (j.contains("laser"))
 		{
-			audioEffect.laser = ParseAudioEffectLaserInfo(j["laser"], chartData);
+			audioEffect.laser = ParseAudioEffectLaserInfo(j["laser"], pDiag);
 		}
 		
 		return audioEffect;
 	}
 
-	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, ChartData& chartData)
+	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		KeySoundFXInfo fx;
 		
@@ -1647,13 +1647,13 @@ namespace
 		return fx;
 	}
 
-	KeySoundLaserInfo ParseKeySoundLaserInfo(const nlohmann::json& j, ChartData& chartData)
+	KeySoundLaserInfo ParseKeySoundLaserInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		KeySoundLaserInfo laser;
 		
 		if (j.contains("vol"))
 		{
-			laser.vol = ParseByPulse<double>(j["vol"], chartData);
+			laser.vol = ParseByPulse<double>(j["vol"], pDiag);
 		}
 		
 		if (j.contains("slam_event") && j["slam_event"].is_object())
@@ -1683,54 +1683,54 @@ namespace
 		return laser;
 	}
 
-	KeySoundInfo ParseKeySoundInfo(const nlohmann::json& j, ChartData& chartData)
+	KeySoundInfo ParseKeySoundInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		KeySoundInfo keySound;
 		
 		if (j.contains("fx"))
 		{
-			keySound.fx = ParseKeySoundFXInfo(j["fx"], chartData);
+			keySound.fx = ParseKeySoundFXInfo(j["fx"], pDiag);
 		}
 		
 		if (j.contains("laser"))
 		{
-			keySound.laser = ParseKeySoundLaserInfo(j["laser"], chartData);
+			keySound.laser = ParseKeySoundLaserInfo(j["laser"], pDiag);
 		}
 		
 		return keySound;
 	}
 
-	AudioInfo ParseAudioInfo(const nlohmann::json& j, ChartData& chartData)
+	AudioInfo ParseAudioInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		AudioInfo audio;
 		
 		if (j.contains("bgm"))
 		{
-			audio.bgm = ParseBGMInfo(j["bgm"], chartData);
+			audio.bgm = ParseBGMInfo(j["bgm"], pDiag);
 		}
 		
 		if (j.contains("key_sound"))
 		{
-			audio.keySound = ParseKeySoundInfo(j["key_sound"], chartData);
+			audio.keySound = ParseKeySoundInfo(j["key_sound"], pDiag);
 		}
 		
 		if (j.contains("audio_effect"))
 		{
-			audio.audioEffect = ParseAudioEffectInfo(j["audio_effect"], chartData);
+			audio.audioEffect = ParseAudioEffectInfo(j["audio_effect"], pDiag);
 		}
 		
 		return audio;
 	}
 
-	CamGraphs ParseCamGraphs(const nlohmann::json& j, ChartData& chartData)
+	CamGraphs ParseCamGraphs(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		CamGraphs graphs;
 
-		if (j.contains("zoom_bottom")) graphs.zoomBottom = ParseGraph(j["zoom_bottom"], chartData);
-		if (j.contains("zoom_side")) graphs.zoomSide = ParseGraph(j["zoom_side"], chartData);
-		if (j.contains("zoom_top")) graphs.zoomTop = ParseGraph(j["zoom_top"], chartData);
-		if (j.contains("rotation_deg")) graphs.rotationDeg = ParseGraph(j["rotation_deg"], chartData);
-		if (j.contains("center_split")) graphs.centerSplit = ParseGraph(j["center_split"], chartData);
+		if (j.contains("zoom_bottom")) graphs.zoomBottom = ParseGraph(j["zoom_bottom"], pDiag);
+		if (j.contains("zoom_side")) graphs.zoomSide = ParseGraph(j["zoom_side"], pDiag);
+		if (j.contains("zoom_top")) graphs.zoomTop = ParseGraph(j["zoom_top"], pDiag);
+		if (j.contains("rotation_deg")) graphs.rotationDeg = ParseGraph(j["rotation_deg"], pDiag);
+		if (j.contains("center_split")) graphs.centerSplit = ParseGraph(j["center_split"], pDiag);
 
 		return graphs;
 	}
@@ -1746,7 +1746,7 @@ namespace
 		return AutoTiltType::kNormal;
 	}
 
-	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, ChartData& chartData)
+	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		ByPulse<TiltValue> tilt;
 
@@ -1827,13 +1827,13 @@ namespace
 		return tilt;
 	}
 
-	CameraInfo ParseCameraInfo(const nlohmann::json& j, ChartData& chartData)
+	CameraInfo ParseCameraInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		CameraInfo camera;
 		
 		if (j.contains("tilt"))
 		{
-			camera.tilt = ParseTilt(j["tilt"], chartData);
+			camera.tilt = ParseTilt(j["tilt"], pDiag);
 		}
 		
 		if (j.contains("cam"))
@@ -1841,7 +1841,7 @@ namespace
 			const auto& camJ = j["cam"];
 			if (camJ.contains("body"))
 			{
-				camera.cam.body = ParseCamGraphs(camJ["body"], chartData);
+				camera.cam.body = ParseCamGraphs(camJ["body"], pDiag);
 			}
 			
 			if (camJ.contains("pattern") && camJ["pattern"].is_object())
@@ -1923,7 +1923,7 @@ namespace
 		return camera;
 	}
 
-	LegacyBGInfo ParseLegacyBGInfo(const nlohmann::json& j, ChartData& chartData)
+	LegacyBGInfo ParseLegacyBGInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		LegacyBGInfo legacy;
 		
@@ -1963,7 +1963,7 @@ namespace
 		return legacy;
 	}
 
-	BGInfo ParseBGInfo(const nlohmann::json& j, ChartData& chartData)
+	BGInfo ParseBGInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		BGInfo bg;
 
@@ -1971,13 +1971,13 @@ namespace
 
 		if (j.contains("legacy"))
 		{
-			bg.legacy = ParseLegacyBGInfo(j["legacy"], chartData);
+			bg.legacy = ParseLegacyBGInfo(j["legacy"], pDiag);
 		}
 
 		return bg;
 	}
 
-	EditorInfo ParseEditorInfo(const nlohmann::json& j, ChartData& chartData)
+	EditorInfo ParseEditorInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		EditorInfo editor;
 		
@@ -1986,13 +1986,13 @@ namespace
 		
 		if (j.contains("comment"))
 		{
-			editor.comment = ParseByPulse<std::string>(j["comment"], chartData);
+			editor.comment = ParseByPulse<std::string>(j["comment"], pDiag);
 		}
 		
 		return editor;
 	}
 
-	CompatInfo ParseCompatInfo(const nlohmann::json& j, ChartData& chartData)
+	CompatInfo ParseCompatInfo(const nlohmann::json& j, KsonParserDiag* pDiag)
 	{
 		CompatInfo compat;
 		
@@ -2083,10 +2083,16 @@ kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const Chart
 	return kson::SaveKSONChartData(ofs, chartData);
 }
 
-kson::ChartData kson::LoadKSONChartData(std::istream& stream)
+kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pKsonDiag)
 {
+	KsonParserDiag localDiag;
+	if (!pKsonDiag)
+	{
+		pKsonDiag = &localDiag;
+	}
+
 	ChartData chartData;
-	
+
 	if (!stream.good())
 	{
 		chartData.error = ErrorType::GeneralIOError;
@@ -2102,90 +2108,90 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream)
 		if (!j.contains("format_version"))
 		{
 			chartData.error = ErrorType::KSONParseError;
-			chartData.warnings.push_back("Missing required field: format_version");
+			pKsonDiag->warnings.push_back("Missing required field: format_version");
 			return chartData;
 		}
 
 		if (!j["format_version"].is_number_integer())
 		{
 			chartData.error = ErrorType::KSONParseError;
-			chartData.warnings.push_back("Invalid format_version: must be an integer");
+			pKsonDiag->warnings.push_back("Invalid format_version: must be an integer");
 			return chartData;
 		}
 
 		// Parse each component
 		if (j.contains("meta"))
 		{
-			chartData.meta = ParseMetaInfo(j["meta"], chartData);
+			chartData.meta = ParseMetaInfo(j["meta"], pKsonDiag);
 		}
-		
+
 		if (j.contains("beat"))
 		{
-			chartData.beat = ParseBeatInfo(j["beat"], chartData);
+			chartData.beat = ParseBeatInfo(j["beat"], pKsonDiag);
 		}
-		
+
 		if (j.contains("gauge"))
 		{
-			chartData.gauge = ParseGaugeInfo(j["gauge"], chartData);
+			chartData.gauge = ParseGaugeInfo(j["gauge"], pKsonDiag);
 		}
-		
+
 		if (j.contains("note"))
 		{
-			chartData.note = ParseNoteInfo(j["note"], chartData);
+			chartData.note = ParseNoteInfo(j["note"], pKsonDiag);
 		}
-		
+
 		if (j.contains("audio"))
 		{
-			chartData.audio = ParseAudioInfo(j["audio"], chartData);
+			chartData.audio = ParseAudioInfo(j["audio"], pKsonDiag);
 		}
-		
+
 		if (j.contains("camera"))
 		{
-			chartData.camera = ParseCameraInfo(j["camera"], chartData);
+			chartData.camera = ParseCameraInfo(j["camera"], pKsonDiag);
 		}
-		
+
 		if (j.contains("bg"))
 		{
-			chartData.bg = ParseBGInfo(j["bg"], chartData);
+			chartData.bg = ParseBGInfo(j["bg"], pKsonDiag);
 		}
-		
+
 		if (j.contains("editor"))
 		{
-			chartData.editor = ParseEditorInfo(j["editor"], chartData);
+			chartData.editor = ParseEditorInfo(j["editor"], pKsonDiag);
 		}
-		
+
 		if (j.contains("compat"))
 		{
-			chartData.compat = ParseCompatInfo(j["compat"], chartData);
+			chartData.compat = ParseCompatInfo(j["compat"], pKsonDiag);
 		}
-		
+
 		if (j.contains("impl"))
 		{
 			chartData.impl = j["impl"];
 		}
-		
+
 		chartData.error = ErrorType::None;
 	}
 	catch (const nlohmann::json::parse_error& e)
 	{
 		chartData.error = ErrorType::KSONParseError;
-		chartData.warnings.push_back("JSON parse error: " + std::string(e.what()));
+		pKsonDiag->warnings.push_back("JSON parse error: " + std::string(e.what()));
 	}
 	catch (const nlohmann::json::type_error& e)
 	{
 		chartData.error = ErrorType::KSONParseError;
-		chartData.warnings.push_back("JSON type error: " + std::string(e.what()));
+		pKsonDiag->warnings.push_back("JSON type error: " + std::string(e.what()));
 	}
 	catch (const std::exception& e)
 	{
 		chartData.error = ErrorType::UnknownError;
-		chartData.warnings.push_back("Unexpected error: " + std::string(e.what()));
+		pKsonDiag->warnings.push_back("Unexpected error: " + std::string(e.what()));
 	}
-	
+
 	return chartData;
 }
 
-kson::ChartData kson::LoadKSONChartData(const std::string& filePath)
+kson::ChartData kson::LoadKSONChartData(const std::string& filePath, KsonParserDiag* pKsonDiag)
 {
 	std::ifstream ifs(filePath);
 	if (!ifs.good())
@@ -2194,6 +2200,6 @@ kson::ChartData kson::LoadKSONChartData(const std::string& filePath)
 		chartData.error = ErrorType::CouldNotOpenInputFileStream;
 		return chartData;
 	}
-	return kson::LoadKSONChartData(ifs);
+	return kson::LoadKSONChartData(ifs, pKsonDiag);
 }
 #endif
