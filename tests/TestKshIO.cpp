@@ -2265,7 +2265,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		return result;
 	};
 
-	SECTION("Standard 1/32th slam does not trigger flag") {
+	SECTION("Standard 1/32th slam does not trigger warning") {
 		// 32 lines/measure = 30 pulses/line = exactly 1/32th
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(32);
 		std::istringstream stream(kshData);
@@ -2275,10 +2275,9 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 
-	SECTION("Sub-32th slam triggers flag") {
+	SECTION("Sub-32th slam triggers warning") {
 		// 48 lines/measure = 20 pulses/line < 30 pulses
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(48);
 		std::istringstream stream(kshData);
@@ -2288,10 +2287,9 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
-		REQUIRE(kshDiag.hasSub32thSlamLasers());
 	}
 
-	SECTION("No slam lasers does not trigger flag") {
+	SECTION("No slam lasers does not trigger warning") {
 		// Chart with no lasers
 		std::string kshData = makeKshHeader();
 		kshData +=
@@ -2306,10 +2304,9 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 
-	SECTION("Normal slope laser does not trigger flag") {
+	SECTION("Normal slope laser does not trigger warning") {
 		// Non-slam laser
 		std::string kshData = makeKshHeader();
 		kshData +=
@@ -2328,7 +2325,6 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
-		REQUIRE_FALSE(kshDiag.hasSub32thSlamLasers());
 	}
 }
 

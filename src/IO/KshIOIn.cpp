@@ -1499,18 +1499,6 @@ namespace
 	}
 }
 
-bool kson::KshParserDiag::hasSub32thSlamLasers() const
-{
-	for (const auto& w : warnings)
-	{
-		if (w.type == KshWarningType::Sub32thSlamLasers)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 std::vector<std::string> kson::KshParserDiag::toStrings() const
 {
 	std::vector<std::string> result;

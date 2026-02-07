@@ -30,7 +30,6 @@ namespace kson
 	{
 		std::vector<KshWarning> warnings;
 
-		bool hasSub32thSlamLasers() const;
 		std::vector<std::string> toStrings() const;
 	};
 }
