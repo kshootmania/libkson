@@ -7,6 +7,7 @@
 #include <numeric>
 #include <cmath>
 #include <limits>
+#include <set>
 
 namespace
 {
@@ -28,6 +29,12 @@ namespace
 	constexpr char kAudioEffectStrSeparator = ';';
 
 	constexpr std::int32_t kLaserXMax = 50;
+
+	// Wide laser zero positions (corrected on KSH load/save)
+	constexpr std::int32_t kWideLaserLeftZeroX = 12; // 'C'
+	constexpr std::int32_t kWideLaserRightZeroX = 37; // 'b'
+	constexpr double kWideLaserLeftZeroValue = 0.25;
+	constexpr double kWideLaserRightZeroValue = 0.75;
 
 	constexpr double kManualTiltAbsMax = 1000.0;
 	constexpr double kZoomAbsMaxLegacy = 300.0; // ver < 1.67
@@ -150,18 +157,15 @@ namespace
 	// GraphValue (0.0-1.0) to LaserX (0-50)
 	constexpr std::int32_t GraphValueToLaserX(double graphValue, bool wide)
 	{
-		// Handle special wide laser positions
 		if (wide)
 		{
-			// Left laser center position (C)
-			if (AlmostEquals(graphValue, 0.25))
+			if (AlmostEquals(graphValue, kWideLaserLeftZeroValue))
 			{
-				return 12; // 'C'
+				return kWideLaserLeftZeroX;
 			}
-			// Right laser center position (b)
-			if (AlmostEquals(graphValue, 0.75))
+			if (AlmostEquals(graphValue, kWideLaserRightZeroValue))
 			{
-				return 37; // 'b'
+				return kWideLaserRightZeroX;
 			}
 		}
 
@@ -216,6 +220,224 @@ namespace
 		case AutoTiltType::kKeepBiggest: return "keep_biggest";
 		case AutoTiltType::kZero: return "zero";
 		default: return "normal";
+		}
+	}
+
+	bool HasFraction(double value)
+	{
+		return value != std::round(value);
+	}
+
+	bool IsOnLaserGrid(double value, bool wide)
+	{
+		if (wide)
+		{
+			if (AlmostEquals(value, kWideLaserLeftZeroValue) || AlmostEquals(value, kWideLaserRightZeroValue))
+			{
+				return true;
+			}
+			// Uncorrected values (12/50, 37/50) become 0.25/0.75 on reload
+			constexpr double kLeftUncorrected = static_cast<double>(kWideLaserLeftZeroX) / kLaserXMax;
+			constexpr double kRightUncorrected = static_cast<double>(kWideLaserRightZeroX) / kLaserXMax;
+			if (AlmostEquals(value, kLeftUncorrected) || AlmostEquals(value, kRightUncorrected))
+			{
+				return false;
+			}
+		}
+		const double quantized = std::round(value * kLaserXMax) / kLaserXMax;
+		return AlmostEquals(value, quantized);
+	}
+
+	// Check if a parameter can be preserved in KSH format
+	bool IsKshPreservableParam(AudioEffectType type, const std::string& paramName, const std::string& paramValue)
+	{
+		switch (type)
+		{
+		case AudioEffectType::Retrigger:
+		case AudioEffectType::Gate:
+		case AudioEffectType::Wobble:
+			return paramName == "wave_length" && paramValue.starts_with("1/");
+		case AudioEffectType::Echo:
+			if (paramName == "wave_length")
+			{
+				return paramValue.starts_with("1/");
+			}
+			if (paramName == "feedback_level")
+			{
+				return true;
+			}
+			return false;
+		case AudioEffectType::PitchShift:
+			return paramName == "pitch";
+		case AudioEffectType::Bitcrusher:
+			return paramName == "reduction";
+		case AudioEffectType::Tapestop:
+			return paramName == "speed";
+		default:
+			return false;
+		}
+	}
+
+	void ScanForDataLossWarnings(const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
+	{
+		if (!pKshSavingDiag)
+		{
+			return;
+		}
+
+		// Zoom fraction loss
+		{
+			std::vector<std::string> fractionalParams;
+			const auto& cam = chartData.camera.cam.body;
+
+			const auto checkGraph = [](const Graph& graph)
+			{
+				for (const auto& [pulse, gp] : graph)
+				{
+					if (HasFraction(gp.v.v) || HasFraction(gp.v.vf))
+					{
+						return true;
+					}
+				}
+				return false;
+			};
+
+			if (checkGraph(cam.zoomTop))
+			{
+				fractionalParams.push_back("zoom_top");
+			}
+			if (checkGraph(cam.zoomBottom))
+			{
+				fractionalParams.push_back("zoom_bottom");
+			}
+			if (checkGraph(cam.zoomSide))
+			{
+				fractionalParams.push_back("zoom_side");
+			}
+
+			if (!fractionalParams.empty())
+			{
+				std::string paramList;
+				for (size_t i = 0; i < fractionalParams.size(); ++i)
+				{
+					if (i > 0)
+					{
+						paramList += ", ";
+					}
+					paramList += fractionalParams[i];
+				}
+				pKshSavingDiag->warnings.push_back({
+					.type = KshSavingWarningType::ZoomFractionLost,
+					.scope = WarningScope::EditorOnly,
+					.message = paramList + " values have fractional parts that will be rounded to integers",
+				});
+			}
+		}
+
+		// Laser precision loss
+		{
+			bool precisionLost = false;
+			for (const auto& laserLane : chartData.note.laser)
+			{
+				for (const auto& [pulse, section] : laserLane)
+				{
+					const bool wide = section.wide();
+					for (const auto& [relPulse, gp] : section.v)
+					{
+						if (!IsOnLaserGrid(gp.v.v, wide) || !IsOnLaserGrid(gp.v.vf, wide))
+						{
+							precisionLost = true;
+							break;
+						}
+					}
+					if (precisionLost)
+					{
+						break;
+					}
+				}
+				if (precisionLost)
+				{
+					break;
+				}
+			}
+
+			if (precisionLost)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.type = KshSavingWarningType::LaserPrecisionLost,
+					.scope = WarningScope::EditorOnly,
+					.message = "Laser positions will be quantized to 51 steps (KSH limitation)",
+				});
+			}
+		}
+
+		// FX long event parameter loss
+		{
+			const auto& fxInfo = chartData.audio.audioEffect.fx;
+			for (const auto& [effectName, lanes] : fxInfo.longEvent)
+			{
+				AudioEffectType effectType = AudioEffectType::Unspecified;
+				if (fxInfo.defContains(effectName))
+				{
+					effectType = fxInfo.defByName(effectName).type;
+				}
+				else
+				{
+					effectType = StrToAudioEffectType(effectName);
+				}
+
+				std::set<std::string> lostParams;
+				bool allParamsLost = true;
+				bool hasAnyParam = false;
+
+				for (const auto& lane : lanes)
+				{
+					for (const auto& [pulse, params] : lane)
+					{
+						for (const auto& [paramName, paramValue] : params)
+						{
+							hasAnyParam = true;
+							if (!IsKshPreservableParam(effectType, paramName, paramValue))
+							{
+								lostParams.insert(paramName);
+							}
+							else
+							{
+								allParamsLost = false;
+							}
+						}
+					}
+				}
+
+				if (!lostParams.empty())
+				{
+					std::string message = "FX audio effect \"" + effectName + "\": ";
+					if (allParamsLost && hasAnyParam)
+					{
+						message += "all parameters will be lost (KSH does not support inline parameters for this effect)";
+					}
+					else
+					{
+						message += "parameters ";
+						bool first = true;
+						for (const auto& p : lostParams)
+						{
+							if (!first)
+							{
+								message += ", ";
+							}
+							message += "\"" + p + "\"";
+							first = false;
+						}
+						message += " will be lost";
+					}
+					pKshSavingDiag->warnings.push_back({
+						.type = KshSavingWarningType::FXLongEventParamsLost,
+						.scope = WarningScope::EditorOnly,
+						.message = std::move(message),
+					});
+				}
+			}
 		}
 	}
 
@@ -2394,6 +2616,8 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 	WriteBOM(stream);
 
 	MeasureExportState state;
+
+	ScanForDataLossWarnings(chartData, pKshSavingDiag);
 
 	// Write header and store the header BPM string in state
 	WriteHeader(stream, chartData, &state.headerBPMStr, pKshSavingDiag);

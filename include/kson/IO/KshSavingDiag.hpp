@@ -13,6 +13,9 @@ namespace kson
 		CenterSplitClamped,
 		ManualTiltClamped,
 		RotationDegClamped,
+		ZoomFractionLost,
+		LaserPrecisionLost,
+		FXLongEventParamsLost,
 	};
 
 	struct KshSavingWarning
