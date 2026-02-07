@@ -907,14 +907,32 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 			return;
 		}
 
+		std::set<std::string> ignoredPackages;
+
 		for (const auto& file : kshFiles) {
 			std::string relativePath = file;
 			size_t songsPos = relativePath.find("/songs/");
 			if (songsPos != std::string::npos) {
-				relativePath = relativePath.substr(songsPos + 1);
+				relativePath = relativePath.substr(songsPos + 7); // skip "/songs/"
 			}
 
-			INFO("Testing file: " << relativePath);
+			// Skip packages with .ignore_ksh_lossless
+			size_t slashPos = relativePath.find('/');
+			if (slashPos != std::string::npos) {
+				std::string packageName = relativePath.substr(0, slashPos);
+				if (!ignoredPackages.contains(packageName)) {
+					std::filesystem::path ignoreFile = songsPath / packageName / ".ignore_ksh_lossless";
+					if (std::filesystem::exists(ignoreFile)) {
+						ignoredPackages.insert(packageName);
+					}
+				}
+				if (ignoredPackages.contains(packageName)) {
+					continue;
+				}
+			}
+
+			std::string displayPath = "songs/" + relativePath;
+			INFO("Testing file: " << displayPath);
 			testKSONRoundTrip(file);
 		}
 	}
