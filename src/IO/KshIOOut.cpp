@@ -584,20 +584,27 @@ namespace
 		stream << "illustrator=" << meta.jacketAuthor << "\r\n";
 
 		// Difficulty
-		const char* diffStr = "infinite";
-		if (meta.difficulty.idx == 0)
+		if (!meta.difficulty.name.empty())
 		{
-			diffStr = "light";
+			stream << "difficulty=" << meta.difficulty.name << "\r\n";
 		}
-		else if (meta.difficulty.idx == 1)
+		else
 		{
-			diffStr = "challenge";
+			const char* diffStr = "infinite";
+			if (meta.difficulty.idx == 0)
+			{
+				diffStr = "light";
+			}
+			else if (meta.difficulty.idx == 1)
+			{
+				diffStr = "challenge";
+			}
+			else if (meta.difficulty.idx == 2)
+			{
+				diffStr = "extended";
+			}
+			stream << "difficulty=" << diffStr << "\r\n";
 		}
-		else if (meta.difficulty.idx == 2)
-		{
-			diffStr = "extended";
-		}
-		stream << "difficulty=" << diffStr << "\r\n";
 		stream << "level=" << meta.level << "\r\n";
 
 		// BPM
