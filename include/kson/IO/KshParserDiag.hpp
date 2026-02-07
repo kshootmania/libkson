@@ -1,4 +1,5 @@
 #pragma once
+#include "WarningScope.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -20,6 +21,7 @@ namespace kson
 	struct KshWarning
 	{
 		KshWarningType type;
+		WarningScope scope;
 		std::string message;
 		std::int64_t lineNo;
 	};

@@ -1,4 +1,5 @@
 #pragma once
+#include "WarningScope.hpp"
 #include <string>
 #include <vector>
 
@@ -22,6 +23,7 @@ namespace kson
 	struct KsonWarning
 	{
 		KsonWarningType type;
+		WarningScope scope;
 		std::string message;
 	};
 

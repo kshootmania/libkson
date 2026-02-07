@@ -1128,6 +1128,7 @@ namespace
 							{
 								m_pKshDiag->warnings.push_back({
 									.type = KshWarningType::Sub32thSlamLasers,
+									.scope = WarningScope::EditorOnly,
 									.message = "Sub-1/32th laser slam detected. Resaving as KSH will lose the original slam lengths.",
 									.lineNo = lineNo,
 								});
@@ -1278,6 +1279,7 @@ namespace
 			{
 				pKshDiag->warnings.push_back({
 					.type = KshWarningType::TitleNotAtBeginning,
+					.scope = WarningScope::EditorOnly,
 					.message = "The option line \"title=...\" must be placed at the beginning of a KSH chart file.",
 					.lineNo = 1,
 				});
@@ -1573,6 +1575,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		currentTimeSig = { .n = 4, .d = 4 };
 		pKshDiag->warnings.push_back({
 			.type = KshWarningType::MissingTimeSigAtZero,
+			.scope = WarningScope::PlayerAndEditor,
 			.message = "Loaded KSH chart data must have time signature at zero pulse.",
 			.lineNo = fileLineNo,
 		});
@@ -1723,6 +1726,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 				{
 					pKshDiag->warnings.push_back({
 						.type = KshWarningType::AudioEffectMissingType,
+						.scope = WarningScope::EditorOnly,
 						.message = "Audio effect '" + name + "' is ignored as it does not contain 'type' parameter.",
 						.lineNo = fileLineNo,
 					});
@@ -1735,6 +1739,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 				{
 					pKshDiag->warnings.push_back({
 						.type = KshWarningType::AudioEffectInvalidType,
+						.scope = WarningScope::EditorOnly,
 						.message = "Audio effect '" + name + "' is ignored as '" + type + "' is not a valid audio effect type",
 						.lineNo = fileLineNo,
 					});
@@ -2252,6 +2257,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		{
 			pKshDiag->warnings.push_back({
 				.type = KshWarningType::UncommittedBTNote,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Uncommitted BT note detected. The chart content does not end with a bar line (\"--\").",
 				.lineNo = fileLineNo,
 			});
@@ -2263,6 +2269,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		{
 			pKshDiag->warnings.push_back({
 				.type = KshWarningType::UncommittedFXNote,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Uncommitted FX note detected. The chart content does not end with a bar line (\"--\").",
 				.lineNo = fileLineNo,
 			});
@@ -2328,6 +2335,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshParserDiag* pKsh
 		{
 			pKshDiag->warnings.push_back({
 				.type = KshWarningType::UndefinedAudioEffect,
+				.scope = WarningScope::EditorOnly,
 				.message = "Undefined audio effect '" + audioEffectName + "' is specified in audio.audio_effect.fx.long_event.",
 				.lineNo = fileLineNo,
 			});

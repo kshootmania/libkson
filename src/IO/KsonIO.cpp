@@ -997,6 +997,7 @@ namespace
 		{
 			pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidGraphValueFormat,
+				.scope = WarningScope::EditorOnly,
 				.message = "Invalid graph value format",
 			});
 			return GraphValue{ 0.0 };
@@ -1063,6 +1064,7 @@ namespace
 			{
 				pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidByPulseEntryFormat,
+				.scope = WarningScope::EditorOnly,
 				.message = "Invalid ByPulse entry format",
 			});
 			}
@@ -1090,6 +1092,7 @@ namespace
 			{
 				pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidGraphEntryFormat,
+				.scope = WarningScope::EditorOnly,
 				.message = "Invalid graph entry format",
 			});
 			}
@@ -1118,6 +1121,7 @@ namespace
 			{
 				pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidByMeasureIdxEntryFormat,
+				.scope = WarningScope::EditorOnly,
 				.message = "Invalid ByMeasureIdx entry format",
 			});
 			}
@@ -1253,6 +1257,7 @@ namespace
 			{
 				pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidNoteEntryFormat,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Invalid note entry format",
 			});
 			}
@@ -1304,6 +1309,7 @@ namespace
 			{
 				pDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidLaserSectionFormat,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Invalid laser section format",
 			});
 			}
@@ -2128,6 +2134,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pK
 			chartData.error = ErrorType::KSONParseError;
 			pKsonDiag->warnings.push_back({
 				.type = KsonWarningType::MissingFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Missing required field: format_version",
 			});
 			return chartData;
@@ -2138,6 +2145,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pK
 			chartData.error = ErrorType::KSONParseError;
 			pKsonDiag->warnings.push_back({
 				.type = KsonWarningType::InvalidFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
 				.message = "Invalid format_version: must be an integer",
 			});
 			return chartData;
@@ -2201,6 +2209,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pK
 		chartData.error = ErrorType::KSONParseError;
 		pKsonDiag->warnings.push_back({
 			.type = KsonWarningType::JsonParseError,
+			.scope = WarningScope::PlayerAndEditor,
 			.message = "JSON parse error: " + std::string(e.what()),
 		});
 	}
@@ -2209,6 +2218,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pK
 		chartData.error = ErrorType::KSONParseError;
 		pKsonDiag->warnings.push_back({
 			.type = KsonWarningType::JsonTypeError,
+			.scope = WarningScope::PlayerAndEditor,
 			.message = "JSON type error: " + std::string(e.what()),
 		});
 	}
@@ -2217,6 +2227,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonParserDiag* pK
 		chartData.error = ErrorType::UnknownError;
 		pKsonDiag->warnings.push_back({
 			.type = KsonWarningType::UnexpectedError,
+			.scope = WarningScope::PlayerAndEditor,
 			.message = "Unexpected error: " + std::string(e.what()),
 		});
 	}
