@@ -823,7 +823,6 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 			std::cerr << "Error code: " << static_cast<int>(kson1.error) << std::endl;
 		}
 		REQUIRE(kson1.error == kson::ErrorType::None);
-		std::cerr << "Loaded KSH successfully: " << filename << std::endl;
 
 		// kson1 → ksh2
 		std::ostringstream ossKsh;
