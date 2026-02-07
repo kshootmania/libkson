@@ -587,11 +587,19 @@ namespace
 
 		// Meta information
 		stream << "title=" << meta.title << "\r\n";
+		if (!meta.titleTranslit.empty())
+		{
+			stream << "title_translit=" << meta.titleTranslit << "\r\n";
+		}
 		if (!meta.titleImgFilename.empty())
 		{
 			stream << "title_img=" << meta.titleImgFilename << "\r\n";
 		}
 		stream << "artist=" << meta.artist << "\r\n";
+		if (!meta.artistTranslit.empty())
+		{
+			stream << "artist_translit=" << meta.artistTranslit << "\r\n";
+		}
 		if (!meta.artistImgFilename.empty())
 		{
 			stream << "artist_img=" << meta.artistImgFilename << "\r\n";
