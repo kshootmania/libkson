@@ -23,6 +23,8 @@ else()
 	set(KSON_GIT_HASH "unknown")
 endif()
 
+set(KSON_GIT_HASH "${KSON_GIT_HASH}" PARENT_SCOPE)
+
 set(KSON_VERSION "0.1.0")
 if(NOT KSON_GIT_HASH STREQUAL "unknown")
 	set(KSON_VERSION_FULL "${KSON_VERSION}+${KSON_GIT_HASH}")
