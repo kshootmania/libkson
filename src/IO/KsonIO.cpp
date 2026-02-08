@@ -936,7 +936,7 @@ namespace
 		nlohmann::json j = nlohmann::json::object();
 		Write(j, "app_name", d.appName, "");
 		Write(j, "app_version", d.appVersion, "");
-		WriteByPulse(j, "comment", d.comment);
+		WriteByPulseMulti(j, "comment", d.comment);
 		return j;
 	}
 
@@ -1059,6 +1059,35 @@ namespace
 				Pulse pulse = item[0].get<Pulse>();
 				T value = item[1].get<T>();
 				result[pulse] = value;
+			}
+			else
+			{
+				pDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::InvalidByPulseEntryFormat,
+				.scope = WarningScope::EditorOnly,
+				.message = "Invalid ByPulse entry format",
+			});
+			}
+		}
+		return result;
+	}
+
+	template<typename T>
+	ByPulseMulti<T> ParseByPulseMulti(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	{
+		ByPulseMulti<T> result;
+		if (!j.is_array())
+		{
+			return result;
+		}
+
+		for (const auto& item : j)
+		{
+			if (item.is_array() && item.size() >= 2)
+			{
+				Pulse pulse = item[0].get<Pulse>();
+				T value = item[1].get<T>();
+				result.emplace(pulse, value);
 			}
 			else
 			{
@@ -2010,7 +2039,7 @@ namespace
 		
 		if (j.contains("comment"))
 		{
-			editor.comment = ParseByPulse<std::string>(j["comment"], pDiag);
+			editor.comment = ParseByPulseMulti<std::string>(j["comment"], pDiag);
 		}
 		
 		return editor;

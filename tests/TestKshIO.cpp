@@ -2345,3 +2345,85 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 	}
 }
 
+TEST_CASE("KSH comment multiline escape/unescape", "[ksh_io][comment]")
+{
+	std::string kshContent = R"(title=Test Comment
+artist=Test
+effect=
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+--
+//First line\nSecond line\nThird line
+0000|00|--
+--
+)";
+
+	std::istringstream iss(kshContent);
+	auto chartData = kson::LoadKSHChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	// Should convert \n to newline
+	REQUIRE(chartData.editor.comment.count(0) == 1);
+	auto it = chartData.editor.comment.find(0);
+	REQUIRE(it != chartData.editor.comment.end());
+	REQUIRE(it->second == "First line\nSecond line\nThird line");
+
+	// Should escape newlines to \n on output
+	std::ostringstream oss;
+	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result == kson::ErrorType::None);
+
+	std::string kshOutput = oss.str();
+	REQUIRE(kshOutput.find("//First line\\nSecond line\\nThird line") != std::string::npos);
+}
+
+TEST_CASE("KSH multiple comments at same pulse", "[ksh_io][comment]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test Multiple Comments";
+	chartData.meta.artist = "Test";
+	chartData.meta.chartAuthor = "Test";
+	chartData.meta.level = 1;
+	chartData.meta.difficulty.idx = 0;
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+
+	// Add 3 comments at the same pulse
+	chartData.editor.comment.emplace(0, "Comment 1");
+	chartData.editor.comment.emplace(0, "Comment 2");
+	chartData.editor.comment.emplace(0, "Comment 3");
+
+	REQUIRE(chartData.editor.comment.count(0) == 3);
+
+	std::ostringstream oss;
+	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	REQUIRE(result == kson::ErrorType::None);
+
+	std::string kshOutput = oss.str();
+	INFO("KSH output:\n" << kshOutput);
+
+	// Should output all 3 comments
+	REQUIRE(kshOutput.find("//Comment 1") != std::string::npos);
+	REQUIRE(kshOutput.find("//Comment 2") != std::string::npos);
+	REQUIRE(kshOutput.find("//Comment 3") != std::string::npos);
+
+	// Round-trip should preserve all comments
+	std::istringstream iss(kshOutput);
+	auto chartData2 = kson::LoadKSHChartData(iss);
+	REQUIRE(chartData2.error == kson::ErrorType::None);
+	REQUIRE(chartData2.editor.comment.count(0) == 3);
+
+	auto range = chartData2.editor.comment.equal_range(0);
+	std::set<std::string> comments;
+	for (auto it = range.first; it != range.second; ++it)
+	{
+		comments.insert(it->second);
+	}
+	REQUIRE(comments.count("Comment 1") == 1);
+	REQUIRE(comments.count("Comment 2") == 1);
+	REQUIRE(comments.count("Comment 3") == 1);
+}
+
