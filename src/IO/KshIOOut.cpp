@@ -1628,7 +1628,14 @@ namespace
 		auto commentRange = chartData.editor.comment.equal_range(pulse);
 		for (auto it = commentRange.first; it != commentRange.second; ++it)
 		{
-			stream << "//" << it->second << "\r\n";
+			std::string escapedComment = it->second;
+			std::size_t pos = 0;
+			while ((pos = escapedComment.find('\n', pos)) != std::string::npos)
+			{
+				escapedComment.replace(pos, 1, "\\n"); // 1 = strlen("\n")
+				pos += 2; // 2 = strlen("\\n")
+			}
+			stream << "//" << escapedComment << "\r\n";
 		}
 
 		// Output unknown lines for this pulse

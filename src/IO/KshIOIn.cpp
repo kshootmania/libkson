@@ -1313,7 +1313,14 @@ namespace
 			{
 				if constexpr (std::is_same_v<ChartDataType, ChartData>)
 				{
-					chartData.editor.comment.emplace(0, line.substr(2)); // 2 = strlen("//")
+					std::string commentText = line.substr(2); // 2 = strlen("//")
+					std::size_t pos = 0;
+					while ((pos = commentText.find("\\n", pos)) != std::string::npos)
+					{
+						commentText.replace(pos, 2, "\n"); // 2 = strlen("\\n")
+						pos += 1; // 1 = strlen("\n")
+					}
+					chartData.editor.comment.emplace(0, commentText);
 				}
 				continue;
 			}
@@ -1623,9 +1630,16 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKs
 		// Comments
 		if (IsCommentLine(line))
 		{
+			std::string commentText = line.substr(2); // 2 = strlen("//")
+			std::size_t pos = 0;
+			while ((pos = commentText.find("\\n", pos)) != std::string::npos)
+			{
+				commentText.replace(pos, 2, "\n"); // 2 = strlen("\\n")
+				pos += 1; // 1 = strlen("\n")
+			}
 			commentLines.push_back({
 				.lineIdx = chartLines.size(),
-				.value = line.substr(2), // 2 = strlen("//")
+				.value = commentText,
 			});
 			continue;
 		}
