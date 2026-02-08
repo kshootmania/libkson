@@ -36,8 +36,13 @@
     <ClInclude Include="include\kson\Encoding\Encoding.hpp" />
     <ClInclude Include="include\kson\Error.hpp" />
     <ClInclude Include="include\kson\Gauge\GaugeInfo.hpp" />
+    <ClInclude Include="include\kson\IO\IDiag.hpp" />
     <ClInclude Include="include\kson\IO\KshIO.hpp" />
+    <ClInclude Include="include\kson\IO\KshParserDiag.hpp" />
+    <ClInclude Include="include\kson\IO\KshSavingDiag.hpp" />
     <ClInclude Include="include\kson\IO\KsonIO.hpp" />
+    <ClInclude Include="include\kson\IO\KsonParserDiag.hpp" />
+    <ClInclude Include="include\kson\IO\WarningScope.hpp" />
     <ClInclude Include="include\kson\kson.hpp" />
     <ClInclude Include="include\kson\Meta\MetaInfo.hpp" />
     <ClInclude Include="include\kson\Note\NoteInfo.hpp" />
@@ -50,6 +55,7 @@
     <ClCompile Include="src\Audio\AudioEffect.cpp" />
     <ClCompile Include="src\Audio\BGMInfo.cpp" />
     <ClCompile Include="src\Camera\Tilt.cpp" />
+    <ClCompile Include="src\ChartData.cpp" />
     <ClCompile Include="src\Compat\CompatInfo.cpp" />
     <ClCompile Include="src\Encoding\EncodingWin.cpp" />
     <ClCompile Include="src\Error.cpp" />

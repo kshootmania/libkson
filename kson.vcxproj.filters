@@ -123,13 +123,28 @@
     <ClInclude Include="include\kson\Util\TimingUtils.hpp">
       <Filter>Header Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="include\kson\IO\KshIO.hpp">
-      <Filter>Header Files\io</Filter>
-    </ClInclude>
     <ClInclude Include="include\kson\Encoding\Encoding.hpp">
       <Filter>Header Files\encoding</Filter>
     </ClInclude>
+    <ClInclude Include="include\kson\IO\IDiag.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\IO\KshIO.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\IO\KshParserDiag.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\IO\KshSavingDiag.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
     <ClInclude Include="include\kson\IO\KsonIO.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\IO\KsonParserDiag.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
+    <ClInclude Include="include\kson\IO\WarningScope.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
     <ClInclude Include="include\kson\Util\GraphUtils.hpp">
@@ -168,6 +183,9 @@
       <Filter>Source Files\util</Filter>
     </ClCompile>
     <ClCompile Include="src\Camera\Tilt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ChartData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\IO\KshIOIn.cpp">
