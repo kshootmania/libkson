@@ -2183,6 +2183,38 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 			return chartData;
 		}
 
+		const std::int32_t formatVersion = j["format_version"].get<std::int32_t>();
+		if (formatVersion > kKSONFormatVersion)
+		{
+			std::string message = "File format version " + std::to_string(formatVersion);
+
+			if (j.contains("editor"))
+			{
+				const auto& editorJson = j["editor"];
+				if (editorJson.contains("app_name") && editorJson["app_name"].is_string())
+				{
+					const std::string appName = editorJson["app_name"].get<std::string>();
+					message += " (created with " + appName;
+
+					if (editorJson.contains("app_version") && editorJson["app_version"].is_string())
+					{
+						const std::string appVersion = editorJson["app_version"].get<std::string>();
+						message += " " + appVersion;
+					}
+
+					message += ")";
+				}
+			}
+
+			message += " is newer than supported version " + std::to_string(kKSONFormatVersion);
+
+			pKsonDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::NewerFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
+				.message = message,
+			});
+		}
+
 		// Parse each component
 		if (j.contains("meta"))
 		{

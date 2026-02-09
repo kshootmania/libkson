@@ -16,6 +16,7 @@ namespace kson
 		InvalidLaserSectionFormat,
 		MissingFormatVersion,
 		InvalidFormatVersion,
+		NewerFormatVersion,
 		JsonParseError,
 		JsonTypeError,
 		UnexpectedError,
