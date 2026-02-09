@@ -1828,7 +1828,19 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKs
 
 			if (bufLineCount > 0)
 			{
-				const RelPulse oneLinePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d / bufLineCount;
+				const RelPulse measurePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d;
+				const RelPulse oneLinePulse = measurePulse / bufLineCount;
+
+				// Warn if the measure split is not evenly divisible
+				if (pKshDiag && measurePulse % bufLineCount != 0)
+				{
+					pKshDiag->warnings.push_back({
+						.type = KshLoadingWarningType::MeasureSplitNotDivisible,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "Measure " + std::to_string(currentMeasureIdx) + " is divided into " + std::to_string(bufLineCount) + " lines, not a divisor of " + std::to_string(measurePulse) + " pulses (time sig: " + std::to_string(currentTimeSig.n) + "/" + std::to_string(currentTimeSig.d) + "), precision loss may occur",
+						.lineNo = fileLineNo,
+					});
+				}
 
 				// Add options that require their position
 				for (const auto& [lineIdx, key, value] : optionLines)

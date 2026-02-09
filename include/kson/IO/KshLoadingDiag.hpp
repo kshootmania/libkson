@@ -17,6 +17,7 @@ namespace kson
 		UncommittedFXNote,
 		UndefinedAudioEffect,
 		Sub32thSlamLasers,
+		MeasureSplitNotDivisible,
 	};
 
 	struct KshLoadingWarning
