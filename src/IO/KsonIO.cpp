@@ -788,22 +788,25 @@ namespace
 
 			if (hasCurve && hasGraphValue)
 			{
-				// With immediate change and curve: [pulse, [[v, vf], [a, b]]]
-				nlohmann::json graphValue = nlohmann::json::array();
-				graphValue.push_back(RemoveFloatingPointError(point.v.v));
-				if (std::holds_alternative<double>(point.v.vf))
+				// Ignore curve when vf is AutoTiltType
+				if (std::holds_alternative<AutoTiltType>(point.v.vf))
 				{
-					graphValue.push_back(RemoveFloatingPointError(std::get<double>(point.v.vf)));
+					nlohmann::json graphValue = nlohmann::json::array();
+					graphValue.push_back(RemoveFloatingPointError(point.v.v));
+					graphValue.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(point.v.vf)));
+					entry.push_back(std::move(graphValue));
 				}
 				else
 				{
-					graphValue.push_back(AutoTiltTypeToString(std::get<AutoTiltType>(point.v.vf)));
+					nlohmann::json graphValue = nlohmann::json::array();
+					graphValue.push_back(RemoveFloatingPointError(point.v.v));
+					graphValue.push_back(RemoveFloatingPointError(std::get<double>(point.v.vf)));
+					nlohmann::json curveValue = nlohmann::json::array({
+						RemoveFloatingPointError(point.curve.a),
+						RemoveFloatingPointError(point.curve.b)
+					});
+					entry.push_back(nlohmann::json::array({ std::move(graphValue), std::move(curveValue) }));
 				}
-				nlohmann::json curveValue = nlohmann::json::array({
-					RemoveFloatingPointError(point.curve.a),
-					RemoveFloatingPointError(point.curve.b)
-				});
-				entry.push_back(nlohmann::json::array({ graphValue, curveValue }));
 			}
 			else if (hasCurve)
 			{
