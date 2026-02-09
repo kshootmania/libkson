@@ -277,20 +277,10 @@ TEST_CASE("KSON I/O lossless test (all songs)", "[.][kson_io][kson_lossless][all
 
     SECTION("All KSH files in songs directory") {
         std::vector<std::string> kshFiles;
-        std::string searchCmd = "find \"" + songsPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
-        FILE* pipe = popen(searchCmd.c_str(), "r");
-        if (pipe) {
-            char buffer[1024];
-            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                std::string filename = buffer;
-                if (!filename.empty() && filename.back() == '\n') {
-                    filename.pop_back();
-                }
-                if (!filename.empty()) {
-                    kshFiles.push_back(filename);
-                }
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(songsPath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".ksh") {
+                kshFiles.push_back(entry.path().string());
             }
-            pclose(pipe);
         }
         
         if (kshFiles.empty()) {
@@ -885,20 +875,10 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 
 	SECTION("All KSH files in songs directory") {
 		std::vector<std::string> kshFiles;
-		std::string searchCmd = "find \"" + songsPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
-		FILE* pipe = popen(searchCmd.c_str(), "r");
-		if (pipe) {
-			char buffer[1024];
-			while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-				std::string filename = buffer;
-				if (!filename.empty() && filename.back() == '\n') {
-					filename.pop_back();
-				}
-				if (!filename.empty()) {
-					kshFiles.push_back(filename);
-				}
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(songsPath)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".ksh") {
+				kshFiles.push_back(entry.path().string());
 			}
-			pclose(pipe);
 		}
 
 		if (kshFiles.empty()) {
@@ -1082,20 +1062,10 @@ static void RunKSHRoundTripTest(
 	}
 
 	std::vector<std::string> kshFiles;
-	std::string searchCmd = "find \"" + targetPath.string() + "\" -name \"*.ksh\" 2>/dev/null";
-	FILE* pipe = popen(searchCmd.c_str(), "r");
-	if (pipe) {
-		char buffer[1024];
-		while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-			std::string filename = buffer;
-			if (!filename.empty() && filename.back() == '\n') {
-				filename.pop_back();
-			}
-			if (!filename.empty()) {
-				kshFiles.push_back(filename);
-			}
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(targetPath)) {
+		if (entry.is_regular_file() && entry.path().extension() == ".ksh") {
+			kshFiles.push_back(entry.path().string());
 		}
-		pclose(pipe);
 	}
 
 	if (kshFiles.empty()) {
