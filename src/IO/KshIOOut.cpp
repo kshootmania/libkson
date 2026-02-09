@@ -2648,7 +2648,20 @@ kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartD
 	return result;
 }
 
-std::vector<std::string> kson::KshSavingDiag::toStrings() const
+std::vector<std::string> kson::KshSavingDiag::playerWarnings() const
+{
+	std::vector<std::string> result;
+	for (const auto& w : warnings)
+	{
+		if (w.scope == WarningScope::PlayerAndEditor)
+		{
+			result.push_back(w.message);
+		}
+	}
+	return result;
+}
+
+std::vector<std::string> kson::KshSavingDiag::editorWarnings() const
 {
 	std::vector<std::string> result;
 	result.reserve(warnings.size());

@@ -2267,7 +2267,20 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 	return chartData;
 }
 
-std::vector<std::string> kson::KsonLoadingDiag::toStrings() const
+std::vector<std::string> kson::KsonLoadingDiag::playerWarnings() const
+{
+	std::vector<std::string> result;
+	for (const auto& w : warnings)
+	{
+		if (w.scope == WarningScope::PlayerAndEditor)
+		{
+			result.push_back(w.message);
+		}
+	}
+	return result;
+}
+
+std::vector<std::string> kson::KsonLoadingDiag::editorWarnings() const
 {
 	std::vector<std::string> result;
 	result.reserve(warnings.size());

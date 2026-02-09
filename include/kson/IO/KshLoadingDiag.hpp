@@ -31,6 +31,7 @@ namespace kson
 	{
 		std::vector<KshLoadingWarning> warnings;
 
-		std::vector<std::string> toStrings() const override;
+		std::vector<std::string> playerWarnings() const override;
+		std::vector<std::string> editorWarnings() const override;
 	};
 }

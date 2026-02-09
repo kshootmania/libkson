@@ -1508,7 +1508,20 @@ namespace
 	}
 }
 
-std::vector<std::string> kson::KshLoadingDiag::toStrings() const
+std::vector<std::string> kson::KshLoadingDiag::playerWarnings() const
+{
+	std::vector<std::string> result;
+	for (const auto& w : warnings)
+	{
+		if (w.scope == WarningScope::PlayerAndEditor)
+		{
+			result.push_back("line " + std::to_string(w.lineNo) + ": " + w.message);
+		}
+	}
+	return result;
+}
+
+std::vector<std::string> kson::KshLoadingDiag::editorWarnings() const
 {
 	std::vector<std::string> result;
 	result.reserve(warnings.size());

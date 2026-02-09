@@ -8,7 +8,12 @@ namespace kson
 	{
 		virtual ~IDiag() = default;
 
+		// Player warnings
 		[[nodiscard]]
-		virtual std::vector<std::string> toStrings() const = 0;
+		virtual std::vector<std::string> playerWarnings() const = 0;
+
+		// All warnings (including EditorOnly)
+		[[nodiscard]]
+		virtual std::vector<std::string> editorWarnings() const = 0;
 	};
 }
