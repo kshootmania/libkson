@@ -1059,7 +1059,7 @@ namespace
 		ChartData* m_pTargetChartData = nullptr;
 		KshLoadingDiag* m_pKshDiag = nullptr;
 		std::size_t m_targetLaneIdx = 0;
-		bool m_sub32thSlamReported = false;
+		bool m_sub32ndSlamReported = false;
 
 	public:
 		PreparedLaserSection() = default;
@@ -1112,7 +1112,7 @@ namespace
 					return;
 				}
 
-				// Convert a 32th or shorter laser segment to a laser slam
+				// Convert a 32nd or shorter laser segment to a laser slam
 				const Pulse laserSlamThreshold = kResolution4 / 32;
 				ByRelPulse<GraphPoint> convertedGraphSection;
 				for (auto itr = data.points.cbegin(); itr != data.points.cend(); ++itr)
@@ -1124,15 +1124,15 @@ namespace
 						const auto& [nextRy, nextPoint] = *nextItr;
 						if (0 <= nextRy - ry && nextRy - ry <= laserSlamThreshold && !AlmostEquals(nextPoint.v.v, point.v.v))
 						{
-							if (m_pKshDiag && !m_sub32thSlamReported && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
+							if (m_pKshDiag && !m_sub32ndSlamReported && nextRy - ry > 0 && nextRy - ry < laserSlamThreshold)
 							{
 								m_pKshDiag->warnings.push_back({
-									.type = KshLoadingWarningType::Sub32thSlamLasers,
+									.type = KshLoadingWarningType::Sub32ndSlamLasers,
 									.scope = WarningScope::EditorOnly,
-									.message = "Sub-1/32th laser slam detected. Resaving as KSH will lose the original slam lengths.",
+									.message = "Sub-1/32nd laser slam detected. Resaving as KSH will lose the original slam lengths.",
 									.lineNo = lineNo,
 								});
-								m_sub32thSlamReported = true;
+								m_sub32ndSlamReported = true;
 							}
 							convertedGraphSection.emplace(ry, GraphPoint{ GraphValue{ point.v.v, nextPoint.v.v } });
 							const auto nextNextItr = std::next(nextItr);

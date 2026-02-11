@@ -16,7 +16,7 @@ namespace kson
 		UncommittedBTNote,
 		UncommittedFXNote,
 		UndefinedAudioEffect,
-		Sub32thSlamLasers,
+		Sub32ndSlamLasers,
 		MeasureSplitNotDivisible,
 		UnexpectedError,
 	};

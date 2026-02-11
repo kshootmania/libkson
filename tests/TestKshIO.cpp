@@ -2214,7 +2214,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 	}
 }
 
-TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
+TEST_CASE("KSH sub-32nd slam laser detection", "[ksh_io][sub32nd_slam]") {
 	// Minimal KSH header
 	auto makeKshHeader = []() -> std::string {
 		return
@@ -2252,8 +2252,8 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		return result;
 	};
 
-	SECTION("Standard 1/32th slam does not trigger warning") {
-		// 32 lines/measure = 30 pulses/line = exactly 1/32th
+	SECTION("Standard 1/32nd slam does not trigger warning") {
+		// 32 lines/measure = 30 pulses/line = exactly 1/32nd
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(32);
 		std::istringstream stream(kshData);
 
@@ -2264,7 +2264,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		REQUIRE(chart.note.laser[0].size() == 1);
 	}
 
-	SECTION("Sub-32th slam triggers warning") {
+	SECTION("Sub-32nd slam triggers warning") {
 		// 48 lines/measure = 20 pulses/line < 30 pulses
 		const std::string kshData = makeKshHeader() + makeSlamMeasure(48);
 		std::istringstream stream(kshData);
