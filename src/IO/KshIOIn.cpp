@@ -2439,6 +2439,12 @@ namespace
 			}
 		}
 
+		// Add normal tilt at zero if not present
+		if (!chartData.camera.tilt.contains(0))
+		{
+			chartData.camera.tilt.emplace(0, AutoTiltType::kNormal);
+		}
+
 	}
 }
 

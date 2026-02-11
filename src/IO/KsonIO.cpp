@@ -845,10 +845,23 @@ namespace
 		arrayJSON.push_back(entry);
 	}
 
+	bool IsTiltDefaultOnly(const ByPulse<TiltValue>& tilt)
+	{
+		if (tilt.empty())
+		{
+			// Although empty array is not the spec default (which is [[0, "normal"]]), treat it as default for canonicalization
+			return true;
+		}
+		return tilt.size() == 1 &&
+			tilt.contains(0) &&
+			std::holds_alternative<AutoTiltType>(tilt.at(0)) &&
+			std::get<AutoTiltType>(tilt.at(0)) == AutoTiltType::kNormal;
+	}
+
 	nlohmann::json ToJSON(const CameraInfo& d)
 	{
 		nlohmann::json j = nlohmann::json::object();
-		if (!d.tilt.empty())
+		if (!IsTiltDefaultOnly(d.tilt))
 		{
 			nlohmann::json tiltJSON = nlohmann::json::array();
 			for (const auto& [pulse, tiltValue] : d.tilt)

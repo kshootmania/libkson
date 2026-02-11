@@ -1917,7 +1917,10 @@ namespace
 			else if (std::holds_alternative<AutoTiltType>(tiltValue))
 			{
 				const AutoTiltType autoTiltType = std::get<AutoTiltType>(tiltValue);
-				stream << "tilt=" << AutoTiltTypeToString(autoTiltType) << "\r\n";
+				if (pulse != 0 || autoTiltType != AutoTiltType::kNormal)
+				{
+					stream << "tilt=" << AutoTiltTypeToString(autoTiltType) << "\r\n";
+				}
 			}
 		}
 
