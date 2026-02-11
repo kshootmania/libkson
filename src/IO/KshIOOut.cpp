@@ -2620,18 +2620,25 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 		return ErrorType::GeneralIOError;
 	}
 
-	WriteBOM(stream);
+	try
+	{
+		WriteBOM(stream);
 
-	MeasureExportState state;
+		MeasureExportState state;
 
-	ScanForDataLossWarnings(chartData, pKshSavingDiag);
+		ScanForDataLossWarnings(chartData, pKshSavingDiag);
 
-	// Write header and store the header BPM string in state
-	WriteHeader(stream, chartData, &state.headerBPMStr, pKshSavingDiag);
-	WriteMeasures(stream, chartData, state, pKshSavingDiag);
-	WriteAudioEffectDefinitions(stream, chartData);
+		// Write header and store the header BPM string in state
+		WriteHeader(stream, chartData, &state.headerBPMStr, pKshSavingDiag);
+		WriteMeasures(stream, chartData, state, pKshSavingDiag);
+		WriteAudioEffectDefinitions(stream, chartData);
 
-	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+		return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+	}
+	catch (const std::exception&)
+	{
+		return ErrorType::UnknownError;
+	}
 }
 
 kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)

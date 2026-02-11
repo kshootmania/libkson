@@ -18,6 +18,7 @@ namespace kson
 		UndefinedAudioEffect,
 		Sub32thSlamLasers,
 		MeasureSplitNotDivisible,
+		UnexpectedError,
 	};
 
 	struct KshLoadingWarning

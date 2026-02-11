@@ -2111,22 +2111,29 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 		return ErrorType::GeneralIOError;
 	}
 
-	nlohmann::json json = nlohmann::json::object();
-	Write(json, "format_version", kKSONFormatVersion);
-	Write(json, "meta", ToJSON(chartData.meta));
-	Write(json, "beat", ToJSON(chartData.beat));
-	Write(json, "gauge", ToJSON(chartData.gauge));
-	Write(json, "note", ToJSON(chartData.note));
-	Write(json, "audio", ToJSON(chartData.audio));
-	Write(json, "camera", ToJSON(chartData.camera));
-	Write(json, "bg", ToJSON(chartData.bg));
-	Write(json, "editor", ToJSON(chartData.editor));
-	Write(json, "compat", ToJSON(chartData.compat));
-	Write(json, "impl", chartData.impl);
+	try
+	{
+		nlohmann::json json = nlohmann::json::object();
+		Write(json, "format_version", kKSONFormatVersion);
+		Write(json, "meta", ToJSON(chartData.meta));
+		Write(json, "beat", ToJSON(chartData.beat));
+		Write(json, "gauge", ToJSON(chartData.gauge));
+		Write(json, "note", ToJSON(chartData.note));
+		Write(json, "audio", ToJSON(chartData.audio));
+		Write(json, "camera", ToJSON(chartData.camera));
+		Write(json, "bg", ToJSON(chartData.bg));
+		Write(json, "editor", ToJSON(chartData.editor));
+		Write(json, "compat", ToJSON(chartData.compat));
+		Write(json, "impl", chartData.impl);
 
-	stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
+		stream << json.dump(-1, ' ', false, nlohmann::detail::error_handler_t::replace);
 
-	return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+		return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
+	}
+	catch (const std::exception&)
+	{
+		return ErrorType::UnknownError;
+	}
 }
 
 kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
