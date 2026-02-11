@@ -16,8 +16,8 @@ namespace kson
 	struct CamPatternInvokeSwingValue
 	{
 		double scale = 250.0;
-		std::int32_t repeat = 1;
-		std::int32_t decayOrder = 0;
+		std::int32_t repeat = 3;
+		std::int32_t decayOrder = 2;
 	};
 
 	namespace detail

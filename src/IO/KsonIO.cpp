@@ -506,8 +506,8 @@ namespace
 			nlohmann::json vJSON = nlohmann::json::object();
 			{
 				Write(vJSON, "scale", invoke.v.scale, 250.0);
-				Write(vJSON, "repeat", invoke.v.repeat, 1);
-				Write(vJSON, "decay_order", invoke.v.decayOrder, 0);
+				Write(vJSON, "repeat", invoke.v.repeat, 3);
+				Write(vJSON, "decay_order", invoke.v.decayOrder, 2);
 			}
 			if (vJSON.empty())
 			{
