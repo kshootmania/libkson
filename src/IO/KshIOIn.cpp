@@ -2439,10 +2439,26 @@ namespace
 			}
 		}
 
-		// Add normal tilt at zero if not present
+		// Add default values at zero if not present
 		if (!chartData.camera.tilt.contains(0))
 		{
 			chartData.camera.tilt.emplace(0, AutoTiltType::kNormal);
+		}
+		if (!chartData.beat.timeSig.contains(0))
+		{
+			chartData.beat.timeSig.emplace(0, TimeSig{ 4, 4 });
+		}
+		if (!chartData.beat.scrollSpeed.contains(0))
+		{
+			chartData.beat.scrollSpeed.emplace(0, GraphValue{ 1.0, 1.0 });
+		}
+		if (!chartData.audio.keySound.laser.vol.contains(0))
+		{
+			chartData.audio.keySound.laser.vol.emplace(0, 0.5);
+		}
+		if (!chartData.audio.audioEffect.laser.legacy.filterGain.contains(0))
+		{
+			chartData.audio.audioEffect.laser.legacy.filterGain.emplace(0, 0.5);
 		}
 
 	}

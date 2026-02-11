@@ -292,6 +292,15 @@ namespace
 			return;
 		}
 
+		// Skip if only default value [[0, [4, 4]]]
+		if (byMeasureIdx.size() == 1 &&
+			byMeasureIdx.contains(0) &&
+			byMeasureIdx.at(0).n == 4 &&
+			byMeasureIdx.at(0).d == 4)
+		{
+			return;
+		}
+
 		nlohmann::json& j = json[key];
 		j = nlohmann::json::array();
 		for (const auto& [idx, timeSig] : byMeasureIdx)
@@ -642,7 +651,7 @@ namespace
 			}
 			{
 				nlohmann::json laserJSON = nlohmann::json::object();
-				WriteByPulse(laserJSON, "vol", d.keySound.laser.vol);
+				WriteByPulse(laserJSON, "vol", d.keySound.laser.vol, 0.5);
 				{
 					nlohmann::json slamEventJSON = nlohmann::json::object();
 					for (const auto& [filename, pulseSet] : d.keySound.laser.slamEvent)
@@ -733,7 +742,7 @@ namespace
 				Write(laserJSON, "peaking_filter_delay", d.audioEffect.laser.peakingFilterDelay, 0);
 				{
 					nlohmann::json legacyJSON = nlohmann::json::object();
-					WriteByPulse(legacyJSON, "filter_gain", d.audioEffect.laser.legacy.filterGain);
+					WriteByPulse(legacyJSON, "filter_gain", d.audioEffect.laser.legacy.filterGain, 0.5);
 					Write(laserJSON, "legacy", std::move(legacyJSON));
 				}
 				Write(audioEffectJSON, "laser", std::move(laserJSON));
@@ -2314,6 +2323,28 @@ kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* p
 			.scope = WarningScope::PlayerAndEditor,
 			.message = "Unexpected error: " + std::string(e.what()),
 		});
+	}
+
+	// Add default values at zero if not present
+	if (!chartData.camera.tilt.contains(0))
+	{
+		chartData.camera.tilt.emplace(0, AutoTiltType::kNormal);
+	}
+	if (!chartData.beat.timeSig.contains(0))
+	{
+		chartData.beat.timeSig.emplace(0, TimeSig{ 4, 4 });
+	}
+	if (!chartData.beat.scrollSpeed.contains(0))
+	{
+		chartData.beat.scrollSpeed.emplace(0, GraphValue{ 1.0, 1.0 });
+	}
+	if (!chartData.audio.keySound.laser.vol.contains(0))
+	{
+		chartData.audio.keySound.laser.vol.emplace(0, 0.5);
+	}
+	if (!chartData.audio.audioEffect.laser.legacy.filterGain.contains(0))
+	{
+		chartData.audio.audioEffect.laser.legacy.filterGain.emplace(0, 0.5);
 	}
 
 	return chartData;
