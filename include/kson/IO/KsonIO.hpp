@@ -5,14 +5,14 @@
 
 namespace kson
 {
-	inline constexpr std::int32_t kKSONFormatVersion = 1; // kson format version number (1 for kson 0.9.0)
+	inline constexpr std::int32_t kKsonFormatVersion = 1; // kson format version number (1 for kson 0.9.0)
 
-	ErrorType SaveKSONChartData(std::ostream& stream, const ChartData& chartData);
+	ErrorType SaveKsonChartData(std::ostream& stream, const ChartData& chartData);
 
-	ErrorType SaveKSONChartData(const std::string& filePath, const ChartData& chartData);
+	ErrorType SaveKsonChartData(const std::string& filePath, const ChartData& chartData);
 
-	ChartData LoadKSONChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
+	ChartData LoadKsonChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
 
-	ChartData LoadKSONChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag = nullptr);
+	ChartData LoadKsonChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag = nullptr);
 }
 #endif

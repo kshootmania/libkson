@@ -12,7 +12,7 @@ extern std::filesystem::path g_exeDir;
 
 TEST_CASE("KSON I/O lossless test (bundled charts)", "[kson_io][kson_lossless][bundled]") {
     auto testRoundTrip = [](const std::string& filename) {
-        auto chart1 = kson::LoadKSHChartData(filename);
+        auto chart1 = kson::LoadKshChartData(filename);
 
         if (chart1.error != kson::ErrorType::None) {
             std::cerr << "Error loading KSH file: " << filename << std::endl;
@@ -21,17 +21,17 @@ TEST_CASE("KSON I/O lossless test (bundled charts)", "[kson_io][kson_lossless][b
         REQUIRE(chart1.error == kson::ErrorType::None);
         
         std::ostringstream oss1;
-        auto saveResult1 = kson::SaveKSONChartData(oss1, chart1);
+        auto saveResult1 = kson::SaveKsonChartData(oss1, chart1);
         REQUIRE(saveResult1 == kson::ErrorType::None);
         std::string ksonString1 = oss1.str();
         REQUIRE(!ksonString1.empty());
         
         std::istringstream iss1(ksonString1);
-        auto chart2 = kson::LoadKSONChartData(iss1);
+        auto chart2 = kson::LoadKsonChartData(iss1);
         REQUIRE(chart2.error == kson::ErrorType::None);
         
         std::ostringstream oss2;
-        auto saveResult2 = kson::SaveKSONChartData(oss2, chart2);
+        auto saveResult2 = kson::SaveKsonChartData(oss2, chart2);
         REQUIRE(saveResult2 == kson::ErrorType::None);
         std::string ksonString2 = oss2.str();
         REQUIRE(!ksonString2.empty());
@@ -77,7 +77,7 @@ TEST_CASE("KSON I/O lossless test (bundled charts)", "[kson_io][kson_lossless][b
 }
 
 TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][bundled]") {
-	auto chart = kson::LoadKSONChartData(g_assetsDir + "/Gram_ex.kson");
+	auto chart = kson::LoadKsonChartData(g_assetsDir + "/Gram_ex.kson");
 	REQUIRE(chart.error == kson::ErrorType::None);
 
 	SECTION("Metadata") {
@@ -221,7 +221,7 @@ TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][bundled]") {
 
 TEST_CASE("KSON I/O lossless test (all songs)", "[.][kson_io][kson_lossless][all_songs]") {
     auto testRoundTrip = [](const std::string& filename) {
-        auto chart1 = kson::LoadKSHChartData(filename);
+        auto chart1 = kson::LoadKshChartData(filename);
 
         if (chart1.error != kson::ErrorType::None) {
             std::cerr << "Error loading KSH file: " << filename << std::endl;
@@ -230,17 +230,17 @@ TEST_CASE("KSON I/O lossless test (all songs)", "[.][kson_io][kson_lossless][all
         REQUIRE(chart1.error == kson::ErrorType::None);
         
         std::ostringstream oss1;
-        auto saveResult1 = kson::SaveKSONChartData(oss1, chart1);
+        auto saveResult1 = kson::SaveKsonChartData(oss1, chart1);
         REQUIRE(saveResult1 == kson::ErrorType::None);
         std::string ksonString1 = oss1.str();
         REQUIRE(!ksonString1.empty());
         
         std::istringstream iss1(ksonString1);
-        auto chart2 = kson::LoadKSONChartData(iss1);
+        auto chart2 = kson::LoadKsonChartData(iss1);
         REQUIRE(chart2.error == kson::ErrorType::None);
         
         std::ostringstream oss2;
-        auto saveResult2 = kson::SaveKSONChartData(oss2, chart2);
+        auto saveResult2 = kson::SaveKsonChartData(oss2, chart2);
         REQUIRE(saveResult2 == kson::ErrorType::None);
         std::string ksonString2 = oss2.str();
         REQUIRE(!ksonString2.empty());
@@ -321,7 +321,7 @@ pfiltergain=100
 )";
 
     std::istringstream stream(kshContent);
-    auto chartData = kson::LoadKSHChartData(stream);
+    auto chartData = kson::LoadKshChartData(stream);
 
     REQUIRE(chartData.error == kson::ErrorType::None);
 
@@ -382,7 +382,7 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|o0\n";
         ss << "--\n";
 
-        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        kson::ChartData chart = kson::LoadKshChartData(ss);
         REQUIRE(chart.error == kson::ErrorType::None);
 
         REQUIRE(chart.camera.cam.body.zoomTop.contains(0));
@@ -474,7 +474,7 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|o0\n";
         ss << "--\n";
 
-        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        kson::ChartData chart = kson::LoadKshChartData(ss);
         REQUIRE(chart.error == kson::ErrorType::None);
 
         REQUIRE(chart.camera.cam.body.zoomTop.contains(0));
@@ -568,7 +568,7 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|-o\n";
         ss << "--\n";
 
-        kson::ChartData chart = kson::LoadKSHChartData(ss);
+        kson::ChartData chart = kson::LoadKshChartData(ss);
         REQUIRE(chart.error == kson::ErrorType::None);
 
         // zoom_top should NOT have curve (curve was at different pulse)
@@ -660,7 +660,7 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		kson::ChartData chart = kson::LoadKSHChartData(ss);
+		kson::ChartData chart = kson::LoadKshChartData(ss);
 		REQUIRE(chart.error == kson::ErrorType::None);
 
 		// Check scroll_speed values
@@ -710,7 +710,7 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		kson::ChartData chart = kson::LoadKSHChartData(ss);
+		kson::ChartData chart = kson::LoadKshChartData(ss);
 		REQUIRE(chart.error == kson::ErrorType::None);
 
 		// Check immediate change at pulse 360 (3/8 measure)
@@ -721,16 +721,16 @@ TEST_CASE("KSH scroll_speed Loading", "[ksh_io][scroll_speed]") {
 }
 
 TEST_CASE("KSH I/O lossless test (bundled charts)", "[ksh_io][kson_io][ksh_lossless][bundled]") {
-	auto testKSONRoundTrip = [](const std::string& filename) {
+	auto testKsonRoundTrip = [](const std::string& filename) {
 		// ksh1 → kson1
-		auto kson1 = kson::LoadKSHChartData(filename);
+		auto kson1 = kson::LoadKshChartData(filename);
 		REQUIRE(kson1.error == kson::ErrorType::None);
 		INFO("Loaded KSH successfully: " << filename);
 
 		// kson1 → ksh2
 		INFO("Starting to save KSH: " << filename);
 		std::ostringstream ossKsh;
-		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		const kson::ErrorType saveKshResult = kson::SaveKshChartData(ossKsh, kson1);
 		REQUIRE(saveKshResult == kson::ErrorType::None);
 		INFO("Saved KSH successfully: " << filename);
 		std::string kshString = ossKsh.str();
@@ -738,18 +738,18 @@ TEST_CASE("KSH I/O lossless test (bundled charts)", "[ksh_io][kson_io][ksh_lossl
 
 		// ksh2 → kson2
 		std::istringstream issKsh(kshString);
-		auto kson2 = kson::LoadKSHChartData(issKsh);
+		auto kson2 = kson::LoadKshChartData(issKsh);
 		REQUIRE(kson2.error == kson::ErrorType::None);
 
 		// Compare kson1 and kson2 as JSON
 		std::ostringstream ossJson1;
-		auto saveJson1Result = kson::SaveKSONChartData(ossJson1, kson1);
+		auto saveJson1Result = kson::SaveKsonChartData(ossJson1, kson1);
 		REQUIRE(saveJson1Result == kson::ErrorType::None);
 		std::string ksonString1 = ossJson1.str();
 		REQUIRE(!ksonString1.empty());
 
 		std::ostringstream ossJson2;
-		auto saveJson2Result = kson::SaveKSONChartData(ossJson2, kson2);
+		auto saveJson2Result = kson::SaveKsonChartData(ossJson2, kson2);
 		REQUIRE(saveJson2Result == kson::ErrorType::None);
 		std::string ksonString2 = ossJson2.str();
 		REQUIRE(!ksonString2.empty());
@@ -784,29 +784,29 @@ TEST_CASE("KSH I/O lossless test (bundled charts)", "[ksh_io][kson_io][ksh_lossl
 
 	SECTION("Gram[LT]") {
 		INFO("Testing file: " << g_assetsDir + "/Gram_lt.ksh");
-		testKSONRoundTrip(g_assetsDir + "/Gram_lt.ksh");
+		testKsonRoundTrip(g_assetsDir + "/Gram_lt.ksh");
 	}
 
 	SECTION("Gram[CH]") {
 		INFO("Testing file: " << g_assetsDir + "/Gram_ch.ksh");
-		testKSONRoundTrip(g_assetsDir + "/Gram_ch.ksh");
+		testKsonRoundTrip(g_assetsDir + "/Gram_ch.ksh");
 	}
 
 	SECTION("Gram[EX]") {
 		INFO("Testing file: " << g_assetsDir + "/Gram_ex.ksh");
-		testKSONRoundTrip(g_assetsDir + "/Gram_ex.ksh");
+		testKsonRoundTrip(g_assetsDir + "/Gram_ex.ksh");
 	}
 
 	SECTION("Gram[IN]") {
 		INFO("Testing file: " << g_assetsDir + "/Gram_in.ksh");
-		testKSONRoundTrip(g_assetsDir + "/Gram_in.ksh");
+		testKsonRoundTrip(g_assetsDir + "/Gram_in.ksh");
 	}
 }
 
 TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossless][all_songs]") {
-	auto testKSONRoundTrip = [](const std::string& filename) {
+	auto testKsonRoundTrip = [](const std::string& filename) {
 		// ksh1 → kson1
-		auto kson1 = kson::LoadKSHChartData(filename);
+		auto kson1 = kson::LoadKshChartData(filename);
 
 		if (kson1.error != kson::ErrorType::None) {
 			std::cerr << "Error loading KSH file: " << filename << std::endl;
@@ -816,25 +816,25 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 
 		// kson1 → ksh2
 		std::ostringstream ossKsh;
-		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		const kson::ErrorType saveKshResult = kson::SaveKshChartData(ossKsh, kson1);
 		REQUIRE(saveKshResult == kson::ErrorType::None);
 		std::string kshString = ossKsh.str();
 		REQUIRE(!kshString.empty());
 
 		// ksh2 → kson2
 		std::istringstream issKsh(kshString);
-		auto kson2 = kson::LoadKSHChartData(issKsh);
+		auto kson2 = kson::LoadKshChartData(issKsh);
 		REQUIRE(kson2.error == kson::ErrorType::None);
 
 		// Compare kson1 and kson2 as JSON
 		std::ostringstream ossJson1;
-		auto saveJson1Result = kson::SaveKSONChartData(ossJson1, kson1);
+		auto saveJson1Result = kson::SaveKsonChartData(ossJson1, kson1);
 		REQUIRE(saveJson1Result == kson::ErrorType::None);
 		std::string ksonString1 = ossJson1.str();
 		REQUIRE(!ksonString1.empty());
 
 		std::ostringstream ossJson2;
-		auto saveJson2Result = kson::SaveKSONChartData(ossJson2, kson2);
+		auto saveJson2Result = kson::SaveKsonChartData(ossJson2, kson2);
 		REQUIRE(saveJson2Result == kson::ErrorType::None);
 		std::string ksonString2 = ossJson2.str();
 		REQUIRE(!ksonString2.empty());
@@ -912,19 +912,19 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 
 			std::string displayPath = "songs/" + relativePath;
 			INFO("Testing file: " << displayPath);
-			testKSONRoundTrip(file);
+			testKsonRoundTrip(file);
 		}
 	}
 }
 
 // Common function for KSH round-trip tests on song directories
-static void RunKSHRoundTripTest(
+static void RunKshRoundTripTest(
 	const std::string& testName,
 	const std::string& dirName,
 	const std::set<std::string>& knownFailures)
 {
 	// Filter KSH lines for comparison
-	auto filterKSHLines = [](const std::string& kshContent) -> std::vector<std::string> {
+	auto filterKshLines = [](const std::string& kshContent) -> std::vector<std::string> {
 		std::vector<std::string> lines;
 		std::istringstream iss(kshContent);
 		std::string line;
@@ -1024,21 +1024,21 @@ static void RunKSHRoundTripTest(
 		return filtered;
 	};
 
-	auto testKSHRoundTrip = [&filterKSHLines](const std::string& filename) -> bool {
+	auto testKshRoundTrip = [&filterKshLines](const std::string& filename) -> bool {
 		std::ifstream originalFile(filename);
 		if (!originalFile) return false;
 		std::string originalContent((std::istreambuf_iterator<char>(originalFile)),
 		                            std::istreambuf_iterator<char>());
 
 		// ksh1 -> kson
-		auto kson1 = kson::LoadKSHChartData(filename);
+		auto kson1 = kson::LoadKshChartData(filename);
 		if (kson1.error != kson::ErrorType::None) {
 			return false;
 		}
 
 		// kson -> ksh2
 		std::ostringstream ossKsh;
-		const kson::ErrorType saveKshResult = kson::SaveKSHChartData(ossKsh, kson1);
+		const kson::ErrorType saveKshResult = kson::SaveKshChartData(ossKsh, kson1);
 		if (saveKshResult != kson::ErrorType::None) {
 			return false;
 		}
@@ -1048,8 +1048,8 @@ static void RunKSHRoundTripTest(
 		}
 
 		// Compare ksh1 and ksh2 (filtered)
-		auto originalFiltered = filterKSHLines(originalContent);
-		auto resultFiltered = filterKSHLines(kshString);
+		auto originalFiltered = filterKshLines(originalContent);
+		auto resultFiltered = filterKshLines(kshString);
 
 		return originalFiltered == resultFiltered;
 	};
@@ -1089,7 +1089,7 @@ static void RunKSHRoundTripTest(
 
 		bool success = false;
 		try {
-			success = testKSHRoundTrip(file);
+			success = testKshRoundTrip(file);
 		} catch (const std::exception& e) {
 			success = false;
 		}
@@ -1181,7 +1181,7 @@ TEST_CASE("KSH I/O round-trip test (SFES2022)", "[.][ksh_io][kson_io][sfes2022]"
 		"002/2himitunorojiuranightdisco/IN.ksh",
 	};
 
-	RunKSHRoundTripTest("SFES2022", "SFES2022", knownFailures);
+	RunKshRoundTripTest("SFES2022", "SFES2022", knownFailures);
 }
 
 TEST_CASE("KSH I/O round-trip test (SFES2020)", "[.][ksh_io][kson_io][sfes2020]") {
@@ -1235,7 +1235,7 @@ TEST_CASE("KSH I/O round-trip test (SFES2020)", "[.][ksh_io][kson_io][sfes2020]"
 		"034/2_sakura_sakura/sakura_sakura_ch.ksh",
 	};
 
-	RunKSHRoundTripTest("SFES2020", "SFES2020", knownFailures);
+	RunKshRoundTripTest("SFES2020", "SFES2020", knownFailures);
 }
 
 TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
@@ -1255,7 +1255,7 @@ TEST_CASE("KSH preset FX effect param_change export", "[ksh_io]")
 	chartData.audio.audioEffect.fx.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
 
 	std::ostringstream oss;
-	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshContent = oss.str();
@@ -1290,7 +1290,7 @@ fx:BitCrusher:mix=0%>50%
 )";
 
 	std::istringstream iss(kshContent);
-	auto chartData = kson::LoadKSHChartData(iss);
+	auto chartData = kson::LoadKshChartData(iss);
 	REQUIRE(chartData.error == kson::ErrorType::None);
 
 	// Should import with KSON names (lowercase)
@@ -1327,7 +1327,7 @@ TEST_CASE("KSH preset laser filter param_change export", "[ksh_io]")
 	chartData.audio.audioEffect.laser.paramChange["bitcrusher"]["mix"].emplace(0, "0%>50%");
 
 	std::ostringstream oss;
-	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshContent = oss.str();
@@ -1370,7 +1370,7 @@ filter:bitc:mix=0%>50%
 )";
 
 	std::istringstream iss(kshContent);
-	auto chartData = kson::LoadKSHChartData(iss);
+	auto chartData = kson::LoadKshChartData(iss);
 	REQUIRE(chartData.error == kson::ErrorType::None);
 
 	// Should import with KSON names (lowercase with underscore)
@@ -1415,12 +1415,12 @@ ver=170
 )";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 		REQUIRE(chartData.compat.kshVersion == "170");
 
 		std::ostringstream oss;
-		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1443,12 +1443,12 @@ ver=130
 )";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 		REQUIRE(chartData.compat.kshVersion == "130");
 
 		std::ostringstream oss;
-		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1476,13 +1476,13 @@ TEST_CASE("ver_compat output for legacy versions", "[ksh_io][ver_compat]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 		REQUIRE(chartData.compat.kshVersion == "130");
 
 		// Convert to KSH
 		std::ostringstream oss;
-		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1517,13 +1517,13 @@ TEST_CASE("ver_compat output for legacy versions", "[ksh_io][ver_compat]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 		REQUIRE(chartData.compat.kshVersion == "171");
 
 		// Convert to KSH
 		std::ostringstream oss;
-		const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1556,7 +1556,7 @@ TEST_CASE("ver_compat reading", "[ksh_io][ver_compat]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// Should use ver_compat=130, not ver=160
@@ -1581,7 +1581,7 @@ TEST_CASE("ver_compat reading", "[ksh_io][ver_compat]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// Should use ver=160
@@ -1609,7 +1609,7 @@ TEST_CASE("BPM limit for ver >= 130", "[ksh_io][bpm_limit]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// BPM should be clamped to 65535.0
@@ -1635,7 +1635,7 @@ TEST_CASE("BPM limit for ver >= 130", "[ksh_io][bpm_limit]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// BPM should NOT be clamped
@@ -1660,7 +1660,7 @@ TEST_CASE("BPM limit for ver >= 130", "[ksh_io][bpm_limit]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// BPM should be clamped to 65535.0
@@ -1686,7 +1686,7 @@ TEST_CASE("BPM limit for ver >= 130", "[ksh_io][bpm_limit]") {
 			"--\n";
 
 		std::istringstream iss(kshContent);
-		auto chartData = kson::LoadKSHChartData(iss);
+		auto chartData = kson::LoadKshChartData(iss);
 		REQUIRE(chartData.error == kson::ErrorType::None);
 
 		// BPM should NOT be clamped because ver_compat=120 < 130
@@ -1712,7 +1712,7 @@ TEST_CASE("BPM clamping on KSH output", "[ksh_io][bpm_output]") {
 
 		// Convert to KSH
 		std::ostringstream oss;
-		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1739,7 +1739,7 @@ TEST_CASE("BPM clamping on KSH output", "[ksh_io][bpm_output]") {
 
 		// Convert to KSH
 		std::ostringstream oss;
-		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1766,7 +1766,7 @@ TEST_CASE("BPM clamping on KSH output", "[ksh_io][bpm_output]") {
 
 		// Convert to KSH
 		std::ostringstream oss;
-		kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+		kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 		REQUIRE(result == kson::ErrorType::None);
 
 		std::string kshOutput = oss.str();
@@ -1788,7 +1788,7 @@ TEST_CASE("KSH bg output deduplication", "[ksh_io][bg]") {
 		chartData.bg.legacy.bg[0].filename = "bg1";
 		chartData.bg.legacy.bg[1].filename = "bg2";
 		std::ostringstream oss;
-		kson::SaveKSHChartData(oss, chartData);
+		kson::SaveKshChartData(oss, chartData);
 		REQUIRE(oss.str().find("bg=bg1;bg2") != std::string::npos);
 	}
 
@@ -1796,7 +1796,7 @@ TEST_CASE("KSH bg output deduplication", "[ksh_io][bg]") {
 		chartData.bg.legacy.bg[0].filename = "bg1";
 		chartData.bg.legacy.bg[1].filename = "bg1";
 		std::ostringstream oss;
-		kson::SaveKSHChartData(oss, chartData);
+		kson::SaveKshChartData(oss, chartData);
 		REQUIRE(oss.str().find("bg=bg1\r\n") != std::string::npos);
 	}
 }
@@ -1829,7 +1829,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// First tilt point should have curve
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -1879,7 +1879,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// Immediate change should preserve curve
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -1919,7 +1919,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// Curve between first and second tilt should be preserved in immediate change
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -1974,7 +1974,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// First immediate change with curve
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -2034,7 +2034,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// First point with first curve
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -2094,7 +2094,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// Auto tilt (normal)
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -2141,7 +2141,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// Legacy "big" = "bigger"
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -2180,7 +2180,7 @@ TEST_CASE("KSH Manual Tilt with Curve", "[ksh_io][tilt][curve]") {
 		ss << "0000|00|--\n";
 		ss << "--\n";
 
-		const kson::ChartData chart = kson::LoadKSHChartData(ss);
+		const kson::ChartData chart = kson::LoadKshChartData(ss);
 
 		// First manual tilt: 0.0 at pulse 0
 		REQUIRE(chart.camera.tilt.contains(0));
@@ -2258,7 +2258,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		std::istringstream stream(kshData);
 
 		kson::KshLoadingDiag kshDiag;
-		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+		const auto chart = kson::LoadKshChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
@@ -2270,7 +2270,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		std::istringstream stream(kshData);
 
 		kson::KshLoadingDiag kshDiag;
-		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+		const auto chart = kson::LoadKshChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 		REQUIRE(chart.note.laser[0].size() == 1);
@@ -2288,7 +2288,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		std::istringstream stream(kshData);
 
 		kson::KshLoadingDiag kshDiag;
-		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+		const auto chart = kson::LoadKshChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 	}
@@ -2309,7 +2309,7 @@ TEST_CASE("KSH sub-32th slam laser detection", "[ksh_io][sub32th_slam]") {
 		std::istringstream stream(kshData);
 
 		kson::KshLoadingDiag kshDiag;
-		const auto chart = kson::LoadKSHChartData(stream, &kshDiag);
+		const auto chart = kson::LoadKshChartData(stream, &kshDiag);
 
 		REQUIRE(chart.error == kson::ErrorType::None);
 	}
@@ -2332,7 +2332,7 @@ t=120
 )";
 
 	std::istringstream iss(kshContent);
-	auto chartData = kson::LoadKSHChartData(iss);
+	auto chartData = kson::LoadKshChartData(iss);
 	REQUIRE(chartData.error == kson::ErrorType::None);
 
 	// Should convert \n to newline
@@ -2343,7 +2343,7 @@ t=120
 
 	// Should escape newlines to \n on output
 	std::ostringstream oss;
-	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshOutput = oss.str();
@@ -2369,7 +2369,7 @@ TEST_CASE("KSH multiple comments at same pulse", "[ksh_io][comment]")
 	REQUIRE(chartData.editor.comment.count(0) == 3);
 
 	std::ostringstream oss;
-	const kson::ErrorType result = kson::SaveKSHChartData(oss, chartData);
+	const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
 	REQUIRE(result == kson::ErrorType::None);
 
 	std::string kshOutput = oss.str();
@@ -2382,7 +2382,7 @@ TEST_CASE("KSH multiple comments at same pulse", "[ksh_io][comment]")
 
 	// Round-trip should preserve all comments
 	std::istringstream iss(kshOutput);
-	auto chartData2 = kson::LoadKSHChartData(iss);
+	auto chartData2 = kson::LoadKshChartData(iss);
 	REQUIRE(chartData2.error == kson::ErrorType::None);
 	REQUIRE(chartData2.editor.comment.count(0) == 3);
 

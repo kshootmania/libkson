@@ -3,25 +3,25 @@
 
 namespace kson
 {
-	struct KSHLayerRotationInfo
+	struct KshLayerRotationInfo
 	{
 		bool tilt = false;
 		bool spin = false;
 	};
 
-	struct KSHBGInfo
+	struct KshBGInfo
 	{
 		std::string filename; // UTF-8 guaranteed
 	};
 
-	struct KSHLayerInfo
+	struct KshLayerInfo
 	{
 		std::string filename; // UTF-8 guaranteed
 		std::int32_t duration = 0;
-		KSHLayerRotationInfo rotation = { .tilt = true, .spin = true };
+		KshLayerRotationInfo rotation = { .tilt = true, .spin = true };
 	};
 
-	struct KSHMovieInfo
+	struct KshMovieInfo
 	{
 		std::string filename; // UTF-8 guaranteed
 		std::int32_t offset = 0;
@@ -29,9 +29,9 @@ namespace kson
 
 	struct LegacyBGInfo
 	{
-		std::array<KSHBGInfo, 2> bg; // first index: when gauge < 70%, second index: when gauge >= 70%
-		KSHLayerInfo layer;
-		KSHMovieInfo movie;
+		std::array<KshBGInfo, 2> bg; // first index: when gauge < 70%, second index: when gauge >= 70%
+		KshLayerInfo layer;
+		KshMovieInfo movie;
 	};
 
 	struct BGInfo

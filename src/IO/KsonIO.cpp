@@ -2104,7 +2104,7 @@ namespace
 	}
 }
 
-kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& chartData)
+kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& chartData)
 {
 	if (!stream.good())
 	{
@@ -2114,7 +2114,7 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 	try
 	{
 		nlohmann::json json = nlohmann::json::object();
-		Write(json, "format_version", kKSONFormatVersion);
+		Write(json, "format_version", kKsonFormatVersion);
 		Write(json, "meta", ToJSON(chartData.meta));
 		Write(json, "beat", ToJSON(chartData.beat));
 		Write(json, "gauge", ToJSON(chartData.gauge));
@@ -2136,17 +2136,17 @@ kson::ErrorType kson::SaveKSONChartData(std::ostream& stream, const ChartData& c
 	}
 }
 
-kson::ErrorType kson::SaveKSONChartData(const std::string& filePath, const ChartData& chartData)
+kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const ChartData& chartData)
 {
 	std::ofstream ofs(filePath);
 	if (!ofs.good())
 	{
 		return ErrorType::CouldNotOpenOutputFileStream;
 	}
-	return kson::SaveKSONChartData(ofs, chartData);
+	return kson::SaveKsonChartData(ofs, chartData);
 }
 
-kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag)
+kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag)
 {
 	KsonLoadingDiag localDiag;
 	if (!pKsonDiag)
@@ -2170,7 +2170,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 		// Check for required format_version field
 		if (!j.contains("format_version"))
 		{
-			chartData.error = ErrorType::KSONParseError;
+			chartData.error = ErrorType::KsonParseError;
 			pKsonDiag->warnings.push_back({
 				.type = KsonLoadingWarningType::MissingFormatVersion,
 				.scope = WarningScope::PlayerAndEditor,
@@ -2181,7 +2181,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 
 		if (!j["format_version"].is_number_integer())
 		{
-			chartData.error = ErrorType::KSONParseError;
+			chartData.error = ErrorType::KsonParseError;
 			pKsonDiag->warnings.push_back({
 				.type = KsonLoadingWarningType::InvalidFormatVersion,
 				.scope = WarningScope::PlayerAndEditor,
@@ -2191,7 +2191,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 		}
 
 		const std::int32_t formatVersion = j["format_version"].get<std::int32_t>();
-		if (formatVersion > kKSONFormatVersion)
+		if (formatVersion > kKsonFormatVersion)
 		{
 			std::string message = "File format version " + std::to_string(formatVersion);
 
@@ -2213,7 +2213,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 				}
 			}
 
-			message += " is newer than supported version " + std::to_string(kKSONFormatVersion);
+			message += " is newer than supported version " + std::to_string(kKsonFormatVersion);
 
 			pKsonDiag->warnings.push_back({
 				.type = KsonLoadingWarningType::NewerFormatVersion,
@@ -2277,7 +2277,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 	}
 	catch (const nlohmann::json::parse_error& e)
 	{
-		chartData.error = ErrorType::KSONParseError;
+		chartData.error = ErrorType::KsonParseError;
 		pKsonDiag->warnings.push_back({
 			.type = KsonLoadingWarningType::JsonParseError,
 			.scope = WarningScope::PlayerAndEditor,
@@ -2286,7 +2286,7 @@ kson::ChartData kson::LoadKSONChartData(std::istream& stream, KsonLoadingDiag* p
 	}
 	catch (const nlohmann::json::type_error& e)
 	{
-		chartData.error = ErrorType::KSONParseError;
+		chartData.error = ErrorType::KsonParseError;
 		pKsonDiag->warnings.push_back({
 			.type = KsonLoadingWarningType::JsonTypeError,
 			.scope = WarningScope::PlayerAndEditor,
@@ -2330,7 +2330,7 @@ std::vector<std::string> kson::KsonLoadingDiag::editorWarnings() const
 	return result;
 }
 
-kson::ChartData kson::LoadKSONChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
+kson::ChartData kson::LoadKsonChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
 {
 	std::ifstream ifs(filePath);
 	if (!ifs.good())
@@ -2339,6 +2339,6 @@ kson::ChartData kson::LoadKSONChartData(const std::string& filePath, KsonLoading
 		chartData.error = ErrorType::CouldNotOpenInputFileStream;
 		return chartData;
 	}
-	return kson::LoadKSONChartData(ifs, pKsonDiag);
+	return kson::LoadKsonChartData(ifs, pKsonDiag);
 }
 #endif

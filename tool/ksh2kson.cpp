@@ -29,7 +29,7 @@ void PrintError(kson::ErrorType errorType)
 
 int DoConvert(std::istream& input)
 {
-	kson::ChartData chartData = kson::LoadKSHChartData(input);
+	kson::ChartData chartData = kson::LoadKshChartData(input);
 	if (chartData.error != kson::ErrorType::None)
 	{
 		PrintError(chartData.error);
@@ -40,7 +40,7 @@ int DoConvert(std::istream& input)
 	chartData.editor.appName = kKsh2KsonAppName;
 	chartData.editor.appVersion = kKsh2KsonVersionFull;
 
-	const kson::ErrorType error = kson::SaveKSONChartData(std::cout, chartData);
+	const kson::ErrorType error = kson::SaveKsonChartData(std::cout, chartData);
 	if (error != kson::ErrorType::None)
 	{
 		PrintError(error);

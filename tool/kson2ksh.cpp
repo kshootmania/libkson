@@ -28,14 +28,14 @@ void PrintError(kson::ErrorType errorType)
 
 int DoConvert(std::istream& input)
 {
-	const kson::ChartData chartData = kson::LoadKSONChartData(input);
+	const kson::ChartData chartData = kson::LoadKsonChartData(input);
 	if (chartData.error != kson::ErrorType::None)
 	{
 		PrintError(chartData.error);
 		return kExitError;
 	}
 
-	const kson::ErrorType error = kson::SaveKSHChartData(std::cout, chartData);
+	const kson::ErrorType error = kson::SaveKshChartData(std::cout, chartData);
 	if (error != kson::ErrorType::None)
 	{
 		PrintError(error);

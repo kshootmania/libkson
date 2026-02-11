@@ -14,10 +14,10 @@ See this repository: https://github.com/kshootmania/ksm-chart-format
 ### Library
 ```cpp
 // Load KSH chart file
-kson::ChartData chartData = kson::LoadKSHChartData("chart.ksh");
+kson::ChartData chartData = kson::LoadKshChartData("chart.ksh");
 
 // Save KSON chart file
-kson::SaveKSHChartData("chart.kson", chartData);
+kson::SaveKshChartData("chart.kson", chartData);
 
 // Access to chart meta data
 const std::string& title = chartData.meta.title;

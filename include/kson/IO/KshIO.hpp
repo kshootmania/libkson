@@ -6,15 +6,15 @@
 
 namespace kson
 {
-	MetaChartData LoadKSHMetaChartData(std::istream& stream);
+	MetaChartData LoadKshMetaChartData(std::istream& stream);
 
-	MetaChartData LoadKSHMetaChartData(const std::string& filePath);
+	MetaChartData LoadKshMetaChartData(const std::string& filePath);
 
-	ChartData LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKshDiag = nullptr);
+	ChartData LoadKshChartData(std::istream& stream, KshLoadingDiag* pKshDiag = nullptr);
 
-	ChartData LoadKSHChartData(const std::string& filePath, KshLoadingDiag* pKshDiag = nullptr);
+	ChartData LoadKshChartData(const std::string& filePath, KshLoadingDiag* pKshDiag = nullptr);
 
-	ErrorType SaveKSHChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
+	ErrorType SaveKshChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
 
-	ErrorType SaveKSHChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
+	ErrorType SaveKshChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
 }

@@ -14,13 +14,13 @@ namespace
 	using namespace kson;
 
 	// KSH resolution (192 pulses per 4/4 measure)
-	constexpr Pulse kKSHResolution4 = 192;
-	static_assert(kResolution4 % kKSHResolution4 == 0, "kResolution4 must be divisible by kKSHResolution4");
+	constexpr Pulse kKshResolution4 = 192;
+	static_assert(kResolution4 % kKshResolution4 == 0, "kResolution4 must be divisible by kKshResolution4");
 
 	// Convert pulse value from KSON resolution to KSH resolution
-	constexpr std::int32_t ToKSHResolution(Pulse pulse)
+	constexpr std::int32_t ToKshResolution(Pulse pulse)
 	{
-		return static_cast<std::int32_t>(pulse * kKSHResolution4 / kResolution4);
+		return static_cast<std::int32_t>(pulse * kKshResolution4 / kResolution4);
 	}
 
 	constexpr char kOptionSeparator = '=';
@@ -54,7 +54,7 @@ namespace
 	constexpr std::int32_t kVerManualTiltScaleChanged = 170; // Manual tilt scale changed from 14 degrees to 10 degrees
 
 	// KSON to KSH parameter name mapping (reverse of s_audioEffectParamNameTable)
-	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHParamName
+	const std::unordered_map<std::string_view, std::string_view> kKsonToKshParamName
 	{
 		{ "attack_time", "attackTime" },
 		{ "bandwidth", "bandwidth" },
@@ -92,7 +92,7 @@ namespace
 	};
 
 	// KSON to KSH AudioEffectType name mapping (for #define_fx and #define_filter type=)
-	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHAudioEffectTypeName
+	const std::unordered_map<std::string_view, std::string_view> kKsonToKshAudioEffectTypeName
 	{
 		{ "retrigger", "Retrigger" },
 		{ "gate", "Gate" },
@@ -111,7 +111,7 @@ namespace
 	};
 
 	// KSON to KSH preset FX effect name mapping (for fx-l/fx-r)
-	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHPresetFXEffectName
+	const std::unordered_map<std::string_view, std::string_view> kKsonToKshPresetFXEffectName
 	{
 		{ "retrigger", "Retrigger" },
 		{ "gate", "Gate" },
@@ -127,7 +127,7 @@ namespace
 	};
 
 	// KSON to KSH preset laser filter name mapping (for filtertype= and filter:)
-	const std::unordered_map<std::string_view, std::string_view> kKSONToKSHPresetFilterName
+	const std::unordered_map<std::string_view, std::string_view> kKsonToKshPresetFilterName
 	{
 		{ "peaking_filter", "peak" },
 		{ "low_pass_filter", "lpf1" },
@@ -195,18 +195,18 @@ namespace
 	}
 
 	// Check if the KSON effect name is a preset laser audio effect
-	bool IsKSONPresetLaserFilterName(const std::string& effectName)
+	bool IsKsonPresetLaserFilterName(const std::string& effectName)
 	{
-		return kKSONToKSHPresetFilterName.contains(effectName);
+		return kKsonToKshPresetFilterName.contains(effectName);
 	}
 
 	// Check if the KSON effect name is a preset FX effect
-	bool IsKSONPresetFXEffectName(const std::string& effectName)
+	bool IsKsonPresetFXEffectName(const std::string& effectName)
 	{
-		return kKSONToKSHPresetFXEffectName.contains(effectName);
+		return kKsonToKshPresetFXEffectName.contains(effectName);
 	}
 
-	std::string_view KSONPresetLaserFilterNameToKSH(const std::string& effectName);
+	std::string_view KsonPresetLaserFilterNameToKsh(const std::string& effectName);
 
 	const char* AutoTiltTypeToString(AutoTiltType type)
 	{
@@ -449,7 +449,7 @@ namespace
 	}
 
 	// Round double value to 3 decimal places (0.001 precision) for KSH format
-	double RoundToKSHDoubleValue(double value)
+	double RoundToKshDoubleValue(double value)
 	{
 		return std::round(value * 1000.0) / 1000.0;
 	}
@@ -457,7 +457,7 @@ namespace
 	// Format double value (remove trailing zeros)
 	std::string FormatDouble(double value)
 	{
-		value = RoundToKSHDoubleValue(value);
+		value = RoundToKshDoubleValue(value);
 
 		std::ostringstream oss;
 		oss << std::fixed << std::setprecision(3) << value;
@@ -476,9 +476,9 @@ namespace
 	}
 
 	// Convert RelPulse to KSH length string
-	std::string RelPulseToKSHLength(RelPulse relPulse)
+	std::string RelPulseToKshLength(RelPulse relPulse)
 	{
-		const std::int32_t kshLength = ToKSHResolution(relPulse);
+		const std::int32_t kshLength = ToKshResolution(relPulse);
 		return std::to_string(kshLength);
 	}
 
@@ -738,7 +738,7 @@ namespace
 		}
 
 		// Apply BPM limit for ver >= 130
-		const bool shouldClampBPM = !compat.isKSHVersionOlderThan(kVerBPMLimitAdded);
+		const bool shouldClampBPM = !compat.isKshVersionOlderThan(kVerBPMLimitAdded);
 
 		// Check if single BPM
 		if (bpmMap.size() == 1)
@@ -1001,9 +1001,9 @@ namespace
 			{
 				if (pulses.contains(0))
 				{
-					if (IsKSONPresetLaserFilterName(effectName))
+					if (IsKsonPresetLaserFilterName(effectName))
 					{
-						stream << "filtertype=" << KSONPresetLaserFilterNameToKSH(effectName) << "\r\n";
+						stream << "filtertype=" << KsonPresetLaserFilterNameToKsh(effectName) << "\r\n";
 					}
 					else
 					{
@@ -1138,7 +1138,7 @@ namespace
 	}
 
 	// KSH laser intermediate representation (similar to v1's analog array)
-	struct KSHLaserSegment
+	struct KshLaserSegment
 	{
 		std::int32_t laneIdx; // 0=left, 1=right
 		Pulse startPulse; // Absolute pulse position
@@ -1151,9 +1151,9 @@ namespace
 
 	// Convert KSON laser sections to KSH laser segments
 	// This splits sections at v!=vf points (slams) to match KSH's section structure
-	std::vector<KSHLaserSegment> ConvertLaserToKSHSegments(const ByPulse<LaserSection>& lane, std::int32_t laneIdx)
+	std::vector<KshLaserSegment> ConvertLaserToKshSegments(const ByPulse<LaserSection>& lane, std::int32_t laneIdx)
 	{
-		std::vector<KSHLaserSegment> segments;
+		std::vector<KshLaserSegment> segments;
 		constexpr Pulse kPreferredSlamLength = kResolution4 / 32;
 		constexpr Pulse kPulse1_16 = kResolution4 / 16;
 		constexpr Pulse kPulse1_48 = kResolution4 / 48;
@@ -1182,7 +1182,7 @@ namespace
 					const std::int32_t startValue = GraphValueToLaserX(point.v.v, section.wide());
 					const std::int32_t endValue = GraphValueToLaserX(point.v.vf, section.wide());
 
-					segments.push_back(KSHLaserSegment{
+					segments.push_back(KshLaserSegment{
 						.laneIdx = laneIdx,
 						.startPulse = sectionStart,
 						.length = kPreferredSlamLength,
@@ -1196,7 +1196,7 @@ namespace
 				{
 					// Single point without slam
 					const std::int32_t value = GraphValueToLaserX(point.v.v, section.wide());
-					segments.push_back(KSHLaserSegment{
+					segments.push_back(KshLaserSegment{
 						.laneIdx = laneIdx,
 						.startPulse = sectionStart,
 						.length = 0,
@@ -1282,7 +1282,7 @@ namespace
 						}
 					}
 
-					segments.push_back(KSHLaserSegment{
+					segments.push_back(KshLaserSegment{
 						.laneIdx = laneIdx,
 						.startPulse = absolutePulse,
 						.length = slamLength,
@@ -1308,7 +1308,7 @@ namespace
 							const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
 
 							// Segment continuation after slam (within same section)
-							segments.push_back(KSHLaserSegment{
+							segments.push_back(KshLaserSegment{
 								.laneIdx = laneIdx,
 								.startPulse = slamEndPulse,
 								.length = nextAbsolutePulse - slamEndPulse,
@@ -1333,7 +1333,7 @@ namespace
 						const std::int32_t startValue = GraphValueToLaserX(point.v.v, section.wide());
 						const std::int32_t endValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
 
-						segments.push_back(KSHLaserSegment{
+						segments.push_back(KshLaserSegment{
 							.laneIdx = laneIdx,
 							.startPulse = absolutePulse,
 							.length = nextAbsolutePulse - absolutePulse,
@@ -1355,7 +1355,7 @@ namespace
 	}
 
 	// Get laser char at pulse using intermediate representation
-	char GetLaserCharAt(const std::vector<KSHLaserSegment>& segments, Pulse pulse, std::int32_t laneIdx, MeasureExportState& state)
+	char GetLaserCharAt(const std::vector<KshLaserSegment>& segments, Pulse pulse, std::int32_t laneIdx, MeasureExportState& state)
 	{
 		auto& laserState = state.laserStates[laneIdx];
 
@@ -1397,23 +1397,23 @@ namespace
 
 	// Convert KSON preset FX effect name to KSH name
 	// Throws std::out_of_range if effectName is not a preset
-	std::string_view KSONPresetFXEffectNameToKSH(const std::string& effectName)
+	std::string_view KsonPresetFXEffectNameToKsh(const std::string& effectName)
 	{
-		return kKSONToKSHPresetFXEffectName.at(effectName);
+		return kKsonToKshPresetFXEffectName.at(effectName);
 	}
 
 	// Convert KSON preset laser filter name to KSH filter name
 	// Throws std::out_of_range if effectName is not a preset
-	std::string_view KSONPresetLaserFilterNameToKSH(const std::string& effectName)
+	std::string_view KsonPresetLaserFilterNameToKsh(const std::string& effectName)
 	{
-		return kKSONToKSHPresetFilterName.at(effectName);
+		return kKsonToKshPresetFilterName.at(effectName);
 	}
 
 	// Generate KSH audio effect string from KSON long_event parameters
-	std::string GenerateKSHAudioEffectString(const ChartData& chartData, const std::string& effectName, const AudioEffectParams& params, bool isFX)
+	std::string GenerateKshAudioEffectString(const ChartData& chartData, const std::string& effectName, const AudioEffectParams& params, bool isFX)
 	{
-		std::string result = IsKSONPresetFXEffectName(effectName)
-			? std::string{ KSONPresetFXEffectNameToKSH(effectName) }
+		std::string result = IsKsonPresetFXEffectName(effectName)
+			? std::string{ KsonPresetFXEffectNameToKsh(effectName) }
 			: effectName;
 
 		constexpr std::int32_t kAudioEffectParamUnspecified = std::numeric_limits<std::int32_t>::min();
@@ -1569,7 +1569,7 @@ namespace
 	}
 
 	// Write note line
-	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
+	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
 	{
 		// Note: The output order below should be the same as v1's order (*command_save in kshooteditor.hsp) for better compatibility of internet ranking hashing
 
@@ -1600,7 +1600,7 @@ namespace
 			const double originalBpm = chartData.beat.bpm.at(pulse);
 			double bpm = originalBpm;
 			// Apply BPM limit for ver >= 130
-			if (!chartData.compat.isKSHVersionOlderThan(kVerBPMLimitAdded))
+			if (!chartData.compat.isKshVersionOlderThan(kVerBPMLimitAdded))
 			{
 				bpm = std::min(bpm, kBPMMax);
 				if (pKshSavingDiag && bpm != originalBpm)
@@ -1706,11 +1706,11 @@ namespace
 					if (pulseValueMap.contains(pulse))
 					{
 						const std::string& value = pulseValueMap.at(pulse);
-						const std::string_view kshEffectName = IsKSONPresetFXEffectName(effectName)
-							? KSONPresetFXEffectNameToKSH(effectName)
+						const std::string_view kshEffectName = IsKsonPresetFXEffectName(effectName)
+							? KsonPresetFXEffectNameToKsh(effectName)
 							: std::string_view{ effectName };
-						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string{ kKSONToKSHParamName.at(paramName) }
+						const std::string kshParamName = kKsonToKshParamName.contains(paramName)
+							? std::string{ kKsonToKshParamName.at(paramName) }
 							: paramName;
 						stream << "fx:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
 					}
@@ -1728,11 +1728,11 @@ namespace
 					if (pulseValueMap.contains(pulse))
 					{
 						const std::string& value = pulseValueMap.at(pulse);
-						const std::string_view kshEffectName = IsKSONPresetLaserFilterName(effectName)
-							? KSONPresetLaserFilterNameToKSH(effectName)
+						const std::string_view kshEffectName = IsKsonPresetLaserFilterName(effectName)
+							? KsonPresetLaserFilterNameToKsh(effectName)
 							: std::string_view{ effectName };
-						const std::string kshParamName = kKSONToKSHParamName.contains(paramName)
-							? std::string{ kKSONToKSHParamName.at(paramName) }
+						const std::string kshParamName = kKsonToKshParamName.contains(paramName)
+							? std::string{ kKsonToKshParamName.at(paramName) }
 							: paramName;
 						stream << "filter:" << kshEffectName << ":" << kshParamName << "=" << value << "\r\n";
 					}
@@ -1801,7 +1801,7 @@ namespace
 			for (const auto& [effectName, pulses] : pulseEvent)
 			{
 				// Skip preset filters (already handled above)
-				if (!IsKSONPresetLaserFilterName(effectName))
+				if (!IsKsonPresetLaserFilterName(effectName))
 				{
 					if (pulses.contains(pulse) && pulse != 0)
 					{
@@ -1977,7 +1977,7 @@ namespace
 		if (chartData.beat.stop.contains(pulse))
 		{
 			const RelPulse stopLength = chartData.beat.stop.at(pulse);
-			stream << "stop=" << RelPulseToKSHLength(stopLength) << "\r\n";
+			stream << "stop=" << RelPulseToKshLength(stopLength) << "\r\n";
 		}
 
 		if (chartData.beat.scrollSpeed.contains(pulse))
@@ -2063,7 +2063,7 @@ namespace
 					}
 
 					const auto& params = laneEvents[laneIdx].at(pulse);
-					const std::string audioEffectStr = GenerateKSHAudioEffectString(chartData, effectName, params, true);
+					const std::string audioEffectStr = GenerateKshAudioEffectString(chartData, effectName, params, true);
 
 					// Check if this pulse is the start of an FX long note
 					const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
@@ -2108,21 +2108,21 @@ namespace
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.spin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '(' : ')';
-			const std::int32_t kshLength = ToKSHResolution(spinEvent.length);
+			const std::int32_t kshLength = ToKshResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.halfSpin.contains(pulse))
 		{
 			const auto& spinEvent = chartData.camera.cam.pattern.laser.slamEvent.halfSpin.at(pulse);
 			const char dirChar = spinEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = ToKSHResolution(spinEvent.length);
+			const std::int32_t kshLength = ToKshResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.swing.contains(pulse))
 		{
 			const auto& swingEvent = chartData.camera.cam.pattern.laser.slamEvent.swing.at(pulse);
 			const char dirChar = swingEvent.d < 0 ? '<' : '>';
-			const std::int32_t kshLength = ToKSHResolution(swingEvent.length);
+			const std::int32_t kshLength = ToKshResolution(swingEvent.length);
 			const std::int32_t scale = static_cast<std::int32_t>(std::round(swingEvent.v.scale));
 			const std::int32_t repeat = swingEvent.v.repeat;
 			const std::int32_t decayOrder = swingEvent.v.decayOrder;
@@ -2141,7 +2141,7 @@ namespace
 	}
 
 	// Calculate optimal division for a measure
-	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KSHLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength)
+	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength)
 	{
 		const Pulse measureEnd = measureStart + measureLength;
 		Pulse gcd = measureLength;
@@ -2452,7 +2452,7 @@ namespace
 		// Check if legacy manual tilt scale should be used
 		// This matches the logic in ksh_io_in.cpp: ver < 170 && any abs(tilt) >= 10.0
 		bool useLegacyScaleForManualTilt = false;
-		if (chartData.compat.isKSHVersionOlderThan(kVerManualTiltScaleChanged))
+		if (chartData.compat.isKshVersionOlderThan(kVerManualTiltScaleChanged))
 		{
 			for (const auto& [pulse, tiltValue] : chartData.camera.tilt)
 			{
@@ -2500,10 +2500,10 @@ namespace
 		}
 
 		// Convert KSON laser sections to KSH laser segments (intermediate representation)
-		std::array<std::vector<KSHLaserSegment>, kNumLaserLanes> laserSegments;
+		std::array<std::vector<KshLaserSegment>, kNumLaserLanes> laserSegments;
 		for (std::int32_t laneIdx = 0; laneIdx < kNumLaserLanes; ++laneIdx)
 		{
-			laserSegments[laneIdx] = ConvertLaserToKSHSegments(chartData.note.laser[laneIdx], laneIdx);
+			laserSegments[laneIdx] = ConvertLaserToKshSegments(chartData.note.laser[laneIdx], laneIdx);
 		}
 
 		const Pulse maxPulse = CalculateMaxPulse(chartData);
@@ -2552,9 +2552,9 @@ namespace
 			{
 				stream << "#define_fx " << name << " type=";
 				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (kKSONToKSHAudioEffectTypeName.contains(typeStr))
+				if (kKsonToKshAudioEffectTypeName.contains(typeStr))
 				{
-					stream << kKSONToKSHAudioEffectTypeName.at(typeStr);
+					stream << kKsonToKshAudioEffectTypeName.at(typeStr);
 				}
 				else
 				{
@@ -2564,9 +2564,9 @@ namespace
 				for (const auto& [paramName, value] : def.v)
 				{
 					stream << ";";
-					if (kKSONToKSHParamName.contains(paramName))
+					if (kKsonToKshParamName.contains(paramName))
 					{
-						stream << kKSONToKSHParamName.at(paramName);
+						stream << kKsonToKshParamName.at(paramName);
 					}
 					else
 					{
@@ -2585,9 +2585,9 @@ namespace
 			{
 				stream << "#define_filter " << name << " type=";
 				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (kKSONToKSHAudioEffectTypeName.contains(typeStr))
+				if (kKsonToKshAudioEffectTypeName.contains(typeStr))
 				{
-					stream << kKSONToKSHAudioEffectTypeName.at(typeStr);
+					stream << kKsonToKshAudioEffectTypeName.at(typeStr);
 				}
 				else
 				{
@@ -2597,9 +2597,9 @@ namespace
 				for (const auto& [paramName, value] : def.v)
 				{
 					stream << ";";
-					if (kKSONToKSHParamName.contains(paramName))
+					if (kKsonToKshParamName.contains(paramName))
 					{
-						stream << kKSONToKSHParamName.at(paramName);
+						stream << kKsonToKshParamName.at(paramName);
 					}
 					else
 					{
@@ -2613,7 +2613,7 @@ namespace
 	}
 }
 
-kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
+kson::ErrorType kson::SaveKshChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
 	if (!stream.good())
 	{
@@ -2641,7 +2641,7 @@ kson::ErrorType kson::SaveKSHChartData(std::ostream& stream, const ChartData& ch
 	}
 }
 
-kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
+kson::ErrorType kson::SaveKshChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
 	std::ofstream ofs(filePath, std::ios_base::binary);
 	if (!ofs.good())
@@ -2649,7 +2649,7 @@ kson::ErrorType kson::SaveKSHChartData(const std::string& filePath, const ChartD
 		return ErrorType::GeneralIOError;
 	}
 
-	const ErrorType result = SaveKSHChartData(ofs, chartData, pKshSavingDiag);
+	const ErrorType result = SaveKshChartData(ofs, chartData, pKshSavingDiag);
 	ofs.close();
 
 	return result;

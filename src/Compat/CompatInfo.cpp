@@ -1,7 +1,7 @@
 ﻿#include "kson/Compat/CompatInfo.hpp"
 #include <cstdlib>
 
-bool kson::CompatInfo::isKSHVersionOlderThan(int kshVersionInt) const
+bool kson::CompatInfo::isKshVersionOlderThan(int kshVersionInt) const
 {
 	if (kshVersion.empty())
 	{
@@ -9,6 +9,6 @@ bool kson::CompatInfo::isKSHVersionOlderThan(int kshVersionInt) const
 		return false;
 	}
 
-	const int chartKSHVersionInt = std::atoi(kshVersion.c_str());
-	return 100 <= chartKSHVersionInt && chartKSHVersionInt < kshVersionInt;
+	const int chartKshVersionInt = std::atoi(kshVersion.c_str());
+	return 100 <= chartKshVersionInt && chartKshVersionInt < kshVersionInt;
 }

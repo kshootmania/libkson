@@ -16,7 +16,7 @@ const char *kson::GetErrorString(kson::ErrorType errorType)
 		return "Could not open output file stream";
 	case kson::ErrorType::GeneralChartFormatError:
 		return "Chart format error";
-	case kson::ErrorType::KSONParseError:
+	case kson::ErrorType::KsonParseError:
 		return "KSON parse error";
 	case kson::ErrorType::EncodingError:
 		return "Encoding error";

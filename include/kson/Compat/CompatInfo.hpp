@@ -3,7 +3,7 @@
 
 namespace kson
 {
-	struct KSHUnknownInfo
+	struct KshUnknownInfo
 	{
 		std::unordered_map<std::string, std::string> meta;
 		std::unordered_map<std::string, ByPulseMulti<std::string>> option;
@@ -13,9 +13,9 @@ namespace kson
 	struct CompatInfo
 	{
 		std::string kshVersion;
-		KSHUnknownInfo kshUnknown;
+		KshUnknownInfo kshUnknown;
 
 		[[nodiscard]]
-		bool isKSHVersionOlderThan(int kshVersionInt) const;
+		bool isKshVersionOlderThan(int kshVersionInt) const;
 	};
 }

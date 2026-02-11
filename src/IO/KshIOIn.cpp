@@ -204,7 +204,7 @@ namespace
 		return arr;
 	}
 
-	std::string_view KSHLegacyFXCharToKSHAudioEffectStr(char c)
+	std::string_view KshLegacyFXCharToKshAudioEffectStr(char c)
 	{
 		switch (c)
 		{
@@ -230,7 +230,7 @@ namespace
 		}
 	}
 
-	const std::unordered_map<std::string_view, std::string_view> s_kshFXToKSONAudioEffectNameTable
+	const std::unordered_map<std::string_view, std::string_view> s_kshFXToKsonAudioEffectNameTable
 	{
 		{ "Retrigger", "retrigger" },
 		{ "Gate", "gate" },
@@ -244,7 +244,7 @@ namespace
 		{ "SideChain", "sidechain" },
 	};
 
-	const std::unordered_map<std::string_view, std::string_view> s_kshFilterToKSONAudioEffectNameTable
+	const std::unordered_map<std::string_view, std::string_view> s_kshFilterToKsonAudioEffectNameTable
 	{
 		{ "peak", "peaking_filter" },
 		{ "hpf1", "high_pass_filter" },
@@ -391,7 +391,7 @@ namespace
 		return isUTF8;
 	}
 
-	double RoundToKSHDoubleValue(double value)
+	double RoundToKshDoubleValue(double value)
 	{
 		return std::round(value * 1000.0) / 1000.0;
 	}
@@ -404,7 +404,7 @@ namespace
 		}
 
 		double bpm = ParseNumeric<double>(value);
-		bpm = RoundToKSHDoubleValue(bpm);
+		bpm = RoundToKshDoubleValue(bpm);
 
 		// Apply BPM limit for ver >= 130 (65535.0)
 		if (kshVersionInt >= kVerBPMLimitAdded)
@@ -419,9 +419,9 @@ namespace
 	void InsertFiltertype(ChartData& chartData, Pulse time, const std::string& value)
 	{
 		auto& audioEffectLaser = chartData.audio.audioEffect.laser;
-		if (s_kshFilterToKSONAudioEffectNameTable.contains(value))
+		if (s_kshFilterToKsonAudioEffectNameTable.contains(value))
 		{
-			std::string name(s_kshFilterToKSONAudioEffectNameTable.at(value));
+			std::string name(s_kshFilterToKsonAudioEffectNameTable.at(value));
 			if (name == "fx" && !audioEffectLaser.defContains(name))
 			{
 				if (chartData.audio.bgm.legacy.filenameF.empty())
@@ -834,10 +834,10 @@ namespace
 				// Note: Legacy parameters do not support audioEffectParamValue2 (for Echo), so only audioEffectParamValue1 is sufficient.
 				audioEffectParamValue1 = ParseNumeric<std::int32_t>(audioEffectParamStr);
 			}
-			if (s_kshFXToKSONAudioEffectNameTable.contains(audioEffectName))
+			if (s_kshFXToKsonAudioEffectNameTable.contains(audioEffectName))
 			{
 				// Convert the name of preset audio effects
-				audioEffectName = s_kshFXToKSONAudioEffectNameTable.at(audioEffectName);
+				audioEffectName = s_kshFXToKsonAudioEffectNameTable.at(audioEffectName);
 			}
 			m_pTargetChartData->audio.audioEffect.fx.longEvent[audioEffectName][m_targetLaneIdx].emplace(time, AudioEffectParams{
 				// Store the value of the parameters in temporary keys
@@ -854,7 +854,7 @@ namespace
 		}
 	};
 
-	RelPulse KSHLengthToRelPulse(std::string_view str)
+	RelPulse KshLengthToRelPulse(std::string_view str)
 	{
 		return ParseNumeric<RelPulse>(str) * kResolution4 / 192;
 	}
@@ -876,7 +876,7 @@ namespace
 		}
 
 		return std::make_tuple(
-			KSHLengthToRelPulse(params[0]),
+			KshLengthToRelPulse(params[0]),
 			ParseNumeric<std::int32_t>(params[1]),
 			ParseNumeric<std::int32_t>(params[2]),
 			ParseNumeric<std::int32_t>(params[3]));
@@ -909,7 +909,7 @@ namespace
 
 		std::int32_t swingDecayOrder = 0;
 
-		static PreparedLaneSpin FromKSHSpinStr(std::string_view strFromKsh) // From .ksh spin string (example: "@(192")
+		static PreparedLaneSpin FromKshSpinStr(std::string_view strFromKsh) // From .ksh spin string (example: "@(192")
 		{
 			// A .ksh spin string should have at least 3 chars
 			if (strFromKsh.length() < 3)
@@ -1004,7 +1004,7 @@ namespace
 				return {
 					.type = type,
 					.direction = direction,
-					.duration = KSHLengthToRelPulse(strFromKsh.substr(2)),
+					.duration = KshLengthToRelPulse(strFromKsh.substr(2)),
 				};
 			}
 		}
@@ -1507,7 +1507,7 @@ namespace
 		return chartData;
 	}
 
-	void ParseKSHChartBody(
+	void ParseKshChartBody(
 		std::istream& stream,
 		ChartData* pChartData,
 		KshLoadingDiag* pKshDiag,
@@ -1706,19 +1706,19 @@ namespace
 						continue;
 					}
 
-					AudioEffectParams paramsKSON;
+					AudioEffectParams paramsKson;
 					for (const auto& [paramName, value] : params)
 					{
 						if (s_audioEffectParamNameTable.contains(paramName))
 						{
-							paramsKSON.emplace(s_audioEffectParamNameTable.at(paramName), value);
+							paramsKson.emplace(s_audioEffectParamNameTable.at(paramName), value);
 						}
 					}
 
 					// Name conversion for user-defined audio effects overwriting preset ones
-					if (s_kshFXToKSONAudioEffectNameTable.contains(name))
+					if (s_kshFXToKsonAudioEffectNameTable.contains(name))
 					{
-						name = s_kshFXToKSONAudioEffectNameTable.at(name);
+						name = s_kshFXToKsonAudioEffectNameTable.at(name);
 					}
 
 					auto& def = isDefineFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
@@ -1727,7 +1727,7 @@ namespace
 							.name = name,
 							.v = AudioEffectDef{
 								.type = s_audioEffectTypeTable.at(type),
-								.v = std::move(paramsKSON),
+								.v = std::move(paramsKson),
 							},
 						});
 				}
@@ -1817,7 +1817,7 @@ namespace
 						}
 						else if (key == "stop")
 						{
-							const RelPulse length = KSHLengthToRelPulse(value);
+							const RelPulse length = KshLengthToRelPulse(value);
 							if (length > 0)
 							{
 								chartData.beat.stop[time] = length;
@@ -1875,7 +1875,7 @@ namespace
 							if (IsTiltValueManual(value))
 							{
 								const double rawValue = ParseNumeric<double>(value);
-								const double dValue = RoundToKSHDoubleValue(rawValue);
+								const double dValue = RoundToKshDoubleValue(rawValue);
 								if (std::abs(dValue) <= kManualTiltAbsMax)
 								{
 									// Check for immediate change (consecutive tilt values at the same pulse)
@@ -1988,11 +1988,11 @@ namespace
 								if (s_audioEffectParamNameTable.contains(a[kParamNameIdx]))
 								{
 									const std::string effectName = isFX
-										? (s_kshFXToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
-											? std::string{ s_kshFXToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+										? (s_kshFXToKsonAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+											? std::string{ s_kshFXToKsonAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
 											: std::string{ a[kAudioEffectNameIdx] })
-										: (s_kshFilterToKSONAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
-											? std::string{ s_kshFilterToKSONAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
+										: (s_kshFilterToKsonAudioEffectNameTable.contains(a[kAudioEffectNameIdx])
+											? std::string{ s_kshFilterToKsonAudioEffectNameTable.at(a[kAudioEffectNameIdx]) }
 											: std::string{ a[kAudioEffectNameIdx] });
 									paramChange[effectName][std::string{ s_audioEffectParamNameTable.at(a[kParamNameIdx]) }].insert_or_assign(time, value);
 								}
@@ -2079,7 +2079,7 @@ namespace
 									break;
 								default: // Long FX note (legacy characters, e.g., "F" = Flanger)
 									{
-										const std::string audioEffectStr(KSHLegacyFXCharToKSHAudioEffectStr(buf[j]));
+										const std::string audioEffectStr(KshLegacyFXCharToKshAudioEffectStr(buf[j]));
 										const std::string audioEffectParamStr = currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i) ? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) : "";
 										preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, true);
 									}
@@ -2129,7 +2129,7 @@ namespace
 							else if (currentBlock == kBlockIdxLaser && laneIdx == kNumLaserLanesSZ) // Lane spin
 							{
 								// Create a lane spin from string
-								const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKSHSpinStr(buf.substr(j));
+								const PreparedLaneSpin laneSpin = PreparedLaneSpin::FromKshSpinStr(buf.substr(j));
 								if (laneSpin.isValid())
 								{
 									// Add spin/swing directly to chartData (independent of laser sections)
@@ -2429,11 +2429,11 @@ namespace
 				if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 				{
 					TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
-					point.v.v = RoundToKSHDoubleValue(point.v.v * kToLegacyScale);
+					point.v.v = RoundToKshDoubleValue(point.v.v * kToLegacyScale);
 					// Only scale vf if it's a double value (not AutoTiltType)
 					if (std::holds_alternative<double>(point.v.vf))
 					{
-						std::get<double>(point.v.vf) = RoundToKSHDoubleValue(std::get<double>(point.v.vf) * kToLegacyScale);
+						std::get<double>(point.v.vf) = RoundToKshDoubleValue(std::get<double>(point.v.vf) * kToLegacyScale);
 					}
 				}
 			}
@@ -2466,12 +2466,12 @@ std::vector<std::string> kson::KshLoadingDiag::editorWarnings() const
 	return result;
 }
 
-MetaChartData kson::LoadKSHMetaChartData(std::istream& stream)
+MetaChartData kson::LoadKshMetaChartData(std::istream& stream)
 {
 	return CreateChartDataFromMetaDataStream<MetaChartData>(stream, nullptr);
 }
 
-MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
+MetaChartData kson::LoadKshMetaChartData(const std::string& filePath)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -2484,11 +2484,11 @@ MetaChartData kson::LoadKSHMetaChartData(const std::string& filePath)
 		return { .error = ErrorType::CouldNotOpenInputFileStream };
 	}
 
-	return LoadKSHMetaChartData(ifs);
+	return LoadKshMetaChartData(ifs);
 }
 
 
-kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKshDiag)
+kson::ChartData kson::LoadKshChartData(std::istream& stream, KshLoadingDiag* pKshDiag)
 {
 	KshLoadingDiag localDiag;
 	if (!pKshDiag)
@@ -2512,7 +2512,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKs
 
 	try
 	{
-		ParseKSHChartBody(stream, &chartData, pKshDiag, isUTF8, &fileLineNo);
+		ParseKshChartBody(stream, &chartData, pKshDiag, isUTF8, &fileLineNo);
 	}
 	catch (const std::exception& e)
 	{
@@ -2528,7 +2528,7 @@ kson::ChartData kson::LoadKSHChartData(std::istream& stream, KshLoadingDiag* pKs
 	return chartData;
 }
 
-ChartData kson::LoadKSHChartData(const std::string& filePath, KshLoadingDiag* pKshDiag)
+ChartData kson::LoadKshChartData(const std::string& filePath, KshLoadingDiag* pKshDiag)
 {
 	if (!std::filesystem::exists(filePath))
 	{
@@ -2541,5 +2541,5 @@ ChartData kson::LoadKSHChartData(const std::string& filePath, KshLoadingDiag* pK
 		return { .error = ErrorType::CouldNotOpenInputFileStream };
 	}
 
-	return LoadKSHChartData(ifs, pKshDiag);
+	return LoadKshChartData(ifs, pKshDiag);
 }

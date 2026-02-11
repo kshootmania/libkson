@@ -19,7 +19,7 @@ namespace
 	{
 		kson::KshSavingDiag diag;
 		std::ostringstream oss;
-		kson::SaveKSHChartData(oss, chartData, &diag);
+		kson::SaveKshChartData(oss, chartData, &diag);
 		return diag.warnings;
 	}
 
@@ -40,7 +40,7 @@ namespace
 
 TEST_CASE("KSH saving no data loss warnings for Gram[EX]", "[ksh_saving_diag][bundled]")
 {
-	auto chartData = kson::LoadKSHChartData(g_assetsDir + "/Gram_ex.ksh");
+	auto chartData = kson::LoadKshChartData(g_assetsDir + "/Gram_ex.ksh");
 	REQUIRE(chartData.error == kson::ErrorType::None);
 
 	auto warnings = SaveAndGetWarnings(chartData);
