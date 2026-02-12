@@ -1,4 +1,4 @@
-﻿#include "kson/Util/GraphCurve.hpp"
+#include "kson/Util/GraphCurve.hpp"
 #include "kson/Note/NoteInfo.hpp"
 #include <cmath>
 #include <algorithm>

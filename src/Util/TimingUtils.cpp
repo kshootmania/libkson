@@ -1,4 +1,4 @@
-﻿#include "kson/Util/TimingUtils.hpp"
+#include "kson/Util/TimingUtils.hpp"
 #include <optional>
 #include <iostream>
 

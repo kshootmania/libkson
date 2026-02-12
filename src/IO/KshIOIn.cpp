@@ -1,4 +1,4 @@
-﻿#include "kson/IO/KshIO.hpp"
+#include "kson/IO/KshIO.hpp"
 #include "kson/Encoding/Encoding.hpp"
 #include <filesystem>
 #include <fstream>

@@ -1,4 +1,4 @@
-﻿#include "kson/Audio/AudioEffect.hpp"
+#include "kson/Audio/AudioEffect.hpp"
 
 namespace
 {

@@ -9,6 +9,8 @@ option(KSON_BUILD_TESTS "Build tests" ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+
 # Get git commit hash
 find_package(Git QUIET)
 if(GIT_FOUND)

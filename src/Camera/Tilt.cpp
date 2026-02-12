@@ -1,4 +1,4 @@
-﻿#include "kson/Camera/Tilt.hpp"
+#include "kson/Camera/Tilt.hpp"
 
 double kson::GetAutoTiltScale(AutoTiltType type)
 {

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/ChartData.hpp"
 #include "kson/IO/KsonLoadingDiag.hpp"

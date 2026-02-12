@@ -1,4 +1,4 @@
-﻿#include "kson/Error.hpp"
+#include "kson/Error.hpp"
 
 const char *kson::GetErrorString(kson::ErrorType errorType)
 {

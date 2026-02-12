@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <optional>
 #include "kson/Common/Common.hpp"
 #include "kson/Note/NoteInfo.hpp"

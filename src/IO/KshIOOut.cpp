@@ -1,4 +1,4 @@
-﻿#include "kson/IO/KshIO.hpp"
+#include "kson/IO/KshIO.hpp"
 #include "kson/Util/GraphUtils.hpp"
 #include <filesystem>
 #include <fstream>

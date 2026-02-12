@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <tuple>
 #include "kson/Common/Common.hpp"
 

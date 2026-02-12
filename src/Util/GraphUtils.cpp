@@ -1,4 +1,4 @@
-﻿#include "kson/Util/GraphUtils.hpp"
+#include "kson/Util/GraphUtils.hpp"
 #include "kson/Util/GraphCurve.hpp"
 #include <algorithm>
 #include <vector>

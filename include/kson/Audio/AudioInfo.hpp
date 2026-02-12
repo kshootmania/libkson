@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "kson/Common/Common.hpp"
 #include "BGMInfo.hpp"
 #include "KeySound.hpp"

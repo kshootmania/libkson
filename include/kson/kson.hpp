@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Error.hpp"
 #include "ChartData.hpp"
 #include "IO/IDiag.hpp"

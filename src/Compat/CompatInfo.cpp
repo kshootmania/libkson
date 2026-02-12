@@ -1,4 +1,4 @@
-﻿#include "kson/Compat/CompatInfo.hpp"
+#include "kson/Compat/CompatInfo.hpp"
 #include <cstdlib>
 
 bool kson::CompatInfo::isKshVersionOlderThan(int kshVersionInt) const

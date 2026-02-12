@@ -1,4 +1,4 @@
-﻿#ifndef _WIN32
+#ifndef _WIN32
 #include "kson/Encoding/Encoding.hpp"
 #include <iostream>
 #include <cerrno>
