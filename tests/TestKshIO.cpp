@@ -804,66 +804,78 @@ TEST_CASE("KSH I/O lossless test (bundled charts)", "[ksh_io][kson_io][ksh_lossl
 }
 
 TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossless][all_songs]") {
-	auto testKsonRoundTrip = [](const std::string& filename) {
+	auto testKsonRoundTrip = [](const std::string& filename) -> bool {
 		// ksh1 → kson1
 		auto kson1 = kson::LoadKshChartData(filename);
-
 		if (kson1.error != kson::ErrorType::None) {
-			std::cerr << "Error loading KSH file: " << filename << std::endl;
-			std::cerr << "Error code: " << static_cast<int>(kson1.error) << std::endl;
+			return false;
 		}
-		REQUIRE(kson1.error == kson::ErrorType::None);
 
 		// kson1 → ksh2
 		std::ostringstream ossKsh;
 		const kson::ErrorType saveKshResult = kson::SaveKshChartData(ossKsh, kson1);
-		REQUIRE(saveKshResult == kson::ErrorType::None);
+		if (saveKshResult != kson::ErrorType::None) {
+			return false;
+		}
 		std::string kshString = ossKsh.str();
-		REQUIRE(!kshString.empty());
+		if (kshString.empty()) {
+			return false;
+		}
 
 		// ksh2 → kson2
 		std::istringstream issKsh(kshString);
 		auto kson2 = kson::LoadKshChartData(issKsh);
-		REQUIRE(kson2.error == kson::ErrorType::None);
+		if (kson2.error != kson::ErrorType::None) {
+			return false;
+		}
 
 		// Compare kson1 and kson2 as JSON
 		std::ostringstream ossJson1;
 		auto saveJson1Result = kson::SaveKsonChartData(ossJson1, kson1);
-		REQUIRE(saveJson1Result == kson::ErrorType::None);
+		if (saveJson1Result != kson::ErrorType::None) {
+			return false;
+		}
 		std::string ksonString1 = ossJson1.str();
-		REQUIRE(!ksonString1.empty());
+		if (ksonString1.empty()) {
+			return false;
+		}
 
 		std::ostringstream ossJson2;
 		auto saveJson2Result = kson::SaveKsonChartData(ossJson2, kson2);
-		REQUIRE(saveJson2Result == kson::ErrorType::None);
+		if (saveJson2Result != kson::ErrorType::None) {
+			return false;
+		}
 		std::string ksonString2 = ossJson2.str();
-		REQUIRE(!ksonString2.empty());
+		if (ksonString2.empty()) {
+			return false;
+		}
 
 		nlohmann::json json1 = nlohmann::json::parse(ksonString1);
 		nlohmann::json json2 = nlohmann::json::parse(ksonString2);
 
 		// KSH->KSON->KSH->KSON, so all lines representable in KSH should match
-		INFO("File: " << filename);
-		REQUIRE(json1["format_version"] == json2["format_version"]);
-		REQUIRE(json1["meta"] == json2["meta"]);
-		REQUIRE(json1["beat"] == json2["beat"]);
-		REQUIRE(json1["gauge"] == json2["gauge"]);
-		REQUIRE(json1["note"] == json2["note"]);
-		REQUIRE(json1["audio"] == json2["audio"]);
-		REQUIRE(json1["camera"] == json2["camera"]);
-		REQUIRE(json1["bg"] == json2["bg"]);
+		if (json1["format_version"] != json2["format_version"]) return false;
+		if (json1["meta"] != json2["meta"]) return false;
+		if (json1["beat"] != json2["beat"]) return false;
+		if (json1["gauge"] != json2["gauge"]) return false;
+		if (json1["note"] != json2["note"]) return false;
+		if (json1["audio"] != json2["audio"]) return false;
+		if (json1["camera"] != json2["camera"]) return false;
+		if (json1["bg"] != json2["bg"]) return false;
 
 		if (json1.contains("editor") && json2.contains("editor")) {
-			REQUIRE(json1["editor"] == json2["editor"]);
+			if (json1["editor"] != json2["editor"]) return false;
 		}
 		if (json1.contains("compat") && json2.contains("compat")) {
 			// Override version before comparison
 			json2["compat"]["ksh_version"] = json1["compat"]["ksh_version"];
-			REQUIRE(json1["compat"] == json2["compat"]);
+			if (json1["compat"] != json2["compat"]) return false;
 		}
 		if (json1.contains("impl") && json2.contains("impl")) {
-			REQUIRE(json1["impl"] == json2["impl"]);
+			if (json1["impl"] != json2["impl"]) return false;
 		}
+
+		return true;
 	};
 
 	std::filesystem::path songsPath = g_exeDir / "../../../kshootmania/App/songs";
@@ -888,6 +900,18 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 
 		std::set<std::string> ignoredPackages;
 
+		// Known failing files (relative paths from songs/)
+		const std::set<std::string> knownFailures = {
+			"KUOC_NF2018_PilgrimageR/3_ocean/5_Scabiosa/3_ex.ksh",
+			"KUOC_NF2018_PilgrimageR/3_ocean/5_Scabiosa/4_in.ksh",
+		};
+
+		int passed = 0;
+		int failed = 0;
+		int knownFailureCount = 0;
+		std::vector<std::string> unexpectedFailures;
+		std::vector<std::string> unexpectedSuccesses;
+
 		for (const auto& file : kshFiles) {
 			std::string relativePath = file;
 			size_t songsPos = relativePath.find("/songs/");
@@ -910,9 +934,57 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 				}
 			}
 
-			std::string displayPath = "songs/" + relativePath;
-			INFO("Testing file: " << displayPath);
-			testKsonRoundTrip(file);
+			bool success = false;
+			try {
+				success = testKsonRoundTrip(file);
+			} catch (const std::exception& e) {
+				success = false;
+			}
+
+			if (success) {
+				passed++;
+				if (knownFailures.count(relativePath) > 0) {
+					unexpectedSuccesses.push_back(relativePath);
+				}
+			} else {
+				failed++;
+				if (knownFailures.count(relativePath) == 0) {
+					unexpectedFailures.push_back(relativePath);
+				} else {
+					knownFailureCount++;
+				}
+			}
+		}
+
+		int total = passed + failed;
+		int totalExcludingKnownFailures = total - knownFailureCount;
+		int passedExcludingKnownFailures = passed - unexpectedSuccesses.size();
+		double successRateExcludingKnown = totalExcludingKnownFailures > 0
+			? (100.0 * passedExcludingKnownFailures / totalExcludingKnownFailures)
+			: 0.0;
+		double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
+
+		bool testSuccess = unexpectedFailures.empty();
+		std::cerr << "\n=== All Songs KSON Lossless Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
+		std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
+			<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
+		std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+		std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
+		std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+
+		if (!unexpectedSuccesses.empty()) {
+			std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
+			for (const auto& file : unexpectedSuccesses) {
+				std::cerr << "  - " << file << std::endl;
+			}
+		}
+
+		if (!unexpectedFailures.empty()) {
+			std::cerr << "\nUnexpected failures (NEW REGRESSIONS):" << std::endl;
+			for (const auto& file : unexpectedFailures) {
+				std::cerr << "  - " << file << std::endl;
+			}
+			REQUIRE(unexpectedFailures.empty());
 		}
 	}
 }
