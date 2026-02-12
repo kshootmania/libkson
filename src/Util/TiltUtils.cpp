@@ -41,7 +41,13 @@ std::optional<double> kson::ManualTiltValueAt(const ByPulse<TiltValue>& tiltValu
 		// Next is also manual tilt: interpolate between vf and next v
 		const TiltGraphPoint& nextPoint = std::get<TiltGraphPoint>(nextIt->second);
 		const Pulse nextPulse = nextIt->first;
-		const double lerpRate = static_cast<double>(currentPulse - currentValuePulse) / static_cast<double>(nextPulse - currentValuePulse);
+		const Pulse segmentLength = nextPulse - currentValuePulse;
+		if (segmentLength <= 0)
+		{
+			return nextPoint.v.v;
+		}
+
+		const double lerpRate = static_cast<double>(currentPulse - currentValuePulse) / static_cast<double>(segmentLength);
 
 		// Apply curve if present
 		const double curveValue = EvaluateCurve(currentPoint.curve, lerpRate);

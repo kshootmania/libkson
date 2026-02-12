@@ -35,7 +35,13 @@ double kson::GraphValueAt(const Graph& graph, Pulse pulse)
 	const auto& [pulse2, point2] = *nextItr;
 	assert(pulse1 <= pulse && pulse < pulse2);
 
-	const double lerpRate = static_cast<double>(pulse - pulse1) / static_cast<double>(pulse2 - pulse1);
+	const Pulse segmentLength = pulse2 - pulse1;
+	if (segmentLength <= 0)
+	{
+		return point2.v.v;
+	}
+
+	const double lerpRate = static_cast<double>(pulse - pulse1) / static_cast<double>(segmentLength);
 
 	// Apply curve if present
 	const double curveValue = EvaluateCurve(point1.curve, lerpRate);
