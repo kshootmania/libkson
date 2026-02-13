@@ -969,12 +969,14 @@ TEST_CASE("KSH I/O lossless test (all songs)", "[.][ksh_io][kson_io][ksh_lossles
 		double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
 
 		bool testSuccess = unexpectedFailures.empty();
-		std::cerr << "\n=== All Songs KSON Lossless Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
-		std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
-			<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
-		std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
-		std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
-		std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+		if (!testSuccess) {
+			std::cerr << "\n=== All Songs KSON Lossless Test: FAILURE ===" << std::endl;
+			std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
+				<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
+			std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+			std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
+			std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+		}
 
 		if (!unexpectedSuccesses.empty()) {
 			std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
@@ -1194,12 +1196,14 @@ static void RunKshRoundTripTest(
 	double successRate = total > 0 ? (100.0 * passed / total) : 0.0;
 
 	bool testSuccess = unexpectedFailures.empty();
-	std::cerr << "\n=== " << testName << " Round-Trip Test: " << (testSuccess ? "SUCCESS" : "FAILURE") << " ===" << std::endl;
-	std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
-		<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
-	std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
-	std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
-	std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+	if (!testSuccess) {
+		std::cerr << "\n=== " << testName << " Round-Trip Test: FAILURE ===" << std::endl;
+		std::cerr << passedExcludingKnownFailures << "/" << totalExcludingKnownFailures
+			<< " (" << static_cast<int>(successRateExcludingKnown) << "%)" << std::endl;
+		std::cerr << "  - Total: " << passed << "/" << total << " (" << static_cast<int>(successRate) << "%)" << std::endl;
+		std::cerr << "  - Known failures: " << knownFailureCount << std::endl;
+		std::cerr << "  - New failures: " << unexpectedFailures.size() << std::endl;
+	}
 
 	if (!unexpectedSuccesses.empty()) {
 		std::cerr << "\nUnexpected successes (remove from known failures list):" << std::endl;
