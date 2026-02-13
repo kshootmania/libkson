@@ -165,7 +165,7 @@ TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][bundled]") {
 	SECTION("Camera data") {
 		REQUIRE(chart.camera.cam.body.zoomBottom.size() == 72);
 		REQUIRE(chart.camera.cam.body.zoomTop.size() == 45);
-		REQUIRE(chart.camera.tilt.size() == 16);
+		REQUIRE(chart.camera.tilt.size() == 17); // 16 from file + 1 default at pulse 0
 	}
 
 	SECTION("Audio effects") {
@@ -597,8 +597,12 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(centerSplitItr->second.curve.b == Approx(0.0));
 
         // tilt should NOT have curve (curve was at different pulse)
-        REQUIRE(chart.camera.tilt.size() == 1);
-        const auto& tiltValue = chart.camera.tilt.begin()->second;
+        REQUIRE(chart.camera.tilt.size() == 2); // 1 default at pulse 0 + 1 user-specified tilt
+        // Find the non-zero pulse tilt entry (user-specified tilt=0.1)
+        auto tiltItr = std::find_if(chart.camera.tilt.begin(), chart.camera.tilt.end(),
+            [](const auto& pair) { return pair.first != 0; });
+        REQUIRE(tiltItr != chart.camera.tilt.end());
+        const auto& tiltValue = tiltItr->second;
         REQUIRE(std::holds_alternative<kson::TiltGraphPoint>(tiltValue));
         const auto& tiltGraphPoint = std::get<kson::TiltGraphPoint>(tiltValue);
         REQUIRE(tiltGraphPoint.v.v == Approx(0.1));
