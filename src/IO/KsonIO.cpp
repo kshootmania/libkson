@@ -2168,6 +2168,73 @@ kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const Chart
 	return kson::SaveKsonChartData(ofs, chartData);
 }
 
+namespace
+{
+	bool ValidateAndParseKsonJson(
+		std::istream& stream,
+		nlohmann::json* pOutJson,
+		ErrorType* pOutError,
+		KsonLoadingDiag* pKsonDiag)
+	{
+		if (!stream.good())
+		{
+			*pOutError = ErrorType::GeneralIOError;
+			return false;
+		}
+
+		try
+		{
+			stream >> *pOutJson;
+		}
+		catch (const nlohmann::json::parse_error& e)
+		{
+			*pOutError = ErrorType::KsonParseError;
+			pKsonDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::JsonParseError,
+				.scope = WarningScope::PlayerAndEditor,
+				.message = "JSON parse error: " + std::string(e.what()),
+			});
+			return false;
+		}
+
+		if (!pOutJson->contains("format_version"))
+		{
+			*pOutError = ErrorType::KsonParseError;
+			pKsonDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::MissingFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
+				.message = "Missing required field: format_version",
+			});
+			return false;
+		}
+
+		if (!(*pOutJson)["format_version"].is_number_integer())
+		{
+			*pOutError = ErrorType::KsonParseError;
+			pKsonDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::InvalidFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
+				.message = "Invalid format_version field type",
+			});
+			return false;
+		}
+
+		const std::int32_t formatVersion = (*pOutJson)["format_version"].get<std::int32_t>();
+		if (formatVersion > kKsonFormatVersion)
+		{
+			std::ostringstream oss;
+			oss << "kson file uses newer format version (" << formatVersion << ") than supported (" << kKsonFormatVersion << ")";
+			pKsonDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::NewerFormatVersion,
+				.scope = WarningScope::PlayerAndEditor,
+				.message = oss.str(),
+			});
+		}
+
+		return true;
+	}
+}
+
 kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag)
 {
 	KsonLoadingDiag localDiag;
@@ -2178,73 +2245,14 @@ kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* p
 
 	ChartData chartData;
 
-	if (!stream.good())
-	{
-		chartData.error = ErrorType::GeneralIOError;
-		return chartData;
-	}
-	
 	try
 	{
 		nlohmann::json j;
-		stream >> j;
-
-		// Check for required format_version field
-		if (!j.contains("format_version"))
+		if (!ValidateAndParseKsonJson(stream, &j, &chartData.error, pKsonDiag))
 		{
-			chartData.error = ErrorType::KsonParseError;
-			pKsonDiag->warnings.push_back({
-				.type = KsonLoadingWarningType::MissingFormatVersion,
-				.scope = WarningScope::PlayerAndEditor,
-				.message = "Missing required field: format_version",
-			});
 			return chartData;
 		}
 
-		if (!j["format_version"].is_number_integer())
-		{
-			chartData.error = ErrorType::KsonParseError;
-			pKsonDiag->warnings.push_back({
-				.type = KsonLoadingWarningType::InvalidFormatVersion,
-				.scope = WarningScope::PlayerAndEditor,
-				.message = "Invalid format_version: must be an integer",
-			});
-			return chartData;
-		}
-
-		const std::int32_t formatVersion = j["format_version"].get<std::int32_t>();
-		if (formatVersion > kKsonFormatVersion)
-		{
-			std::string message = "File format version " + std::to_string(formatVersion);
-
-			if (j.contains("editor"))
-			{
-				const auto& editorJson = j["editor"];
-				if (editorJson.contains("app_name") && editorJson["app_name"].is_string())
-				{
-					const std::string appName = editorJson["app_name"].get<std::string>();
-					message += " (created with " + appName;
-
-					if (editorJson.contains("app_version") && editorJson["app_version"].is_string())
-					{
-						const std::string appVersion = editorJson["app_version"].get<std::string>();
-						message += " " + appVersion;
-					}
-
-					message += ")";
-				}
-			}
-
-			message += " is newer than supported version " + std::to_string(kKsonFormatVersion);
-
-			pKsonDiag->warnings.push_back({
-				.type = KsonLoadingWarningType::NewerFormatVersion,
-				.scope = WarningScope::PlayerAndEditor,
-				.message = message,
-			});
-		}
-
-		// Parse each component
 		if (j.contains("meta"))
 		{
 			chartData.meta = ParseMetaInfo(j["meta"], pKsonDiag);
@@ -2376,6 +2384,13 @@ std::vector<std::string> kson::KsonLoadingDiag::editorWarnings() const
 
 kson::ChartData kson::LoadKsonChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
 {
+	if (!std::filesystem::exists(filePath))
+	{
+		ChartData chartData;
+		chartData.error = ErrorType::FileNotFound;
+		return chartData;
+	}
+
 	std::ifstream ifs(filePath);
 	if (!ifs.good())
 	{
@@ -2384,5 +2399,88 @@ kson::ChartData kson::LoadKsonChartData(const std::string& filePath, KsonLoading
 		return chartData;
 	}
 	return kson::LoadKsonChartData(ifs, pKsonDiag);
+}
+
+kson::MetaChartData kson::LoadKsonMetaChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag)
+{
+	KsonLoadingDiag localDiag;
+	if (!pKsonDiag)
+	{
+		pKsonDiag = &localDiag;
+	}
+
+	MetaChartData metaChartData;
+
+	try
+	{
+		nlohmann::json j;
+		if (!ValidateAndParseKsonJson(stream, &j, &metaChartData.error, pKsonDiag))
+		{
+			return metaChartData;
+		}
+
+		if (j.contains("meta"))
+		{
+			metaChartData.meta = ParseMetaInfo(j["meta"], pKsonDiag);
+		}
+
+		if (j.contains("audio") && j["audio"].contains("bgm"))
+		{
+			const BGMInfo bgmInfo = ParseBGMInfo(j["audio"]["bgm"], pKsonDiag);
+			metaChartData.audio.bgm.filename = bgmInfo.filename;
+			metaChartData.audio.bgm.vol = bgmInfo.vol;
+			metaChartData.audio.bgm.preview = bgmInfo.preview;
+		}
+
+		metaChartData.error = ErrorType::None;
+	}
+	catch (const nlohmann::json::parse_error& e)
+	{
+		metaChartData.error = ErrorType::KsonParseError;
+		pKsonDiag->warnings.push_back({
+			.type = KsonLoadingWarningType::JsonParseError,
+			.scope = WarningScope::PlayerAndEditor,
+			.message = "JSON parse error: " + std::string(e.what()),
+		});
+	}
+	catch (const nlohmann::json::type_error& e)
+	{
+		metaChartData.error = ErrorType::KsonParseError;
+		pKsonDiag->warnings.push_back({
+			.type = KsonLoadingWarningType::JsonTypeError,
+			.scope = WarningScope::PlayerAndEditor,
+			.message = "JSON type error: " + std::string(e.what()),
+		});
+	}
+	catch (const std::exception& e)
+	{
+		metaChartData.error = ErrorType::UnknownError;
+		pKsonDiag->warnings.push_back({
+			.type = KsonLoadingWarningType::UnexpectedError,
+			.scope = WarningScope::PlayerAndEditor,
+			.message = "Unexpected error: " + std::string(e.what()),
+		});
+	}
+
+	return metaChartData;
+}
+
+kson::MetaChartData kson::LoadKsonMetaChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
+{
+	if (!std::filesystem::exists(filePath))
+	{
+		MetaChartData metaChartData;
+		metaChartData.error = ErrorType::FileNotFound;
+		return metaChartData;
+	}
+
+	std::ifstream ifs(filePath);
+	if (!ifs.good())
+	{
+		MetaChartData metaChartData;
+		metaChartData.error = ErrorType::CouldNotOpenInputFileStream;
+		return metaChartData;
+	}
+	return kson::LoadKsonMetaChartData(ifs, pKsonDiag);
 }
 #endif

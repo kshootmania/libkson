@@ -180,7 +180,7 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     
     SECTION("Non-existent file") {
         auto chart = kson::LoadKsonChartData("non_existent_file.kson");
-        REQUIRE(chart.error == kson::ErrorType::CouldNotOpenInputFileStream);
+        REQUIRE(chart.error == kson::ErrorType::FileNotFound);
     }
 }
 

@@ -14,5 +14,9 @@ namespace kson
 	ChartData LoadKsonChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
 
 	ChartData LoadKsonChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag = nullptr);
+
+	MetaChartData LoadKsonMetaChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
+
+	MetaChartData LoadKsonMetaChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag = nullptr);
 }
 #endif
