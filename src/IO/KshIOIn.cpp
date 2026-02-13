@@ -811,6 +811,17 @@ namespace
 			return m_inserter.prepared();
 		}
 
+		std::string_view currentAudioEffectParamStr() const
+		{
+			if (m_inserter.prepared())
+			{
+				const auto& param = m_inserter.data().audioEffectParamStr;
+				if (param.has_value())
+					return param.value();
+			}
+			return {};
+		}
+
 		void extendLength(RelPulse relPulse)
 		{
 			m_inserter.data().extendLength(relPulse);
@@ -2080,7 +2091,9 @@ namespace
 								default: // Long FX note (legacy characters, e.g., "F" = Flanger)
 									{
 										const std::string audioEffectStr(KshLegacyFXCharToKshAudioEffectStr(buf[j]));
-										const std::string audioEffectParamStr = currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i) ? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i) : "";
+										const std::string audioEffectParamStr = currentMeasureFXAudioEffectParamStrs[laneIdx].contains(i)
+											? currentMeasureFXAudioEffectParamStrs[laneIdx].at(i)
+											: std::string{ preparedLongNoteRef.currentAudioEffectParamStr() };
 										preparedLongNoteRef.prepare(time, audioEffectStr, audioEffectParamStr, true);
 									}
 									preparedLongNoteRef.extendLength(oneLinePulse);
