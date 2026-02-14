@@ -18,6 +18,7 @@ namespace kson
 		UndefinedAudioEffect,
 		Sub32ndSlamLasers,
 		MeasureSplitNotDivisible,
+		AudioEffectDuplicateName,
 		UnexpectedError,
 	};
 

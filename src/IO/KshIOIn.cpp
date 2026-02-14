@@ -1733,14 +1733,32 @@ namespace
 					}
 
 					auto& def = isDefineFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
-					def.push_back(
-						AudioEffectDefKVP{
-							.name = name,
-							.v = AudioEffectDef{
-								.type = s_audioEffectTypeTable.at(type),
-								.v = std::move(paramsKson),
-							},
+					auto existingIt = std::find_if(def.begin(), def.end(),
+						[&name](const auto& kvp) { return kvp.name == name; });
+					if (existingIt != def.end())
+					{
+						pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::AudioEffectDuplicateName,
+							.scope = WarningScope::EditorOnly,
+							.message = "Duplicate audio effect definition '" + name + "' found. The later definition will be used.",
+							.lineNo = fileLineNo,
 						});
+						existingIt->v = AudioEffectDef{
+							.type = s_audioEffectTypeTable.at(type),
+							.v = std::move(paramsKson),
+						};
+					}
+					else
+					{
+						def.push_back(
+							AudioEffectDefKVP{
+								.name = name,
+								.v = AudioEffectDef{
+									.type = s_audioEffectTypeTable.at(type),
+									.v = std::move(paramsKson),
+								},
+							});
+					}
 				}
 				continue;
 			}
