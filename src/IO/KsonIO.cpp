@@ -421,30 +421,6 @@ namespace
 		WriteGraph(json, key, graph);
 	}
 
-	void WriteGraphSections(nlohmann::json& json, const char* key, const ByPulse<GraphSection>& graphSections)
-	{
-		if (graphSections.empty())
-		{
-			return;
-		}
-
-		nlohmann::json& j = json[key];
-		j = nlohmann::json::array();
-		for (const auto& [y, graphSection] : graphSections)
-		{
-			if (graphSection.v.empty())
-			{
-				continue;
-			}
-
-			nlohmann::json& graphJSON = j.emplace_back(nlohmann::json::array({ y, nlohmann::json::array() }))[1];
-			for (const auto& [ry, v] : graphSection.v)
-			{
-				WriteGraphPoint(graphJSON, ry, v);
-			}
-		}
-	}
-
 	void WriteAudioEffectDef(nlohmann::json& json, const char* key, const std::vector<AudioEffectDefKVP>& def)
 	{
 		if (def.empty())
@@ -1029,21 +1005,6 @@ namespace
 		}
 	}
 
-	GraphPoint ParseGraphPoint(const nlohmann::json& j, KsonLoadingDiag* pDiag)
-	{
-		// Parse v (GraphValue)
-		GraphValue v = ParseGraphValue(j, pDiag);
-
-		// Parse curve (GraphCurveValue) if present (3rd element)
-		GraphCurveValue curve{ 0.0, 0.0 };
-		if (j.is_array() && j.size() >= 3 && j[2].is_array() && j[2].size() >= 2)
-		{
-			curve = GraphCurveValue{ j[2][0].get<double>(), j[2][1].get<double>() };
-		}
-
-		return GraphPoint{ v, curve };
-	}
-
 	// Parse GraphPoint from an array item where item[valueIdx] is the value and item[curveIdx] is the curve
 	GraphPoint ParseGraphPointFromArrayItem(
 		const nlohmann::json& item,
@@ -1183,7 +1144,7 @@ namespace
 		return result;
 	}
 
-	MetaInfo ParseMetaInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	MetaInfo ParseMetaInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		MetaInfo meta;
 		
@@ -1276,7 +1237,7 @@ namespace
 		return beat;
 	}
 
-	GaugeInfo ParseGaugeInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	GaugeInfo ParseGaugeInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		GaugeInfo gauge;
 		
@@ -1416,7 +1377,7 @@ namespace
 		return note;
 	}
 
-	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	BGMPreviewInfo ParseBGMPreviewInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		BGMPreviewInfo preview;
 		preview.offset = GetWithDefault<std::int32_t>(j, "offset", 0);
@@ -1424,7 +1385,7 @@ namespace
 		return preview;
 	}
 
-	LegacyBGMInfo ParseLegacyBGMInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	LegacyBGMInfo ParseLegacyBGMInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		LegacyBGMInfo legacy;
 		if (j.contains("fp_filenames") && j["fp_filenames"].is_array())
@@ -1484,7 +1445,7 @@ namespace
 		return AudioEffectType::Unspecified;
 	}
 
-	AudioEffectDef ParseAudioEffectDef(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	AudioEffectDef ParseAudioEffectDef(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		AudioEffectDef def;
 		
@@ -1681,7 +1642,7 @@ namespace
 		return audioEffect;
 	}
 
-	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		KeySoundFXInfo fx;
 		
@@ -1824,7 +1785,7 @@ namespace
 		return AutoTiltType::kNormal;
 	}
 
-	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		ByPulse<TiltValue> tilt;
 
@@ -2001,7 +1962,7 @@ namespace
 		return camera;
 	}
 
-	LegacyBGInfo ParseLegacyBGInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	LegacyBGInfo ParseLegacyBGInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		LegacyBGInfo legacy;
 		
@@ -2070,7 +2031,7 @@ namespace
 		return editor;
 	}
 
-	CompatInfo ParseCompatInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	CompatInfo ParseCompatInfo(const nlohmann::json& j, KsonLoadingDiag*)
 	{
 		CompatInfo compat;
 		

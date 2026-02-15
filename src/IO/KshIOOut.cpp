@@ -23,10 +23,8 @@ namespace
 		return static_cast<std::int32_t>(pulse * kKshResolution4 / kResolution4);
 	}
 
-	constexpr char kOptionSeparator = '=';
 	constexpr char kBlockSeparator = '|';
 	constexpr std::string_view kMeasureSeparator = "--";
-	constexpr char kAudioEffectStrSeparator = ';';
 
 	constexpr std::int32_t kLaserXMax = 50;
 
@@ -37,8 +35,7 @@ namespace
 	constexpr double kWideLaserRightZeroValue = 0.75;
 
 	constexpr double kManualTiltAbsMax = 1000.0;
-	constexpr double kZoomAbsMaxLegacy = 300.0; // ver < 1.67
-	constexpr double kZoomAbsMax = 65535.0; // ver >= 1.67
+	constexpr double kZoomAbsMax = 65535.0;
 	constexpr double kCenterSplitAbsMax = 65535.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
 
@@ -1074,7 +1071,7 @@ namespace
 	}
 
 	// Get BT char at pulse
-	char GetBTCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse oneLinePulse)
+	char GetBTCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse)
 	{
 		// Check if note starts at this pulse
 		if (lane.contains(pulse))
@@ -1106,7 +1103,7 @@ namespace
 	}
 
 	// Get FX char at pulse
-	char GetFXCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse oneLinePulse)
+	char GetFXCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse)
 	{
 		// Check if note starts at this pulse
 		if (lane.contains(pulse))
@@ -1947,8 +1944,7 @@ namespace
 			{
 				if (seg.startPulse == pulse && seg.isSectionStart)
 				{
-					auto& laserState = state.laserStates[i];
-					// Output wide annotation if changed
+					// Output wide annotation
 					if (seg.wide)
 					{
 						stream << "laserrange_" << (i == 0 ? 'l' : 'r') << "=2x\r\n";
@@ -2068,10 +2064,6 @@ namespace
 					const auto& params = laneEvents[laneIdx].at(pulse);
 					const std::string audioEffectStr = GenerateKshAudioEffectString(chartData, effectName, params, true);
 
-					// Check if this pulse is the start of an FX long note
-					const bool isNoteStart = chartData.note.fx[laneIdx].contains(pulse) &&
-						chartData.note.fx[laneIdx].at(pulse).length > 0;
-
 					// Output fx-l/fx-r
 					stream << "fx-" << (laneIdx == 0 ? 'l' : 'r') << "=" << audioEffectStr << "\r\n";
 					state.currentFXAudioEffects[laneIdx] = audioEffectStr;
@@ -2149,9 +2141,6 @@ namespace
 		const Pulse measureEnd = measureStart + measureLength;
 		Pulse gcd = measureLength;
 		bool shouldDoubleResolution = false;
-
-		// 1/32 measure length for slam representation (30 pulses at kResolution=240)
-		constexpr Pulse kSlamLength = kResolution4 / 32; // 1/32 measure = 30 pulses
 
 		// Helper function to update GCD with a pulse if it's within the measure
 		auto updateGCD = [&](Pulse pulse) {

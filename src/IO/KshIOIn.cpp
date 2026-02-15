@@ -532,28 +532,6 @@ namespace
 		}
 	}
 
-	void ApplyBufferedCurvesToGraphSection(
-		const std::string& paramName,
-		ByPulse<GraphSection>& graphSections,
-		const std::unordered_map<std::string, ByPulse<GraphCurveValue>>& bufferedCurves)
-	{
-		if (!bufferedCurves.contains(paramName))
-		{
-			return;
-		}
-
-		for (const auto& [pulse, curve] : bufferedCurves.at(paramName))
-		{
-			for (auto& [sectionPulse, section] : graphSections)
-			{
-				const RelPulse relPulse = pulse - sectionPulse;
-				if (relPulse >= 0 && section.v.contains(relPulse))
-				{
-					section.v.at(relPulse).curve = curve;
-				}
-			}
-		}
-	}
 
 	void ApplyBufferedCurvesToLaser(
 		std::size_t laneIdx,
@@ -1160,7 +1138,7 @@ namespace
 
 				// Publish prepared laser section
 				auto& targetLane = m_pTargetChartData->note.laser[m_targetLaneIdx];
-				const auto [_, inserted] = targetLane.emplace(
+				targetLane.emplace(
 					time,
 					LaserSection{
 						.v = convertedGraphSection,
