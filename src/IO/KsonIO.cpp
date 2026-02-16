@@ -1,5 +1,6 @@
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/IO/KsonIO.hpp"
+#include <filesystem>
 #include <fstream>
 #include <optional>
 #include <limits>
@@ -8,6 +9,12 @@
 namespace
 {
 	using namespace kson;
+
+	std::filesystem::path U8Path(const std::string& utf8Str)
+	{
+		return std::filesystem::path(
+			std::u8string_view(reinterpret_cast<const char8_t*>(utf8Str.data()), utf8Str.size()));
+	}
 
 	// Note: Since to_json() overload makes it difficult to find minor bugs
 	//       (e.g., ByPulse<T> shouldn't be converted as std::map, Pulse and RelPulse shouldn't be the same),
@@ -2121,7 +2128,7 @@ kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& c
 
 kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const ChartData& chartData)
 {
-	std::ofstream ofs(filePath);
+	std::ofstream ofs(U8Path(filePath));
 	if (!ofs.good())
 	{
 		return ErrorType::CouldNotOpenOutputFileStream;
@@ -2345,14 +2352,15 @@ std::vector<std::string> kson::KsonLoadingDiag::editorWarnings() const
 
 kson::ChartData kson::LoadKsonChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
 {
-	if (!std::filesystem::exists(filePath))
+	const auto fsPath = U8Path(filePath);
+	if (!std::filesystem::exists(fsPath))
 	{
 		ChartData chartData;
 		chartData.error = ErrorType::FileNotFound;
 		return chartData;
 	}
 
-	std::ifstream ifs(filePath);
+	std::ifstream ifs(fsPath);
 	if (!ifs.good())
 	{
 		ChartData chartData;
@@ -2428,14 +2436,15 @@ kson::MetaChartData kson::LoadKsonMetaChartData(std::istream& stream, KsonLoadin
 
 kson::MetaChartData kson::LoadKsonMetaChartData(const std::string& filePath, KsonLoadingDiag* pKsonDiag)
 {
-	if (!std::filesystem::exists(filePath))
+	const auto fsPath = U8Path(filePath);
+	if (!std::filesystem::exists(fsPath))
 	{
 		MetaChartData metaChartData;
 		metaChartData.error = ErrorType::FileNotFound;
 		return metaChartData;
 	}
 
-	std::ifstream ifs(filePath);
+	std::ifstream ifs(fsPath);
 	if (!ifs.good())
 	{
 		MetaChartData metaChartData;

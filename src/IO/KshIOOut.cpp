@@ -13,6 +13,12 @@ namespace
 {
 	using namespace kson;
 
+	std::filesystem::path U8Path(const std::string& utf8Str)
+	{
+		return std::filesystem::path(
+			std::u8string_view(reinterpret_cast<const char8_t*>(utf8Str.data()), utf8Str.size()));
+	}
+
 	// KSH resolution (192 pulses per 4/4 measure)
 	constexpr Pulse kKshResolution4 = 192;
 	static_assert(kResolution4 % kKshResolution4 == 0, "kResolution4 must be divisible by kKshResolution4");
@@ -2635,7 +2641,7 @@ kson::ErrorType kson::SaveKshChartData(std::ostream& stream, const ChartData& ch
 
 kson::ErrorType kson::SaveKshChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
-	std::ofstream ofs(filePath, std::ios_base::binary);
+	std::ofstream ofs(U8Path(filePath), std::ios_base::binary);
 	if (!ofs.good())
 	{
 		return ErrorType::GeneralIOError;

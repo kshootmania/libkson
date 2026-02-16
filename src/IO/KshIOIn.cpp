@@ -12,6 +12,12 @@ namespace
 {
 	using namespace kson;
 
+	std::filesystem::path U8Path(const std::string& utf8Str)
+	{
+		return std::filesystem::path(
+			std::u8string_view(reinterpret_cast<const char8_t*>(utf8Str.data()), utf8Str.size()));
+	}
+
 	constexpr char kOptionSeparator = '=';
 	constexpr char kBlockSeparator = '|';
 	constexpr std::string_view kMeasureSeparator = "--";
@@ -2504,12 +2510,13 @@ MetaChartData kson::LoadKshMetaChartData(std::istream& stream)
 
 MetaChartData kson::LoadKshMetaChartData(const std::string& filePath)
 {
-	if (!std::filesystem::exists(filePath))
+	const auto fsPath = U8Path(filePath);
+	if (!std::filesystem::exists(fsPath))
 	{
 		return { .error = ErrorType::FileNotFound };
 	}
 
-	std::ifstream ifs(filePath, std::ios_base::binary);
+	std::ifstream ifs(fsPath, std::ios_base::binary);
 	if (!ifs.good())
 	{
 		return { .error = ErrorType::CouldNotOpenInputFileStream };
@@ -2561,12 +2568,13 @@ kson::ChartData kson::LoadKshChartData(std::istream& stream, KshLoadingDiag* pKs
 
 ChartData kson::LoadKshChartData(const std::string& filePath, KshLoadingDiag* pKshDiag)
 {
-	if (!std::filesystem::exists(filePath))
+	const auto fsPath = U8Path(filePath);
+	if (!std::filesystem::exists(fsPath))
 	{
 		return { .error = ErrorType::FileNotFound };
 	}
 
-	std::ifstream ifs(filePath, std::ios_base::binary);
+	std::ifstream ifs(fsPath, std::ios_base::binary);
 	if (!ifs.good())
 	{
 		return { .error = ErrorType::CouldNotOpenInputFileStream };
