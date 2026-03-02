@@ -172,7 +172,14 @@ namespace
 			}
 		}
 
-		const std::int32_t laserX = static_cast<std::int32_t>(std::round(graphValue * kLaserXMax));
+		// Switch rounding direction at 0.5 for better compatibility with detailed laser snap in v1 editor
+		const double raw = graphValue * kLaserXMax;
+		const std::int32_t rounded = static_cast<std::int32_t>(std::round(raw));
+		const double frac = raw - std::floor(raw);
+		const bool isHalfBoundary = std::abs(frac - 0.5) < 1e-9;
+		const std::int32_t laserX = isHalfBoundary && raw < kLaserXMax / 2.0
+			? rounded - 1
+			: rounded;
 		return std::clamp(laserX, 0, kLaserXMax);
 	}
 
