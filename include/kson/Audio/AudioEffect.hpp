@@ -30,6 +30,10 @@ namespace kson
 
 	using AudioEffectParams = Dict<std::string>;
 
+	// Sort parameter names according to the format specification order
+	[[nodiscard]]
+	std::vector<std::string> SortAudioEffectParamNames(AudioEffectType type, const AudioEffectParams& params);
+
 	struct AudioEffectDef
 	{
 		AudioEffectType type = AudioEffectType::Unspecified;

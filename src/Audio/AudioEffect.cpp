@@ -22,6 +22,25 @@ namespace
 		{ "peaking_filter", AudioEffectType::PeakingFilter },
 	};
 
+	// Parameter order for each audio effect type according to the format specification
+	const std::unordered_map<AudioEffectType, std::vector<std::string_view>> s_audioEffectParamOrder
+	{
+		{ AudioEffectType::Retrigger, { "update_period", "wave_length", "rate", "update_trigger", "mix" } },
+		{ AudioEffectType::Gate, { "wave_length", "rate", "mix" } },
+		{ AudioEffectType::Flanger, { "period", "delay", "depth", "feedback", "stereo_width", "vol", "mix" } },
+		{ AudioEffectType::PitchShift, { "pitch", "chunk_size", "overlap", "mix" } },
+		{ AudioEffectType::Bitcrusher, { "reduction", "mix" } },
+		{ AudioEffectType::Phaser, { "period", "stage", "freq_1", "freq_2", "q", "feedback", "stereo_width", "hi_cut_gain", "mix" } },
+		{ AudioEffectType::Wobble, { "wave_length", "freq_1", "freq_2", "q", "mix" } },
+		{ AudioEffectType::Tapestop, { "speed", "trigger", "mix" } },
+		{ AudioEffectType::Echo, { "update_period", "wave_length", "update_trigger", "feedback_level", "mix" } },
+		{ AudioEffectType::Sidechain, { "period", "hold_time", "attack_time", "release_time", "ratio" } },
+		{ AudioEffectType::SwitchAudio, { "filename" } },
+		{ AudioEffectType::HighPassFilter, { "v", "freq", "freq_max", "q", "mix" } },
+		{ AudioEffectType::LowPassFilter, { "v", "freq", "freq_max", "q", "mix" } },
+		{ AudioEffectType::PeakingFilter, { "v", "freq", "freq_max", "bandwidth", "gain", "mix" } },
+	};
+
 	const std::unordered_map<AudioEffectType, std::string_view> s_audioEffectTypeToStr
 	{
 		{ AudioEffectType::Retrigger, "retrigger" },
@@ -119,4 +138,37 @@ Dict<AudioEffectDef> kson::AudioEffectLaserInfo::defAsDict() const
 		ret.emplace(kvp.name, kvp.v);
 	}
 	return ret;
+}
+
+std::vector<std::string> kson::SortAudioEffectParamNames(AudioEffectType type, const AudioEffectParams& params)
+{
+	std::vector<std::string> result;
+	result.reserve(params.size());
+
+	std::set<std::string> added;
+
+	// Spec order
+	if (const auto it = s_audioEffectParamOrder.find(type); it != s_audioEffectParamOrder.end())
+	{
+		for (const auto& name : it->second)
+		{
+			const std::string nameStr(name);
+			if (params.contains(nameStr))
+			{
+				result.push_back(nameStr);
+				added.insert(nameStr);
+			}
+		}
+	}
+
+	// Remaining in alphabetical order
+	for (const auto& [name, _] : params)
+	{
+		if (!added.contains(name))
+		{
+			result.push_back(name);
+		}
+	}
+
+	return result;
 }

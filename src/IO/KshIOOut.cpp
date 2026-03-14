@@ -2566,7 +2566,7 @@ namespace
 					stream << typeStr;
 				}
 
-				for (const auto& [paramName, value] : def.v)
+				for (const auto& paramName : SortAudioEffectParamNames(def.type, def.v))
 				{
 					stream << ";";
 					if (kKsonToKshParamName.contains(paramName))
@@ -2577,7 +2577,7 @@ namespace
 					{
 						stream << paramName;
 					}
-					stream << "=" << value;
+					stream << "=" << def.v.at(paramName);
 				}
 				stream << "\r\n";
 			}
@@ -2599,7 +2599,7 @@ namespace
 					stream << typeStr;
 				}
 
-				for (const auto& [paramName, value] : def.v)
+				for (const auto& paramName : SortAudioEffectParamNames(def.type, def.v))
 				{
 					stream << ";";
 					if (kKsonToKshParamName.contains(paramName))
@@ -2610,7 +2610,7 @@ namespace
 					{
 						stream << paramName;
 					}
-					stream << "=" << value;
+					stream << "=" << def.v.at(paramName);
 				}
 				stream << "\r\n";
 			}
