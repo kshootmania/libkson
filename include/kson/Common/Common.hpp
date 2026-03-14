@@ -66,6 +66,9 @@ namespace kson
 		T v;
 	};
 
+	[[nodiscard]]
+	bool AlmostEquals(double a, double b);
+
 	struct GraphValue
 	{
 		double v = 0.0;
@@ -103,7 +106,7 @@ namespace kson
 		[[nodiscard]]
 		bool isLinear() const
 		{
-			return a == b;
+			return AlmostEquals(a, b);
 		}
 	};
 
