@@ -273,6 +273,9 @@ namespace
 		{ "Echo", AudioEffectType::Echo },
 		{ "SideChain", AudioEffectType::Sidechain },
 		{ "SwitchAudio", AudioEffectType::SwitchAudio },
+		{ "HighPassFilter", AudioEffectType::HighPassFilter },
+		{ "LowPassFilter", AudioEffectType::LowPassFilter },
+		{ "PeakingFilter", AudioEffectType::PeakingFilter },
 	};
 
 	const std::unordered_map<std::string_view, std::string_view> s_audioEffectParamNameTable
@@ -1711,9 +1714,13 @@ namespace
 					}
 
 					// Name conversion for user-defined audio effects overwriting preset ones
-					if (s_kshFXToKsonAudioEffectNameTable.contains(name))
+					if (isDefineFX && s_kshFXToKsonAudioEffectNameTable.contains(name))
 					{
 						name = s_kshFXToKsonAudioEffectNameTable.at(name);
+					}
+					else if (isDefineFilter && s_kshFilterToKsonAudioEffectNameTable.contains(name))
+					{
+						name = s_kshFilterToKsonAudioEffectNameTable.at(name);
 					}
 
 					auto& def = isDefineFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
