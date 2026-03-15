@@ -2477,3 +2477,136 @@ TEST_CASE("KSH multiple comments at same pulse", "[ksh_io][comment]")
 	REQUIRE(comments.count("Comment 3") == 1);
 }
 
+TEST_CASE("KSH audio effect definition name conversion", "[ksh_io][audio_effect]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test";
+	chartData.meta.artist = "Test";
+	chartData.meta.chartAuthor = "Test";
+	chartData.meta.level = 1;
+	chartData.meta.difficulty.idx = 0;
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+
+	SECTION("FX preset name is converted to KSH format")
+	{
+		chartData.audio.audioEffect.fx.def.push_back(kson::AudioEffectDefKVP{
+			.name = "retrigger",
+			.v = {
+				.type = kson::AudioEffectType::Retrigger,
+				.v = {{"wave_length", "1/8"}},
+			},
+		});
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		REQUIRE(kshOutput.find("#define_fx Retrigger type=Retrigger") != std::string::npos);
+		REQUIRE(kshOutput.find("#define_fx retrigger") == std::string::npos);
+	}
+
+	SECTION("Filter preset name is converted to KSH format")
+	{
+		chartData.audio.audioEffect.laser.def.push_back(kson::AudioEffectDefKVP{
+			.name = "peaking_filter",
+			.v = {
+				.type = kson::AudioEffectType::PeakingFilter,
+				.v = {{"freq", "200Hz"}},
+			},
+		});
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		REQUIRE(kshOutput.find("#define_filter peak type=PeakingFilter") != std::string::npos);
+		REQUIRE(kshOutput.find("#define_filter peaking_filter") == std::string::npos);
+	}
+
+	SECTION("User-defined names are not converted")
+	{
+		chartData.audio.audioEffect.fx.def.push_back(kson::AudioEffectDefKVP{
+			.name = "my_custom_fx",
+			.v = {
+				.type = kson::AudioEffectType::Gate,
+				.v = {{"wave_length", "1/4"}},
+			},
+		});
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKshChartData(oss, chartData);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		REQUIRE(kshOutput.find("#define_fx my_custom_fx type=Gate") != std::string::npos);
+	}
+
+	SECTION("FX preset name roundtrip")
+	{
+		std::string kshContent = R"(title=Test
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+--
+0000|00|--
+--
+#define_fx Retrigger type=Retrigger;waveLength=1/8
+)";
+
+		std::istringstream iss(kshContent);
+		auto loaded = kson::LoadKshChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.audio.audioEffect.fx.def.size() == 1);
+		REQUIRE(loaded.audio.audioEffect.fx.def[0].name == "retrigger");
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKshChartData(oss, loaded);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		REQUIRE(kshOutput.find("#define_fx Retrigger type=Retrigger") != std::string::npos);
+	}
+
+	SECTION("Filter preset name roundtrip")
+	{
+		std::string kshContent = R"(title=Test
+artist=Test
+effect=Test
+jacket=
+illustrator=
+difficulty=light
+level=1
+t=120
+--
+0000|00|--
+--
+#define_filter peak type=PeakingFilter;freq=200Hz
+)";
+
+		std::istringstream iss(kshContent);
+		auto loaded = kson::LoadKshChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.audio.audioEffect.laser.def.size() == 1);
+		REQUIRE(loaded.audio.audioEffect.laser.def[0].name == "peaking_filter");
+
+		std::ostringstream oss;
+		const kson::ErrorType result = kson::SaveKshChartData(oss, loaded);
+		REQUIRE(result == kson::ErrorType::None);
+
+		std::string kshOutput = oss.str();
+
+		REQUIRE(kshOutput.find("#define_filter peak type=PeakingFilter") != std::string::npos);
+	}
+}
+

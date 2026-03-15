@@ -17,4 +17,21 @@ namespace kson
 	ErrorType SaveKshChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
 
 	ErrorType SaveKshChartData(const std::string& filePath, const ChartData& chartData, KshSavingDiag* pKshSavingDiag = nullptr);
+
+	// Audio effect definition KSH text serialization/deserialization
+	[[nodiscard]]
+	std::string SerializeAudioEffectDefsToKsh(
+		const std::vector<AudioEffectDefKVP>& fxDefs,
+		const std::vector<AudioEffectDefKVP>& laserDefs);
+
+	struct AudioEffectDefsParseResult
+	{
+		std::vector<AudioEffectDefKVP> fxDefs;
+		std::vector<AudioEffectDefKVP> laserDefs;
+		std::vector<std::string> warnings;
+		std::string error;
+	};
+
+	[[nodiscard]]
+	AudioEffectDefsParseResult ParseAudioEffectDefsFromKsh(const std::string& text);
 }

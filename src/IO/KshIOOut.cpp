@@ -2547,72 +2547,65 @@ namespace
 		}
 	}
 
+	void WriteAudioEffectDefLine(
+		std::ostream& stream,
+		std::string_view prefix,
+		const std::string& name,
+		const AudioEffectDef& def,
+		const std::unordered_map<std::string_view, std::string_view>& nameTable)
+	{
+		stream << prefix << " ";
+		if (nameTable.contains(name))
+		{
+			stream << nameTable.at(name);
+		}
+		else
+		{
+			stream << name;
+		}
+		stream << " type=";
+		const std::string_view typeStr = AudioEffectTypeToStr(def.type);
+		if (kKsonToKshAudioEffectTypeName.contains(typeStr))
+		{
+			stream << kKsonToKshAudioEffectTypeName.at(typeStr);
+		}
+		else
+		{
+			stream << typeStr;
+		}
+
+		for (const auto& paramName : SortAudioEffectParamNames(def.type, def.v))
+		{
+			stream << ";";
+			if (kKsonToKshParamName.contains(paramName))
+			{
+				stream << kKsonToKshParamName.at(paramName);
+			}
+			else
+			{
+				stream << paramName;
+			}
+			stream << "=" << def.v.at(paramName);
+		}
+		stream << "\r\n";
+	}
+
 	// Write audio effect definitions (#define_fx and #define_filter)
 	void WriteAudioEffectDefinitions(std::ostream& stream, const ChartData& chartData)
 	{
-		// Write #define_fx
 		if (!chartData.audio.audioEffect.fx.def.empty())
 		{
 			for (const auto& [name, def] : chartData.audio.audioEffect.fx.def)
 			{
-				stream << "#define_fx " << name << " type=";
-				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (kKsonToKshAudioEffectTypeName.contains(typeStr))
-				{
-					stream << kKsonToKshAudioEffectTypeName.at(typeStr);
-				}
-				else
-				{
-					stream << typeStr;
-				}
-
-				for (const auto& paramName : SortAudioEffectParamNames(def.type, def.v))
-				{
-					stream << ";";
-					if (kKsonToKshParamName.contains(paramName))
-					{
-						stream << kKsonToKshParamName.at(paramName);
-					}
-					else
-					{
-						stream << paramName;
-					}
-					stream << "=" << def.v.at(paramName);
-				}
-				stream << "\r\n";
+				WriteAudioEffectDefLine(stream, "#define_fx", name, def, kKsonToKshPresetFXEffectName);
 			}
 		}
 
-		// Write #define_filter
 		if (!chartData.audio.audioEffect.laser.def.empty())
 		{
 			for (const auto& [name, def] : chartData.audio.audioEffect.laser.def)
 			{
-				stream << "#define_filter " << name << " type=";
-				const std::string_view typeStr = AudioEffectTypeToStr(def.type);
-				if (kKsonToKshAudioEffectTypeName.contains(typeStr))
-				{
-					stream << kKsonToKshAudioEffectTypeName.at(typeStr);
-				}
-				else
-				{
-					stream << typeStr;
-				}
-
-				for (const auto& paramName : SortAudioEffectParamNames(def.type, def.v))
-				{
-					stream << ";";
-					if (kKsonToKshParamName.contains(paramName))
-					{
-						stream << kKsonToKshParamName.at(paramName);
-					}
-					else
-					{
-						stream << paramName;
-					}
-					stream << "=" << def.v.at(paramName);
-				}
-				stream << "\r\n";
+				WriteAudioEffectDefLine(stream, "#define_filter", name, def, kKsonToKshPresetFilterName);
 			}
 		}
 	}
@@ -2658,6 +2651,25 @@ kson::ErrorType kson::SaveKshChartData(const std::string& filePath, const ChartD
 	ofs.close();
 
 	return result;
+}
+
+std::string kson::SerializeAudioEffectDefsToKsh(
+	const std::vector<AudioEffectDefKVP>& fxDefs,
+	const std::vector<AudioEffectDefKVP>& laserDefs)
+{
+	std::ostringstream stream;
+
+	for (const auto& [name, def] : fxDefs)
+	{
+		WriteAudioEffectDefLine(stream, "#define_fx", name, def, kKsonToKshPresetFXEffectName);
+	}
+
+	for (const auto& [name, def] : laserDefs)
+	{
+		WriteAudioEffectDefLine(stream, "#define_filter", name, def, kKsonToKshPresetFilterName);
+	}
+
+	return stream.str();
 }
 
 std::vector<std::string> kson::KshSavingDiag::playerWarnings() const

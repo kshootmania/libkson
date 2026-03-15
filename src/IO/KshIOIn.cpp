@@ -2589,3 +2589,179 @@ ChartData kson::LoadKshChartData(const std::string& filePath, KshLoadingDiag* pK
 
 	return LoadKshChartData(ifs, pKshDiag);
 }
+
+kson::AudioEffectDefsParseResult kson::ParseAudioEffectDefsFromKsh(const std::string& text)
+{
+	AudioEffectDefsParseResult result;
+
+	std::istringstream stream(text);
+	std::string line;
+	std::int64_t lineNo = 0;
+
+	while (std::getline(stream, line, '\n'))
+	{
+		++lineNo;
+
+		// Eliminate CR
+		if (!line.empty() && *line.crbegin() == '\r')
+		{
+			line.pop_back();
+		}
+
+		// Skip empty lines
+		if (line.empty())
+		{
+			continue;
+		}
+
+		const bool isDefineFX = line.starts_with("#define_fx ");
+		const bool isDefineFilter = !isDefineFX && line.starts_with("#define_filter ");
+		if (!isDefineFX && !isDefineFilter)
+		{
+			result.error = "Line " + std::to_string(lineNo) + ": Expected '#define_fx' or '#define_filter'";
+			return result;
+		}
+
+		std::string_view sv = line;
+
+		// Move cursor to audio effect name start
+		{
+			bool whiteSpaceFound = false;
+			while (!sv.empty())
+			{
+				if (sv[0] == ' ')
+				{
+					whiteSpaceFound = true;
+				}
+				else if (whiteSpaceFound)
+				{
+					break;
+				}
+
+				sv = sv.substr(1);
+			}
+		}
+
+		// Get audio effect name while moving cursor to parameter value start
+		std::string name;
+		{
+			bool whiteSpaceFound = false;
+			while (!sv.empty())
+			{
+				if (sv[0] == ' ')
+				{
+					whiteSpaceFound = true;
+				}
+				else if (whiteSpaceFound)
+				{
+					break;
+				}
+				else
+				{
+					name.push_back(sv[0]);
+				}
+
+				sv = sv.substr(1);
+			}
+
+			while (!sv.empty() && sv.ends_with(' '))
+			{
+				sv = sv.substr(0, sv.length() - 1);
+			}
+		}
+
+		if (name.empty())
+		{
+			result.error = "Line " + std::to_string(lineNo) + ": Missing effect name";
+			return result;
+		}
+
+		// Parse parameters
+		Dict<std::string> params;
+		while (!sv.empty())
+		{
+			const std::size_t semicolonIdx = sv.find_first_of(kAudioEffectStrSeparator);
+			const std::string_view paramSV = (semicolonIdx == std::string_view::npos) ? sv : sv.substr(0, semicolonIdx);
+			const std::size_t equalIdx = paramSV.find_first_of(kOptionSeparator);
+			if (equalIdx == std::string_view::npos || equalIdx == 0)
+			{
+				result.error = "Line " + std::to_string(lineNo) + ": Invalid parameter format";
+				return result;
+			}
+			const std::string paramName(paramSV.substr(0, equalIdx));
+			const std::string value(paramSV.substr(equalIdx + 1));
+			if (!value.empty())
+			{
+				params.emplace(paramName, value);
+			}
+
+			if (semicolonIdx == std::string_view::npos)
+			{
+				break;
+			}
+			else
+			{
+				sv = sv.substr(semicolonIdx + 1);
+			}
+		}
+
+		if (!params.contains("type"))
+		{
+			result.error = "Line " + std::to_string(lineNo) + ": Missing 'type' parameter for effect '" + name + "'";
+			return result;
+		}
+
+		const std::string type = params.at("type");
+		params.erase("type");
+		if (!s_audioEffectTypeTable.contains(type))
+		{
+			result.error = "Line " + std::to_string(lineNo) + ": Invalid effect type '" + type + "'";
+			return result;
+		}
+
+		// Convert parameter names to KSON names
+		AudioEffectParams paramsKson;
+		for (const auto& [paramName, value] : params)
+		{
+			if (s_audioEffectParamNameTable.contains(paramName))
+			{
+				paramsKson.emplace(s_audioEffectParamNameTable.at(paramName), value);
+			}
+		}
+
+		// Name conversion for user-defined audio effects overwriting preset ones
+		if (isDefineFX && s_kshFXToKsonAudioEffectNameTable.contains(name))
+		{
+			name = s_kshFXToKsonAudioEffectNameTable.at(name);
+		}
+		else if (isDefineFilter && s_kshFilterToKsonAudioEffectNameTable.contains(name))
+		{
+			name = s_kshFilterToKsonAudioEffectNameTable.at(name);
+		}
+
+		auto& defs = isDefineFX ? result.fxDefs : result.laserDefs;
+		auto existingIt = std::find_if(defs.begin(), defs.end(),
+			[&name](const auto& kvp) { return kvp.name == name; });
+		if (existingIt != defs.end())
+		{
+			result.warnings.push_back(
+				"Line " + std::to_string(lineNo) + ": Duplicate effect '" + name + "' (later definition used)");
+			existingIt->v = AudioEffectDef{
+				.type = s_audioEffectTypeTable.at(type),
+				.v = std::move(paramsKson),
+			};
+		}
+		else
+		{
+			defs.push_back(AudioEffectDefKVP{
+				.name = name,
+				.v = AudioEffectDef{
+					.type = s_audioEffectTypeTable.at(type),
+					.v = std::move(paramsKson),
+				},
+			});
+		}
+	}
+
+	return result;
+}
