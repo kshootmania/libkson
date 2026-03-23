@@ -8,6 +8,8 @@ namespace kson
 		std::unordered_map<std::string, std::string> meta;
 		std::unordered_map<std::string, ByPulseMulti<std::string>> option;
 		ByPulseMulti<std::string> line;
+
+		bool operator==(const KshUnknownInfo&) const = default;
 	};
 
 	struct CompatInfo
