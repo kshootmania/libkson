@@ -3,11 +3,21 @@
 #include <algorithm>
 #include <vector>
 
-double kson::GraphValueAt(const Graph& graph, Pulse pulse)
+double kson::GraphValueAt(const Graph& graph, Pulse pulse, GraphSide side)
 {
 	if (graph.empty())
 	{
 		return 0.0;
+	}
+
+	if (side == GraphSide::Before)
+	{
+		// For the Before side, return the incoming value (v) when pulse is exactly on a graph point
+		const auto exactItr = graph.find(pulse);
+		if (exactItr != graph.end())
+		{
+			return exactItr->second.v.v;
+		}
 	}
 
 	auto itr = graph.upper_bound(pulse);
