@@ -246,7 +246,7 @@ TEST_CASE("Graph Utilities", "[graph]") {
 		// Weak ease-out curve, flat end
 		{
 			kson::Graph graph;
-			
+
 			graph.emplace(0, kson::GraphPoint{0.0, {0.5, 1.0}});
 			graph.emplace(480, 1.0);
 
@@ -254,6 +254,44 @@ TEST_CASE("Graph Utilities", "[graph]") {
 			REQUIRE(kson::GraphValueAt(graph, 240) == Approx(0.7500));
 			REQUIRE(kson::GraphValueAt(graph, 360) == Approx(0.9375));
 		}
+	}
+
+	SECTION("Graph value side at a discontinuity") {
+		kson::Graph graph;
+
+		// Slam at pulse 240 (incoming 0.5 -> outgoing 0.8)
+		graph.emplace(0, 0.0);
+		graph.emplace(240, kson::GraphValue{0.5, 0.8});
+		graph.emplace(480, 1.0);
+
+		// On the graph point: After returns vf, Before returns v
+		REQUIRE(kson::GraphValueAt(graph, 240) == Approx(0.8)); // default After
+		REQUIRE(kson::GraphValueAt(graph, 240, kson::GraphSide::After) == Approx(0.8));
+		REQUIRE(kson::GraphValueAt(graph, 240, kson::GraphSide::Before) == Approx(0.5));
+
+		// Off the graph point: side is irrelevant
+		REQUIRE(kson::GraphValueAt(graph, 120, kson::GraphSide::Before) == Approx(0.25));
+		REQUIRE(kson::GraphValueAt(graph, 120, kson::GraphSide::After) == Approx(0.25));
+	}
+
+	SECTION("Graph value at fractional pulse") {
+		kson::Graph graph;
+
+		graph.emplace(0, 0.0);
+		graph.emplace(240, kson::GraphValue{0.5, 0.8});
+		graph.emplace(480, 1.0);
+
+		// Integer pulse respects side on a graph point
+		REQUIRE(kson::GraphValueAtDouble(graph, 240.0) == Approx(0.8));
+		REQUIRE(kson::GraphValueAtDouble(graph, 240.0, kson::GraphSide::Before) == Approx(0.5));
+
+		// Fractional pulse interpolates within the segment (side is irrelevant)
+		REQUIRE(kson::GraphValueAtDouble(graph, 120.5) == Approx(0.5 * 120.5 / 240.0));
+		// Just before the slam approaches the incoming value 0.5
+		REQUIRE(kson::GraphValueAtDouble(graph, 239.5) == Approx(0.5 * 239.5 / 240.0));
+		// Just after the slam starts from the outgoing value 0.8
+		REQUIRE(kson::GraphValueAtDouble(graph, 240.5) == Approx(0.8 + 0.2 * 0.5 / 240.0));
+		REQUIRE(kson::GraphValueAtDouble(graph, 360.5) == Approx(0.8 + 0.2 * 120.5 / 240.0));
 	}
 }
 
