@@ -2094,7 +2094,60 @@ namespace
 	}
 }
 
-kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& chartData)
+namespace
+{
+	bool HasOverlappingLaserSections(const kson::ChartData& chartData)
+	{
+		for (std::size_t laneIdx = 0; laneIdx < kson::kNumLaserLanesSZ; ++laneIdx)
+		{
+			kson::Pulse activeEnd = 0;
+			bool hasActive = false;
+
+			for (const auto& [sectionStart, section] : chartData.note.laser[laneIdx])
+			{
+				if (section.v.empty())
+				{
+					continue;
+				}
+
+				const kson::Pulse sectionEnd = sectionStart + section.v.rbegin()->first;
+				if (sectionEnd <= sectionStart)
+				{
+					continue;
+				}
+
+				if (hasActive && sectionStart < activeEnd)
+				{
+					return true;
+				}
+
+				activeEnd = std::max(activeEnd, sectionEnd);
+				hasActive = true;
+			}
+		}
+
+		return false;
+	}
+
+	void ScanForKsonSavingWarnings(const kson::ChartData& chartData, kson::KsonSavingDiag* pKsonDiag)
+	{
+		if (!pKsonDiag)
+		{
+			return;
+		}
+
+		if (HasOverlappingLaserSections(chartData))
+		{
+			pKsonDiag->warnings.push_back({
+				.type = kson::KsonSavingWarningType::OverlappingLaserSections,
+				.scope = kson::WarningScope::EditorOnly,
+				.message = "Overlapping laser sections in the same lane are not allowed by the KSON format",
+			});
+		}
+	}
+}
+
+kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& chartData, KsonSavingDiag* pKsonDiag)
 {
 	if (!stream.good())
 	{
@@ -2103,6 +2156,8 @@ kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& c
 
 	try
 	{
+		ScanForKsonSavingWarnings(chartData, pKsonDiag);
+
 		nlohmann::json json = nlohmann::json::object();
 		Write(json, "format_version", kKsonFormatVersion);
 		Write(json, "meta", ToJSON(chartData.meta));
@@ -2126,14 +2181,48 @@ kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& c
 	}
 }
 
-kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const ChartData& chartData)
+kson::ErrorType kson::SaveKsonChartData(std::ostream& stream, const ChartData& chartData)
+{
+	return SaveKsonChartData(stream, chartData, nullptr);
+}
+
+kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const ChartData& chartData, KsonSavingDiag* pKsonDiag)
 {
 	std::ofstream ofs(U8Path(filePath));
 	if (!ofs.good())
 	{
 		return ErrorType::CouldNotOpenOutputFileStream;
 	}
-	return kson::SaveKsonChartData(ofs, chartData);
+	return kson::SaveKsonChartData(ofs, chartData, pKsonDiag);
+}
+
+kson::ErrorType kson::SaveKsonChartData(const std::string& filePath, const ChartData& chartData)
+{
+	return SaveKsonChartData(filePath, chartData, nullptr);
+}
+
+std::vector<std::string> kson::KsonSavingDiag::playerWarnings() const
+{
+	std::vector<std::string> result;
+	for (const auto& w : warnings)
+	{
+		if (w.scope == WarningScope::PlayerAndEditor)
+		{
+			result.push_back(w.message);
+		}
+	}
+	return result;
+}
+
+std::vector<std::string> kson::KsonSavingDiag::editorWarnings() const
+{
+	std::vector<std::string> result;
+	result.reserve(warnings.size());
+	for (const auto& w : warnings)
+	{
+		result.push_back(w.message);
+	}
+	return result;
 }
 
 namespace

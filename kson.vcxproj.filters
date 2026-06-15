@@ -144,6 +144,9 @@
     <ClInclude Include="include\kson\IO\KsonParserDiag.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
+    <ClInclude Include="include\kson\IO\KsonSavingDiag.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
     <ClInclude Include="include\kson\IO\WarningScope.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>

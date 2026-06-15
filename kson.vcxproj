@@ -42,6 +42,7 @@
     <ClInclude Include="include\kson\IO\KshSavingDiag.hpp" />
     <ClInclude Include="include\kson\IO\KsonIO.hpp" />
     <ClInclude Include="include\kson\IO\KsonParserDiag.hpp" />
+    <ClInclude Include="include\kson\IO\KsonSavingDiag.hpp" />
     <ClInclude Include="include\kson\IO\WarningScope.hpp" />
     <ClInclude Include="include\kson\kson.hpp" />
     <ClInclude Include="include\kson\Meta\MetaInfo.hpp" />

@@ -2,6 +2,7 @@
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/ChartData.hpp"
 #include "kson/IO/KsonLoadingDiag.hpp"
+#include "kson/IO/KsonSavingDiag.hpp"
 
 namespace kson
 {
@@ -9,7 +10,11 @@ namespace kson
 
 	ErrorType SaveKsonChartData(std::ostream& stream, const ChartData& chartData);
 
+	ErrorType SaveKsonChartData(std::ostream& stream, const ChartData& chartData, KsonSavingDiag* pKsonDiag);
+
 	ErrorType SaveKsonChartData(const std::string& filePath, const ChartData& chartData);
+
+	ErrorType SaveKsonChartData(const std::string& filePath, const ChartData& chartData, KsonSavingDiag* pKsonDiag);
 
 	ChartData LoadKsonChartData(std::istream& stream, KsonLoadingDiag* pKsonDiag = nullptr);
 

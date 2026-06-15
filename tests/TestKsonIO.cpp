@@ -968,3 +968,39 @@ TEST_CASE("KSON Tilt Serialization", "[kson_io][tilt]") {
 		REQUIRE(point2880.curve.b == Approx(0.7));
 	}
 }
+
+
+TEST_CASE("KSON saving warning for overlapping laser sections", "[kson_io][saving_diag]")
+{
+	kson::ChartData chart;
+	chart.note.laser[0][0].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.0 } });
+	chart.note.laser[0][0].v.emplace(960, kson::GraphPoint{ kson::GraphValue{ 0.5 } });
+	chart.note.laser[0][480].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.25 } });
+	chart.note.laser[0][480].v.emplace(960, kson::GraphPoint{ kson::GraphValue{ 0.75 } });
+
+	kson::KsonSavingDiag diag;
+	std::ostringstream oss;
+	const kson::ErrorType result = kson::SaveKsonChartData(oss, chart, &diag);
+
+	REQUIRE(result == kson::ErrorType::None);
+	REQUIRE(diag.warnings.size() == 1);
+	REQUIRE(diag.warnings[0].type == kson::KsonSavingWarningType::OverlappingLaserSections);
+	REQUIRE(!diag.editorWarnings().empty());
+	REQUIRE(diag.playerWarnings().empty());
+}
+
+TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][saving_diag]")
+{
+	kson::ChartData chart;
+	chart.note.laser[0][0].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.0 } });
+	chart.note.laser[0][0].v.emplace(960, kson::GraphPoint{ kson::GraphValue{ 0.5 } });
+	chart.note.laser[0][960].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.5 } });
+	chart.note.laser[0][960].v.emplace(960, kson::GraphPoint{ kson::GraphValue{ 1.0 } });
+
+	kson::KsonSavingDiag diag;
+	std::ostringstream oss;
+	const kson::ErrorType result = kson::SaveKsonChartData(oss, chart, &diag);
+
+	REQUIRE(result == kson::ErrorType::None);
+	REQUIRE(diag.warnings.empty());
+}

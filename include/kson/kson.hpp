@@ -7,6 +7,7 @@
 #include "IO/KshSavingDiag.hpp"
 #include "IO/KsonIO.hpp"
 #include "IO/KsonLoadingDiag.hpp"
+#include "IO/KsonSavingDiag.hpp"
 #include "Util/TimingUtils.hpp"
 #include "Util/GraphUtils.hpp"
 #include "Util/GraphCurve.hpp"
