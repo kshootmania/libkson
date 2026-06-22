@@ -288,6 +288,32 @@ namespace
 		}
 	}
 
+	bool HasZoomFractionLoss(const Graph& graph)
+	{
+		for (const auto& [pulse, graphPoint] : graph)
+		{
+			if (HasFraction(graphPoint.v.v) || HasFraction(graphPoint.v.vf))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	const char* ToKshCameraParamName(KshCameraParam param)
+	{
+		switch (param)
+		{
+		case KshCameraParam::ZoomTop:
+			return "zoom_top";
+		case KshCameraParam::ZoomBottom:
+			return "zoom_bottom";
+		case KshCameraParam::ZoomSide:
+			return "zoom_side";
+		}
+		return "";
+	}
+
 	void ScanForDataLossWarnings(const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 	{
 		if (!pKshSavingDiag)
@@ -295,53 +321,56 @@ namespace
 			return;
 		}
 
-		// Zoom fraction loss
+		if (!chartData.compat.isKshVersionOlderThan(kVerBPMLimitAdded))
 		{
-			std::vector<std::string> fractionalParams;
-			const auto& cam = chartData.camera.cam.body;
-
-			const auto checkGraph = [](const Graph& graph)
+			for (const auto& [pulse, bpm] : chartData.beat.bpm)
 			{
-				for (const auto& [pulse, gp] : graph)
+				if (bpm <= kBPMMax)
 				{
-					if (HasFraction(gp.v.v) || HasFraction(gp.v.vf))
-					{
-						return true;
-					}
-				}
-				return false;
-			};
-
-			if (checkGraph(cam.zoomTop))
-			{
-				fractionalParams.push_back("zoom_top");
-			}
-			if (checkGraph(cam.zoomBottom))
-			{
-				fractionalParams.push_back("zoom_bottom");
-			}
-			if (checkGraph(cam.zoomSide))
-			{
-				fractionalParams.push_back("zoom_side");
-			}
-
-			if (!fractionalParams.empty())
-			{
-				std::string paramList;
-				for (size_t i = 0; i < fractionalParams.size(); ++i)
-				{
-					if (i > 0)
-					{
-						paramList += ", ";
-					}
-					paramList += fractionalParams[i];
+					continue;
 				}
 				pKshSavingDiag->warnings.push_back({
-					.type = KshSavingWarningType::ZoomFractionLost,
-					.scope = WarningScope::EditorOnly,
-					.message = paramList + " values have fractional parts that will be rounded to integers",
+					.scope = WarningScope::PlayerAndEditor,
+					.message = "BPM value " + std::to_string(bpm) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(kBPMMax),
+					.details = BpmClampedWarningDetails{
+						.pulse = pulse,
+						.value = bpm,
+						.maxValue = kBPMMax,
+					},
 				});
 			}
+		}
+
+		const auto& cam = chartData.camera.cam.body;
+		std::vector<KshCameraParam> fractionalParams;
+		if (HasZoomFractionLoss(cam.zoomTop))
+		{
+			fractionalParams.push_back(KshCameraParam::ZoomTop);
+		}
+		if (HasZoomFractionLoss(cam.zoomBottom))
+		{
+			fractionalParams.push_back(KshCameraParam::ZoomBottom);
+		}
+		if (HasZoomFractionLoss(cam.zoomSide))
+		{
+			fractionalParams.push_back(KshCameraParam::ZoomSide);
+		}
+		if (!fractionalParams.empty())
+		{
+			std::string paramList;
+			for (size_t i = 0; i < fractionalParams.size(); ++i)
+			{
+				if (i > 0)
+				{
+					paramList += ", ";
+				}
+				paramList += ToKshCameraParamName(fractionalParams[i]);
+			}
+			pKshSavingDiag->warnings.push_back({
+				.scope = WarningScope::EditorOnly,
+				.message = paramList + " values have fractional parts that will be rounded to integers",
+				.details = ZoomFractionLostWarningDetails{ .params = fractionalParams },
+			});
 		}
 
 		// Laser precision loss
@@ -374,9 +403,9 @@ namespace
 			if (precisionLost)
 			{
 				pKshSavingDiag->warnings.push_back({
-					.type = KshSavingWarningType::LaserPrecisionLost,
 					.scope = WarningScope::EditorOnly,
 					.message = "Laser positions will be quantized to 51 steps (KSH limitation)",
+					.details = LaserPrecisionLostWarningDetails{},
 				});
 			}
 		}
@@ -396,56 +425,36 @@ namespace
 					effectType = StrToAudioEffectType(effectName);
 				}
 
-				std::set<std::string> lostParams;
-				bool allParamsLost = true;
-				bool hasAnyParam = false;
-
-				for (const auto& lane : lanes)
+				for (size_t laneIdx = 0; laneIdx < lanes.size(); ++laneIdx)
 				{
-					for (const auto& [pulse, params] : lane)
+					for (const auto& [pulse, params] : lanes[laneIdx])
 					{
+						bool hasLostParams = false;
 						for (const auto& [paramName, paramValue] : params)
 						{
-							hasAnyParam = true;
 							if (!IsKshPreservableParam(effectType, paramName, paramValue))
 							{
-								lostParams.insert(paramName);
-							}
-							else
-							{
-								allParamsLost = false;
+								hasLostParams = true;
+								break;
 							}
 						}
-					}
-				}
 
-				if (!lostParams.empty())
-				{
-					std::string message = "FX audio effect \"" + effectName + "\": ";
-					if (allParamsLost && hasAnyParam)
-					{
-						message += "all parameters will be lost (KSH does not support inline parameters for this effect)";
-					}
-					else
-					{
-						message += "parameters ";
-						bool first = true;
-						for (const auto& p : lostParams)
+						if (!hasLostParams)
 						{
-							if (!first)
-							{
-								message += ", ";
-							}
-							message += "\"" + p + "\"";
-							first = false;
+							continue;
 						}
-						message += " will be lost";
+
+						const std::string lane = laneIdx == 0 ? "FX-L" : "FX-R";
+						pKshSavingDiag->warnings.push_back({
+							.scope = WarningScope::EditorOnly,
+							.message = "FX audio effect \"" + effectName + "\" note parameter overrides at pulse " + std::to_string(pulse) + " in " + lane + " will be lost",
+							.details = FXLongEventParamsLostWarningDetails{
+								.pulse = pulse,
+								.laneIdx = laneIdx,
+								.effectName = effectName,
+							},
+						});
 					}
-					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::FXLongEventParamsLost,
-						.scope = WarningScope::EditorOnly,
-						.message = std::move(message),
-					});
 				}
 			}
 		}
@@ -732,7 +741,7 @@ namespace
 
 	// Write BPM to header
 	// Returns the header BPM string that was output
-	std::string WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat, KshSavingDiag* pKshSavingDiag)
+	std::string WriteBPMToHeader(std::ostream& stream, const std::string& dispBPM, const ByPulse<double>& bpmMap, const CompatInfo& compat)
 	{
 		// If dispBPM is set, use it as-is
 		if (!dispBPM.empty())
@@ -758,14 +767,6 @@ namespace
 			if (shouldClampBPM)
 			{
 				bpm = std::min(bpm, kBPMMax);
-				if (pKshSavingDiag && bpm != originalBpm)
-				{
-					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::BpmClamped,
-						.scope = WarningScope::PlayerAndEditor,
-						.message = "BPM value " + std::to_string(originalBpm) + " clamped to " + std::to_string(kBPMMax),
-					});
-				}
 			}
 			std::string bpmStr = FormatDouble(bpm);
 			stream << "t=" << bpmStr << "\r\n";
@@ -776,20 +777,12 @@ namespace
 		double minBPM = std::numeric_limits<double>::max();
 		double maxBPM = std::numeric_limits<double>::lowest();
 
-		for (const auto& [pulse, bpm] : bpmMap)
+		for (const auto& [_, bpm] : bpmMap)
 		{
 			double clampedBPM = bpm;
 			if (shouldClampBPM)
 			{
 				clampedBPM = std::min(bpm, kBPMMax);
-				if (pKshSavingDiag && clampedBPM != bpm)
-				{
-					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::BpmClamped,
-						.scope = WarningScope::PlayerAndEditor,
-						.message = "BPM value " + std::to_string(bpm) + " clamped to " + std::to_string(kBPMMax),
-					});
-				}
 			}
 			minBPM = std::min(minBPM, clampedBPM);
 			maxBPM = std::max(maxBPM, clampedBPM);
@@ -811,7 +804,7 @@ namespace
 	}
 
 	// Write header section
-	void WriteHeader(std::ostream& stream, const ChartData& chartData, std::string* headerBPMStr = nullptr, KshSavingDiag* pKshSavingDiag = nullptr)
+	void WriteHeader(std::ostream& stream, const ChartData& chartData, std::string* headerBPMStr = nullptr)
 	{
 		const auto& meta = chartData.meta;
 		const auto& audio = chartData.audio;
@@ -865,7 +858,7 @@ namespace
 		stream << "level=" << meta.level << "\r\n";
 
 		// BPM
-		std::string bpmStr = WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat, pKshSavingDiag);
+		std::string bpmStr = WriteBPMToHeader(stream, meta.dispBPM, chartData.beat.bpm, chartData.compat);
 		if (headerBPMStr != nullptr)
 		{
 			*headerBPMStr = bpmStr;
@@ -1539,15 +1532,22 @@ namespace
 	}
 
 	// Write zoom parameter (zoom_top, zoom_bottom, zoom_side)
-	void WriteZoomParameter(std::ostream& stream, const std::string& paramName, const GraphPoint& graphPoint, KshSavingDiag* pKshSavingDiag)
+	void WriteZoomParameter(std::ostream& stream, KshCameraParam param, Pulse pulse, const GraphPoint& graphPoint, KshSavingDiag* pKshSavingDiag)
 	{
+		const std::string paramName = ToKshCameraParamName(param);
 		const double clampedV = std::clamp(graphPoint.v.v, -kZoomAbsMax, kZoomAbsMax);
 		if (pKshSavingDiag && clampedV != graphPoint.v.v)
 		{
 			pKshSavingDiag->warnings.push_back({
-				.type = KshSavingWarningType::ZoomValueClamped,
 				.scope = WarningScope::EditorOnly,
-				.message = paramName + " value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+				.message = paramName + " value " + std::to_string(graphPoint.v.v) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+				.details = ZoomValueClampedWarningDetails{
+					.pulse = pulse,
+					.param = param,
+					.isFinalValue = false,
+					.minValue = -kZoomAbsMax,
+					.maxValue = kZoomAbsMax,
+				},
 			});
 		}
 		const std::int32_t zoomValue = static_cast<std::int32_t>(std::round(clampedV));
@@ -1560,9 +1560,15 @@ namespace
 			if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
 			{
 				pKshSavingDiag->warnings.push_back({
-					.type = KshSavingWarningType::ZoomValueClamped,
 					.scope = WarningScope::EditorOnly,
-					.message = paramName + " vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+					.message = paramName + " vf value " + std::to_string(graphPoint.v.vf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+					.details = ZoomValueClampedWarningDetails{
+						.pulse = pulse,
+						.param = param,
+						.isFinalValue = true,
+						.minValue = -kZoomAbsMax,
+						.maxValue = kZoomAbsMax,
+					},
 				});
 			}
 			const std::int32_t zoomValueFinal = static_cast<std::int32_t>(std::round(clampedVf));
@@ -1613,14 +1619,6 @@ namespace
 			if (!chartData.compat.isKshVersionOlderThan(kVerBPMLimitAdded))
 			{
 				bpm = std::min(bpm, kBPMMax);
-				if (pKshSavingDiag && bpm != originalBpm)
-				{
-					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::BpmClamped,
-						.scope = WarningScope::PlayerAndEditor,
-						.message = "BPM value " + std::to_string(originalBpm) + " clamped to " + std::to_string(kBPMMax),
-					});
-				}
 			}
 
 			std::string bpmStr = FormatDouble(bpm);
@@ -1678,9 +1676,14 @@ namespace
 			if (pKshSavingDiag && clampedV != graphPoint.v.v)
 			{
 				pKshSavingDiag->warnings.push_back({
-					.type = KshSavingWarningType::CenterSplitClamped,
 					.scope = WarningScope::EditorOnly,
-					.message = "center_split value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+					.message = "center_split value " + std::to_string(graphPoint.v.v) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+					.details = CenterSplitClampedWarningDetails{
+						.pulse = pulse,
+						.isFinalValue = false,
+						.minValue = -kCenterSplitAbsMax,
+						.maxValue = kCenterSplitAbsMax,
+					},
 				});
 			}
 			stream << "center_split=" << clampedV << "\r\n";
@@ -1692,9 +1695,14 @@ namespace
 				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
 				{
 					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::CenterSplitClamped,
 						.scope = WarningScope::EditorOnly,
-						.message = "center_split vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+						.message = "center_split vf value " + std::to_string(graphPoint.v.vf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+						.details = CenterSplitClampedWarningDetails{
+							.pulse = pulse,
+							.isFinalValue = true,
+							.minValue = -kCenterSplitAbsMax,
+							.maxValue = kCenterSplitAbsMax,
+						},
 					});
 				}
 				stream << "center_split=" << clampedVf << "\r\n";
@@ -1891,9 +1899,14 @@ namespace
 				if (pKshSavingDiag && clampedV != scaledV)
 				{
 					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::ManualTiltClamped,
 						.scope = WarningScope::EditorOnly,
-						.message = "tilt value " + std::to_string(scaledV) + " clamped to " + std::to_string(clampedV),
+						.message = "tilt value " + std::to_string(scaledV) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+						.details = ManualTiltClampedWarningDetails{
+							.pulse = pulse,
+							.isFinalValue = false,
+							.minValue = -kManualTiltAbsMax,
+							.maxValue = kManualTiltAbsMax,
+						},
 					});
 				}
 				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
@@ -1909,9 +1922,14 @@ namespace
 						if (pKshSavingDiag && clampedVf != scaledVf)
 						{
 							pKshSavingDiag->warnings.push_back({
-								.type = KshSavingWarningType::ManualTiltClamped,
 								.scope = WarningScope::EditorOnly,
-								.message = "tilt vf value " + std::to_string(scaledVf) + " clamped to " + std::to_string(clampedVf),
+								.message = "tilt vf value " + std::to_string(scaledVf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+								.details = ManualTiltClampedWarningDetails{
+									.pulse = pulse,
+									.isFinalValue = true,
+									.minValue = -kManualTiltAbsMax,
+									.maxValue = kManualTiltAbsMax,
+								},
 							});
 						}
 						stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
@@ -1936,17 +1954,17 @@ namespace
 
 		if (chartData.camera.cam.body.zoomTop.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_top", chartData.camera.cam.body.zoomTop.at(pulse), pKshSavingDiag);
+			WriteZoomParameter(stream, KshCameraParam::ZoomTop, pulse, chartData.camera.cam.body.zoomTop.at(pulse), pKshSavingDiag);
 		}
 
 		if (chartData.camera.cam.body.zoomBottom.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_bottom", chartData.camera.cam.body.zoomBottom.at(pulse), pKshSavingDiag);
+			WriteZoomParameter(stream, KshCameraParam::ZoomBottom, pulse, chartData.camera.cam.body.zoomBottom.at(pulse), pKshSavingDiag);
 		}
 
 		if (chartData.camera.cam.body.zoomSide.contains(pulse))
 		{
-			WriteZoomParameter(stream, "zoom_side", chartData.camera.cam.body.zoomSide.at(pulse), pKshSavingDiag);
+			WriteZoomParameter(stream, KshCameraParam::ZoomSide, pulse, chartData.camera.cam.body.zoomSide.at(pulse), pKshSavingDiag);
 		}
 
 		// Check for laser wide annotation changes before processing notes
@@ -2025,9 +2043,14 @@ namespace
 			if (pKshSavingDiag && clampedV != graphPoint.v.v)
 			{
 				pKshSavingDiag->warnings.push_back({
-					.type = KshSavingWarningType::RotationDegClamped,
 					.scope = WarningScope::EditorOnly,
-					.message = "rotation_deg value " + std::to_string(graphPoint.v.v) + " clamped to " + std::to_string(clampedV),
+					.message = "rotation_deg value " + std::to_string(graphPoint.v.v) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+					.details = RotationDegClampedWarningDetails{
+						.pulse = pulse,
+						.isFinalValue = false,
+						.minValue = -kRotationDegAbsMax,
+						.maxValue = kRotationDegAbsMax,
+					},
 				});
 			}
 			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
@@ -2039,9 +2062,14 @@ namespace
 				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
 				{
 					pKshSavingDiag->warnings.push_back({
-						.type = KshSavingWarningType::RotationDegClamped,
 						.scope = WarningScope::EditorOnly,
-						.message = "rotation_deg vf value " + std::to_string(graphPoint.v.vf) + " clamped to " + std::to_string(clampedVf),
+						.message = "rotation_deg vf value " + std::to_string(graphPoint.v.vf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+						.details = RotationDegClampedWarningDetails{
+							.pulse = pulse,
+							.isFinalValue = true,
+							.minValue = -kRotationDegAbsMax,
+							.maxValue = kRotationDegAbsMax,
+						},
 					});
 				}
 				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
@@ -2627,7 +2655,7 @@ kson::ErrorType kson::SaveKshChartData(std::ostream& stream, const ChartData& ch
 		ScanForDataLossWarnings(chartData, pKshSavingDiag);
 
 		// Write header and store the header BPM string in state
-		WriteHeader(stream, chartData, &state.headerBPMStr, pKshSavingDiag);
+		WriteHeader(stream, chartData, &state.headerBPMStr);
 		WriteMeasures(stream, chartData, state, pKshSavingDiag);
 		WriteAudioEffectDefinitions(stream, chartData);
 

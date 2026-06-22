@@ -2096,10 +2096,11 @@ namespace
 
 namespace
 {
-	bool HasOverlappingLaserSections(const kson::ChartData& chartData)
+	void ScanForOverlappingLaserSections(const kson::ChartData& chartData, kson::KsonSavingDiag* pKsonDiag)
 	{
 		for (std::size_t laneIdx = 0; laneIdx < kson::kNumLaserLanesSZ; ++laneIdx)
 		{
+			const std::string lane = laneIdx == 0 ? "LASER-L" : "LASER-R";
 			kson::Pulse activeEnd = 0;
 			bool hasActive = false;
 
@@ -2118,15 +2119,20 @@ namespace
 
 				if (hasActive && sectionStart < activeEnd)
 				{
-					return true;
+					pKsonDiag->warnings.push_back({
+						.scope = kson::WarningScope::EditorOnly,
+						.message = "Overlapping laser section at pulse " + std::to_string(sectionStart) + " in " + lane + " is not allowed by the KSON format",
+						.details = kson::OverlappingLaserSectionsWarningDetails{
+							.pulse = sectionStart,
+							.laneIdx = laneIdx,
+						},
+					});
 				}
 
 				activeEnd = std::max(activeEnd, sectionEnd);
 				hasActive = true;
 			}
 		}
-
-		return false;
 	}
 
 	void ScanForKsonSavingWarnings(const kson::ChartData& chartData, kson::KsonSavingDiag* pKsonDiag)
@@ -2136,14 +2142,7 @@ namespace
 			return;
 		}
 
-		if (HasOverlappingLaserSections(chartData))
-		{
-			pKsonDiag->warnings.push_back({
-				.type = kson::KsonSavingWarningType::OverlappingLaserSections,
-				.scope = kson::WarningScope::EditorOnly,
-				.message = "Overlapping laser sections in the same lane are not allowed by the KSON format",
-			});
-		}
+		ScanForOverlappingLaserSections(chartData, pKsonDiag);
 	}
 }
 

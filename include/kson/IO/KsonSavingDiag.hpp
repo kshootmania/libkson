@@ -1,4 +1,5 @@
 #pragma once
+#include "kson/Common/Common.hpp"
 #include "IDiag.hpp"
 #include "WarningScope.hpp"
 #include <string>
@@ -6,16 +7,17 @@
 
 namespace kson
 {
-	enum class KsonSavingWarningType
+	struct OverlappingLaserSectionsWarningDetails
 	{
-		OverlappingLaserSections,
+		Pulse pulse;
+		size_t laneIdx;
 	};
 
 	struct KsonSavingWarning
 	{
-		KsonSavingWarningType type;
 		WarningScope scope;
 		std::string message;
+		OverlappingLaserSectionsWarningDetails details;
 	};
 
 	struct KsonSavingDiag : IDiag

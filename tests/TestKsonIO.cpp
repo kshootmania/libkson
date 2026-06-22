@@ -984,9 +984,31 @@ TEST_CASE("KSON saving warning for overlapping laser sections", "[kson_io][savin
 
 	REQUIRE(result == kson::ErrorType::None);
 	REQUIRE(diag.warnings.size() == 1);
-	REQUIRE(diag.warnings[0].type == kson::KsonSavingWarningType::OverlappingLaserSections);
+	REQUIRE(diag.warnings[0].details.pulse == 480);
+	REQUIRE(diag.warnings[0].details.laneIdx == 0);
 	REQUIRE(!diag.editorWarnings().empty());
 	REQUIRE(diag.playerWarnings().empty());
+}
+
+TEST_CASE("KSON saving warning for each overlapping laser section", "[kson_io][saving_diag]")
+{
+	kson::ChartData chart;
+	chart.note.laser[1][0].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.0 } });
+	chart.note.laser[1][0].v.emplace(960, kson::GraphPoint{ kson::GraphValue{ 0.5 } });
+	chart.note.laser[1][240].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.25 } });
+	chart.note.laser[1][240].v.emplace(240, kson::GraphPoint{ kson::GraphValue{ 0.75 } });
+	chart.note.laser[1][480].v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.25 } });
+	chart.note.laser[1][480].v.emplace(240, kson::GraphPoint{ kson::GraphValue{ 0.75 } });
+
+	kson::KsonSavingDiag diag;
+	std::ostringstream oss;
+	kson::SaveKsonChartData(oss, chart, &diag);
+
+	REQUIRE(diag.warnings.size() == 2);
+	REQUIRE(diag.warnings[0].details.pulse == 240);
+	REQUIRE(diag.warnings[0].details.laneIdx == 1);
+	REQUIRE(diag.warnings[1].details.pulse == 480);
+	REQUIRE(diag.warnings[1].details.laneIdx == 1);
 }
 
 TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][saving_diag]")
