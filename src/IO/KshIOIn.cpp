@@ -7,6 +7,10 @@
 #include <optional>
 #include <charconv>
 #include <cmath>
+#ifdef __EMSCRIPTEN__
+#include <cerrno>
+#include <cstdlib>
+#endif
 
 namespace
 {
@@ -74,6 +78,30 @@ namespace
 		}
 
 		return defaultValue;
+#elif defined(__EMSCRIPTEN__)
+		const std::string s{ str };
+		const char* begin = s.c_str();
+		char* end = nullptr;
+		errno = 0;
+
+		if constexpr (std::is_integral_v<T>)
+		{
+			if constexpr (std::is_unsigned_v<T>)
+			{
+				const unsigned long long parsed = std::strtoull(begin, &end, 10);
+				return (end != begin && errno != ERANGE) ? static_cast<T>(parsed) : defaultValue;
+			}
+			else
+			{
+				const long long parsed = std::strtoll(begin, &end, 10);
+				return (end != begin && errno != ERANGE) ? static_cast<T>(parsed) : defaultValue;
+			}
+		}
+		else
+		{
+			const double parsed = std::strtod(begin, &end);
+			return (end != begin && errno != ERANGE) ? static_cast<T>(parsed) : defaultValue;
+		}
 #else
 		try
 		{

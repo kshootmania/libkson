@@ -1,4 +1,4 @@
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
 #include "kson/Encoding/Encoding.hpp"
 #include <iostream>
 #include <cerrno>
