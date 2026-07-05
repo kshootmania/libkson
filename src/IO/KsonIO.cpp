@@ -1983,6 +1983,12 @@ namespace
 					legacy.bg[i].filename = bgArray[i]["filename"].get<std::string>();
 				}
 			}
+
+			// If the array has only a single element, that bg is always used regardless of the gauge percentage
+			if (bgArray.size() == 1)
+			{
+				legacy.bg[1] = legacy.bg[0];
+			}
 		}
 		
 		if (j.contains("layer") && j["layer"].is_object())

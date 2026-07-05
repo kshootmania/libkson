@@ -205,7 +205,7 @@ TEST_CASE("Gram[EX] detailed chart validation", "[ksh_io][bundled]") {
 	SECTION("Background") {
 		REQUIRE(chart.bg.legacy.bg.size() == 2); // 1 element in KSON, 2 in source code
 		REQUIRE(chart.bg.legacy.bg[0].filename == "cyber");
-		REQUIRE(chart.bg.legacy.bg[1].filename == "");
+		REQUIRE(chart.bg.legacy.bg[1].filename == "cyber"); // single-element bg is applied to both
 		REQUIRE(chart.bg.legacy.layer.filename == "techno");
 	}
 
