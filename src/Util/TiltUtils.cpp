@@ -2,6 +2,33 @@
 #include "kson/Util/GraphCurve.hpp"
 #include <variant>
 
+namespace
+{
+	// Find the last AutoTiltType entry at or before the current pulse
+	// (manual tilt entries do not affect the auto tilt type, so they are skipped)
+	std::optional<kson::AutoTiltType> LastAutoTiltTypeAt(const kson::ByPulse<kson::TiltValue>& tiltValue, kson::Pulse currentPulse)
+	{
+		auto it = kson::ValueItrAt(tiltValue, currentPulse);
+		if (it == tiltValue.end() || currentPulse < it->first)
+		{
+			return std::nullopt;
+		}
+
+		while (true)
+		{
+			if (std::holds_alternative<kson::AutoTiltType>(it->second))
+			{
+				return std::get<kson::AutoTiltType>(it->second);
+			}
+			if (it == tiltValue.begin())
+			{
+				return std::nullopt;
+			}
+			--it;
+		}
+	}
+}
+
 std::optional<double> kson::ManualTiltValueAt(const ByPulse<TiltValue>& tiltValue, Pulse currentPulse)
 {
 	if (tiltValue.empty())
@@ -68,14 +95,10 @@ double kson::AutoTiltScaleAt(const ByPulse<TiltValue>& tiltValue, Pulse currentP
 		return 1.0;
 	}
 
-	const auto it = ValueItrAt(tiltValue, currentPulse);
-	if (it != tiltValue.end() && currentPulse >= it->first)
+	const std::optional<AutoTiltType> type = LastAutoTiltTypeAt(tiltValue, currentPulse);
+	if (type.has_value())
 	{
-		if (std::holds_alternative<AutoTiltType>(it->second))
-		{
-			const AutoTiltType type = std::get<AutoTiltType>(it->second);
-			return GetAutoTiltScale(type);
-		}
+		return GetAutoTiltScale(type.value());
 	}
 	return 1.0;
 }
@@ -87,14 +110,10 @@ bool kson::AutoTiltKeepAt(const ByPulse<TiltValue>& tiltValue, Pulse currentPuls
 		return false;
 	}
 
-	const auto it = ValueItrAt(tiltValue, currentPulse);
-	if (it != tiltValue.end() && currentPulse >= it->first)
+	const std::optional<AutoTiltType> type = LastAutoTiltTypeAt(tiltValue, currentPulse);
+	if (type.has_value())
 	{
-		if (std::holds_alternative<AutoTiltType>(it->second))
-		{
-			const AutoTiltType type = std::get<AutoTiltType>(it->second);
-			return IsKeepAutoTiltType(type);
-		}
+		return IsKeepAutoTiltType(type.value());
 	}
 	return false;
 }
