@@ -1,5 +1,6 @@
 #pragma once
 #include "kson/Common/Common.hpp"
+#include "kson/Compat/CompatInfo.hpp"
 
 namespace kson
 {
@@ -39,6 +40,10 @@ namespace kson
 		AudioEffectType type = AudioEffectType::Unspecified;
 		AudioEffectParams v;
 	};
+
+	// Inserts the legacy default release_time into a user-defined SideChain definition of a chart converted from KSH older than ver=200
+	// (the default value was changed from "1/16" to "1/8" at ver=200)
+	void ApplyLegacySidechainReleaseTime(AudioEffectDef* pDef, const CompatInfo& compat);
 
 	using AudioEffectDefKVP = DefKeyValuePair<AudioEffectDef>;
 

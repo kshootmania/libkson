@@ -172,3 +172,21 @@ std::vector<std::string> kson::SortAudioEffectParamNames(AudioEffectType type, c
 
 	return result;
 }
+
+void kson::ApplyLegacySidechainReleaseTime(AudioEffectDef* pDef, const CompatInfo& compat)
+{
+	if (pDef->type != AudioEffectType::Sidechain)
+	{
+		return;
+	}
+
+	if (pDef->v.contains("release_time"))
+	{
+		return;
+	}
+
+	if (compat.isKshVersionOlderThan(kKshVersionKsonBased))
+	{
+		pDef->v.emplace("release_time", "1/16");
+	}
+}

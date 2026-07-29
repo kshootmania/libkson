@@ -872,8 +872,9 @@ namespace
 
 		// Calculate version value early (needed for layer delimiter selection)
 		// FX format changed at ver=160, so output at least ver=160
-		std::string verValue = "171";
-		int verInt = 171;
+		// (charts not converted from KSH are output as ver=200)
+		std::string verValue = std::to_string(kKshVersionKsonBased);
+		int verInt = kKshVersionKsonBased;
 		bool needVerCompat = false;
 		if (!chartData.compat.kshVersion.empty())
 		{

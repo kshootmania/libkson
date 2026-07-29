@@ -1407,7 +1407,11 @@ namespace
 			if constexpr (std::is_same_v<ChartDataType, ChartData>)
 			{
 				// Use ver_compat if present, otherwise use ver
-				chartData.compat.kshVersion = kshVersionCompat.empty() ? kshVersion : kshVersionCompat;
+				// (kshVersion is left empty for ver >= 200 because such charts are converted from kson)
+				if (kshVersionInt < kKshVersionKsonBased)
+				{
+					chartData.compat.kshVersion = kshVersionCompat.empty() ? kshVersion : kshVersionCompat;
+				}
 			}
 
 			chartData.meta.title = Pop(metaDataHashMap, "title");
@@ -1571,7 +1575,8 @@ namespace
 			});
 		}
 
-		const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, 170);
+		// Note: Empty kshVersion means the chart is converted from kson (treated as the latest version)
+		const std::int32_t kshVersionInt = ParseNumeric<std::int32_t>(chartData.compat.kshVersion, kKshVersionKsonBased);
 
 		// For backward compatibility of zoom_top/zoom_bottom/zoom_side
 		const double zoomAbsMax = (kshVersionInt >= 167) ? kZoomAbsMax : kZoomAbsMaxLegacy;

@@ -3,6 +3,10 @@
 
 namespace kson
 {
+	// KSH format version representing charts converted from kson
+	// (CompatInfo::kshVersion is left empty when loading such charts)
+	constexpr std::int32_t kKshVersionKsonBased = 200;
+
 	struct KshUnknownInfo
 	{
 		std::unordered_map<std::string, std::string> meta;
