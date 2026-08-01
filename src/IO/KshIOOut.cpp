@@ -891,8 +891,8 @@ namespace
 			}
 			catch (...)
 			{
-				verValue = "171";
-				verInt = 171;
+				verValue = std::to_string(kKshVersionKsonBased);
+				verInt = kKshVersionKsonBased;
 			}
 		}
 

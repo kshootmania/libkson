@@ -5,7 +5,7 @@ bool kson::CompatInfo::isKshVersionOlderThan(int kshVersionInt) const
 {
 	if (kshVersion.empty())
 	{
-		// This chart data is not converted from the KSH format
+		// This chart data is not converted from KSH older than ver=200
 		return false;
 	}
 
