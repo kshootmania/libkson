@@ -184,6 +184,55 @@ TEST_CASE("KSON Loading", "[kson_io]") {
     }
 }
 
+TEST_CASE("KSON meta first BPM", "[kson_io]") {
+    SECTION("First BPM is parsed") {
+        const std::string ksonData = R"({
+            "format_version": 1,
+            "meta": {
+                "title": "Test Song",
+                "disp_bpm": ""
+            },
+            "beat": {
+                "bpm": [[0, 191.0]]
+            }
+        })";
+        std::istringstream stream(ksonData);
+        auto chart = kson::LoadKsonMetaChartData(stream);
+        REQUIRE(chart.error == kson::ErrorType::None);
+        REQUIRE(chart.firstBPM == Approx(191.0));
+        REQUIRE(chart.meta.dispBPM.empty());
+    }
+
+    SECTION("First BPM is the earliest BPM change") {
+        const std::string ksonData = R"({
+            "format_version": 1,
+            "meta": {
+                "title": "Test Song"
+            },
+            "beat": {
+                "bpm": [[0, 120.0], [960, 180.5]]
+            }
+        })";
+        std::istringstream stream(ksonData);
+        auto chart = kson::LoadKsonMetaChartData(stream);
+        REQUIRE(chart.error == kson::ErrorType::None);
+        REQUIRE(chart.firstBPM == Approx(120.0));
+    }
+
+    SECTION("First BPM defaults to 120 without BPM changes") {
+        const std::string ksonData = R"({
+            "format_version": 1,
+            "meta": {
+                "title": "Test Song"
+            }
+        })";
+        std::istringstream stream(ksonData);
+        auto chart = kson::LoadKsonMetaChartData(stream);
+        REQUIRE(chart.error == kson::ErrorType::None);
+        REQUIRE(chart.firstBPM == Approx(120.0));
+    }
+}
+
 TEST_CASE("KSON Round-trip", "[kson_io]") {
     SECTION("Save and load KSON") {
         // Create chart data

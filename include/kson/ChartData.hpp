@@ -22,6 +22,8 @@ namespace kson
 		MetaInfo meta;
 		MetaAudioInfo audio;
 
+		double firstBPM = 120.0;
+
 		ErrorType error = ErrorType::None;
 	};
 

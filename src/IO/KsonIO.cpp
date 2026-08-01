@@ -2487,6 +2487,15 @@ kson::MetaChartData kson::LoadKsonMetaChartData(std::istream& stream, KsonLoadin
 			metaChartData.meta = ParseMetaInfo(j["meta"], pKsonDiag);
 		}
 
+		if (j.contains("beat") && j["beat"].contains("bpm"))
+		{
+			const ByPulse<double> bpm = ParseByPulse<double>(j["beat"]["bpm"], pKsonDiag);
+			if (!bpm.empty())
+			{
+				metaChartData.firstBPM = bpm.begin()->second;
+			}
+		}
+
 		if (j.contains("audio") && j["audio"].contains("bgm"))
 		{
 			const BGMInfo bgmInfo = ParseBGMInfo(j["audio"]["bgm"], pKsonDiag);
