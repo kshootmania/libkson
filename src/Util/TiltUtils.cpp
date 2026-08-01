@@ -5,7 +5,8 @@
 namespace
 {
 	// Find the last AutoTiltType entry at or before the current pulse
-	// (manual tilt entries do not affect the auto tilt type, so they are skipped)
+	// (manual tilt entries do not affect the auto tilt type, so they are skipped,
+	//  except for graph points whose vf holds AutoTiltType)
 	std::optional<kson::AutoTiltType> LastAutoTiltTypeAt(const kson::ByPulse<kson::TiltValue>& tiltValue, kson::Pulse currentPulse)
 	{
 		auto it = kson::ValueItrAt(tiltValue, currentPulse);
@@ -20,6 +21,13 @@ namespace
 			{
 				return std::get<kson::AutoTiltType>(it->second);
 			}
+
+			const kson::TiltGraphPoint& point = std::get<kson::TiltGraphPoint>(it->second);
+			if (std::holds_alternative<kson::AutoTiltType>(point.v.vf))
+			{
+				return std::get<kson::AutoTiltType>(point.v.vf);
+			}
+
 			if (it == tiltValue.begin())
 			{
 				return std::nullopt;
