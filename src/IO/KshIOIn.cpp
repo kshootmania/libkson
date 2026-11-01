@@ -392,17 +392,26 @@ namespace
 		return !tiltValueStr.empty() && ((tiltValueStr[0] >= '0' && tiltValueStr[0] <= '9') || tiltValueStr[0] == '-');
 	}
 
-	TimeSig ParseTimeSig(std::string_view str)
+	std::optional<TimeSig> ParseTimeSig(std::string_view str)
 	{
 		std::size_t slashIdx = str.find('/');
 
 		// TimeSig must have "/"
-		assert(slashIdx != std::string::npos);
+		if (slashIdx == std::string_view::npos)
+		{
+			return std::nullopt;
+		}
 
-		return {
+		const TimeSig timeSig{
 			.n = ParseNumeric<std::int32_t>(str.substr(0, slashIdx)),
 			.d = ParseNumeric<std::int32_t>(str.substr(slashIdx + 1)),
 		};
+		if (!IsValidTimeSig(timeSig))
+		{
+			return std::nullopt;
+		}
+
+		return timeSig;
 	}
 
 	bool EliminateUTF8BOM(std::istream& stream)
@@ -1328,6 +1337,7 @@ namespace
 		[[maybe_unused]] bool barLineExists = false;
 		std::unordered_map<std::string, std::string> metaDataHashMap;
 		std::int64_t headerLineNo = 0;
+		[[maybe_unused]] std::int64_t beatLineNo = 0;
 		std::string line;
 		while (std::getline(stream, line, '\n'))
 		{
@@ -1378,6 +1388,10 @@ namespace
 			{
 				// Encoding error (the key must not be empty because IsOptionLine() is true)
 				return { .error = ErrorType::EncodingError };
+			}
+			if (key == "beat")
+			{
+				beatLineNo = headerLineNo;
 			}
 			metaDataHashMap.insert_or_assign(key, value);
 		}
@@ -1444,7 +1458,19 @@ namespace
 				TimeSig firstTimeSig{ 4, 4 };
 				if (metaDataHashMap.contains("beat")) [[unlikely]] // unlikely because "beat=" is usually after the first bar line
 				{
-					firstTimeSig = ParseTimeSig(metaDataHashMap.at("beat"));
+					if (const auto timeSig = ParseTimeSig(metaDataHashMap.at("beat")))
+					{
+						firstTimeSig = *timeSig;
+					}
+					else if (pKshDiag)
+					{
+						pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::InvalidTimeSig,
+							.scope = WarningScope::PlayerAndEditor,
+							.message = "Invalid time signature \"beat=" + metaDataHashMap.at("beat") + "\" is ignored.",
+							.lineNo = beatLineNo,
+						});
+					}
 					metaDataHashMap.erase("beat");
 				}
 				chartData.beat.timeSig.emplace(0, firstTimeSig);
@@ -1817,8 +1843,20 @@ namespace
 
 				if (key == "beat")
 				{
-					currentTimeSig = ParseTimeSig(value);
-					chartData.beat.timeSig.insert_or_assign(currentMeasureIdx, currentTimeSig);
+					if (const auto timeSig = ParseTimeSig(value))
+					{
+						currentTimeSig = *timeSig;
+						chartData.beat.timeSig.insert_or_assign(currentMeasureIdx, currentTimeSig);
+					}
+					else
+					{
+						pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::InvalidTimeSig,
+							.scope = WarningScope::PlayerAndEditor,
+							.message = "Invalid time signature \"beat=" + value + "\" is ignored.",
+							.lineNo = fileLineNo,
+						});
+					}
 				}
 				else
 				{

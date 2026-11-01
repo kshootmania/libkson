@@ -10,6 +10,7 @@ namespace kson
 	enum class KshLoadingWarningType
 	{
 		TitleNotAtBeginning,
+		InvalidTimeSig,
 		MissingTimeSigAtZero,
 		AudioEffectMissingType,
 		AudioEffectInvalidType,

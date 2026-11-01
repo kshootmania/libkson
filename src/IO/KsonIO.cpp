@@ -1212,7 +1212,19 @@ namespace
 						const auto& tsData = item[1];
 						if (tsData.is_array() && tsData.size() >= 2)
 						{
-							beat.timeSig[idx] = TimeSig{ tsData[0].get<std::int32_t>(), tsData[1].get<std::int32_t>() };
+							const TimeSig timeSig{ tsData[0].get<std::int32_t>(), tsData[1].get<std::int32_t>() };
+							if (IsValidTimeSig(timeSig))
+							{
+								beat.timeSig[idx] = timeSig;
+							}
+							else
+							{
+								pDiag->warnings.push_back({
+									.type = KsonLoadingWarningType::InvalidByMeasureIdxEntryFormat,
+									.scope = WarningScope::PlayerAndEditor,
+									.message = "Invalid time signature " + std::to_string(timeSig.n) + "/" + std::to_string(timeSig.d) + " at measure index " + std::to_string(idx) + " is ignored",
+								});
+							}
 						}
 					}
 				}
