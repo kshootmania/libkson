@@ -147,7 +147,7 @@ kson::Graph kson::BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPuls
 
 	for (const auto& [stopStart, stopEnd] : mergedStopRanges)
 	{
-		const double speedBeforeStop = GraphValueAt(result, stopStart);
+		const double speedBeforeStop = GraphValueAt(result, stopStart, GraphSide::Before);
 		const double speedAfterStop = GraphValueAt(result, stopEnd);
 
 		auto it = result.upper_bound(stopStart);

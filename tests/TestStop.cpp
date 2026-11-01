@@ -150,7 +150,7 @@ TEST_CASE("BakeStopIntoScrollSpeed with vf mismatch at start point", "[stop][scr
 	kson::Graph result = kson::BakeStopIntoScrollSpeed(scrollSpeed, stop);
 
 	REQUIRE(result.count(100) == 1);
-	REQUIRE(result[100].v.v == Approx(-1.0));
+	REQUIRE(result[100].v.v == Approx(1.0)); // Incoming value (v) of the point at the stop start is kept
 	REQUIRE(result[100].v.vf == Approx(0.0));
 
 	REQUIRE(result.count(200) == 0);
