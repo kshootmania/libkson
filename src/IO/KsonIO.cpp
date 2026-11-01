@@ -1364,6 +1364,17 @@ namespace
 					section.w = kLaserXScale1x;
 				}
 
+				// Laser section must have at least one point
+				if (section.v.empty())
+				{
+					pDiag->warnings.push_back({
+						.type = KsonLoadingWarningType::InvalidLaserSectionFormat,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "Laser section without points is ignored",
+					});
+					continue;
+				}
+
 				lane[pulse] = section;
 			}
 			else
