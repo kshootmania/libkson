@@ -10,6 +10,9 @@ namespace
 {
 	using namespace kson;
 
+	// Maximum value of BPM
+	constexpr double kBPMMax = 65535.0;
+
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
 		return std::filesystem::path(
@@ -1190,13 +1193,37 @@ namespace
 		return meta;
 	}
 
+	ByPulse<double> ParseBPM(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	{
+		ByPulse<double> bpm = ParseByPulse<double>(j, pDiag);
+		for (auto itr = bpm.begin(); itr != bpm.end();)
+		{
+			auto& [pulse, value] = *itr;
+
+			if (!std::isfinite(value) || value <= 0.0)
+			{
+				pDiag->warnings.push_back({
+					.type = KsonLoadingWarningType::InvalidByPulseEntryFormat,
+					.scope = WarningScope::PlayerAndEditor,
+					.message = "Invalid BPM value " + std::to_string(value) + " at pulse " + std::to_string(pulse) + " is ignored",
+				});
+				itr = bpm.erase(itr);
+				continue;
+			}
+
+			value = std::min(value, kBPMMax);
+			++itr;
+		}
+		return bpm;
+	}
+
 	BeatInfo ParseBeatInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
 	{
 		BeatInfo beat;
 		
 		if (j.contains("bpm"))
 		{
-			beat.bpm = ParseByPulse<double>(j["bpm"], pDiag);
+			beat.bpm = ParseBPM(j["bpm"], pDiag);
 		}
 		
 		if (j.contains("time_sig"))
@@ -2416,6 +2443,14 @@ kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* p
 	{
 		chartData.beat.timeSig.emplace(0, TimeSig{ 4, 4 });
 	}
+	if (chartData.beat.bpm.empty())
+	{
+		chartData.beat.bpm.emplace(0, 120.0);
+	}
+	else if (!chartData.beat.bpm.contains(0))
+	{
+		chartData.beat.bpm.emplace(0, chartData.beat.bpm.begin()->second);
+	}
 	if (!chartData.beat.scrollSpeed.contains(0))
 	{
 		chartData.beat.scrollSpeed.emplace(0, GraphValue{ 1.0, 1.0 });
@@ -2501,7 +2536,7 @@ kson::MetaChartData kson::LoadKsonMetaChartData(std::istream& stream, KsonLoadin
 
 		if (j.contains("beat") && j["beat"].contains("bpm"))
 		{
-			const ByPulse<double> bpm = ParseByPulse<double>(j["beat"]["bpm"], pKsonDiag);
+			const ByPulse<double> bpm = ParseBPM(j["beat"]["bpm"], pKsonDiag);
 			if (!bpm.empty())
 			{
 				metaChartData.firstBPM = bpm.begin()->second;

@@ -442,15 +442,26 @@ namespace
 		return std::round(value * 1000.0) / 1000.0;
 	}
 
+	// Returns whether the value is a BPM range string for display (e.g., "120-180"; a leading "-" is a minus sign)
+	bool IsBPMRangeStr(std::string_view value)
+	{
+		return value.find('-', 1) != std::string_view::npos;
+	}
+
 	bool InsertBPMChange(ByPulse<double>& bpmChanges, Pulse time, std::string_view value, std::int32_t kshVersionInt = 0)
 	{
-		if (value.find('-') != std::string_view::npos)
+		if (IsBPMRangeStr(value))
 		{
 			return false;
 		}
 
 		double bpm = ParseNumeric<double>(value);
 		bpm = RoundToKshDoubleValue(bpm);
+
+		if (!std::isfinite(bpm) || bpm <= 0.0)
+		{
+			return false;
+		}
 
 		// Apply BPM limit for ver >= 130 (65535.0)
 		if (kshVersionInt >= kVerBPMLimitAdded)
@@ -1241,6 +1252,7 @@ namespace
 		std::size_t lineIdx;
 		std::string key;
 		std::string value;
+		std::int64_t fileLineNo;
 	};
 
 	struct BufCommentLine
@@ -1338,6 +1350,7 @@ namespace
 		std::unordered_map<std::string, std::string> metaDataHashMap;
 		std::int64_t headerLineNo = 0;
 		[[maybe_unused]] std::int64_t beatLineNo = 0;
+		[[maybe_unused]] std::int64_t bpmLineNo = 0;
 		std::string line;
 		while (std::getline(stream, line, '\n'))
 		{
@@ -1392,6 +1405,10 @@ namespace
 			if (key == "beat")
 			{
 				beatLineNo = headerLineNo;
+			}
+			if (key == "t")
+			{
+				bpmLineNo = headerLineNo;
 			}
 			metaDataHashMap.insert_or_assign(key, value);
 		}
@@ -1478,7 +1495,16 @@ namespace
 				// Insert the first tempo change
 				if (metaDataHashMap.contains("t")) [[likely]]
 				{
-					InsertBPMChange(chartData.beat.bpm, 0, metaDataHashMap.at("t"), kshVersionInt);
+					const std::string& bpmStr = metaDataHashMap.at("t");
+					if (!InsertBPMChange(chartData.beat.bpm, 0, bpmStr, kshVersionInt) && !IsBPMRangeStr(bpmStr) && pKshDiag)
+					{
+						pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::InvalidBPM,
+							.scope = WarningScope::PlayerAndEditor,
+							.message = "Invalid BPM \"t=" + bpmStr + "\" is ignored.",
+							.lineNo = bpmLineNo,
+						});
+					}
 				}
 			}
 			chartData.meta.dispBPM = Pop(metaDataHashMap, "t", "");
@@ -1864,6 +1890,7 @@ namespace
 						.lineIdx = chartLines.size(),
 						.key = key,
 						.value = value,
+						.fileLineNo = fileLineNo,
 					});
 				}
 				continue;
@@ -1894,7 +1921,7 @@ namespace
 					}
 
 					// Add options that require their position
-					for (const auto& [lineIdx, key, value] : optionLines)
+					for (const auto& [lineIdx, key, value, optionFileLineNo] : optionLines)
 					{
 						const Pulse time = currentPulse + lineRelPulse(lineIdx);
 
@@ -1912,14 +1939,16 @@ namespace
 
 						if (key == "t")
 						{
-							if (chartData.beat.bpm.empty()) [[unlikely]]
+							// In rare cases where BPM is not specified on the chart metadata, the first BPM change is inserted at 0
+							const Pulse bpmChangeTime = chartData.beat.bpm.empty() ? 0 : time;
+							if (!InsertBPMChange(chartData.beat.bpm, bpmChangeTime, value, kshVersionInt) && !IsBPMRangeStr(value))
 							{
-								// In rare cases where BPM is not specified on the chart metadata
-								InsertBPMChange(chartData.beat.bpm, 0, value, kshVersionInt);
-							}
-							else
-							{
-								InsertBPMChange(chartData.beat.bpm, time, value, kshVersionInt);
+								pKshDiag->warnings.push_back({
+									.type = KshLoadingWarningType::InvalidBPM,
+									.scope = WarningScope::PlayerAndEditor,
+									.message = "Invalid BPM \"t=" + value + "\" is ignored.",
+									.lineNo = optionFileLineNo,
+								});
 							}
 						}
 						else if (key == "stop")
@@ -2556,6 +2585,14 @@ namespace
 		if (!chartData.beat.timeSig.contains(0))
 		{
 			chartData.beat.timeSig.emplace(0, TimeSig{ 4, 4 });
+		}
+		if (chartData.beat.bpm.empty())
+		{
+			chartData.beat.bpm.emplace(0, 120.0);
+		}
+		else if (!chartData.beat.bpm.contains(0))
+		{
+			chartData.beat.bpm.emplace(0, chartData.beat.bpm.begin()->second);
 		}
 		if (!chartData.beat.scrollSpeed.contains(0))
 		{

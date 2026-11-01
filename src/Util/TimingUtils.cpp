@@ -412,7 +412,7 @@ double kson::GetModeBPM(const BeatInfo& beatInfo, Pulse lastPulse)
 
 double kson::GetEffectiveStdBPM(const ChartData& chartData)
 {
-	if (chartData.meta.stdBPM > 0.0)
+	if (std::isfinite(chartData.meta.stdBPM) && chartData.meta.stdBPM > 0.0)
 	{
 		return chartData.meta.stdBPM;
 	}

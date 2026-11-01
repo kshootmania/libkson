@@ -92,7 +92,8 @@ TEST_CASE("KSON Loading", "[kson_io]") {
         // Check defaults
         REQUIRE(chart.meta.title.empty());
         REQUIRE(chart.meta.level == 1);
-        REQUIRE(chart.beat.bpm.empty());
+        REQUIRE(chart.beat.bpm.size() == 1);
+        REQUIRE(chart.beat.bpm.at(0) == Approx(120.0));
         REQUIRE(chart.note.bt[0].empty());
     }
     

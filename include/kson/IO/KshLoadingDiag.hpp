@@ -11,6 +11,7 @@ namespace kson
 	{
 		TitleNotAtBeginning,
 		InvalidTimeSig,
+		InvalidBPM,
 		MissingTimeSigAtZero,
 		AudioEffectMissingType,
 		AudioEffectInvalidType,
