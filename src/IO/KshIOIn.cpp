@@ -1937,17 +1937,17 @@ namespace
 			{
 				const std::size_t bufLineCount = chartLines.size();
 
-				if (bufLineCount > 0)
+				if (bufLineCount > 0 || !optionLines.empty() || !commentLines.empty() || !unknownLines.empty())
 				{
 					const RelPulse measurePulse = kResolution4 * currentTimeSig.n / currentTimeSig.d;
-					const double oneLinePulse = static_cast<double>(measurePulse) / static_cast<double>(bufLineCount);
+					const double oneLinePulse = (bufLineCount > 0) ? static_cast<double>(measurePulse) / static_cast<double>(bufLineCount) : 0.0;
 					const auto lineRelPulse = [oneLinePulse](std::size_t lineIdx) -> Pulse
 					{
 						return static_cast<Pulse>(lineIdx * oneLinePulse);
 					};
 
 					// Warn if the measure split is not evenly divisible
-					if (pKshDiag && measurePulse % bufLineCount != 0)
+					if (pKshDiag && bufLineCount > 0 && measurePulse % bufLineCount != 0)
 					{
 						pKshDiag->warnings.push_back({
 							.type = KshLoadingWarningType::MeasureSplitNotDivisible,
