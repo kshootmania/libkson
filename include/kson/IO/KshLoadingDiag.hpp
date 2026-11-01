@@ -15,6 +15,7 @@ namespace kson
 		MissingTimeSigAtZero,
 		AudioEffectMissingType,
 		AudioEffectInvalidType,
+		InvalidAudioEffectParam,
 		UncommittedBTNote,
 		UncommittedFXNote,
 		UndefinedAudioEffect,

@@ -1763,6 +1763,25 @@ namespace
 					{
 						const std::size_t semicolonIdx = sv.find_first_of(kAudioEffectStrSeparator);
 						std::string_view paramSV = (semicolonIdx == std::string_view::npos) ? sv : sv.substr(0, semicolonIdx);
+
+						// Skip the parameter without "=" or with an empty name
+						const std::size_t equalIdx = paramSV.find(kOptionSeparator);
+						if (equalIdx == std::string_view::npos || equalIdx == 0)
+						{
+							pKshDiag->warnings.push_back({
+								.type = KshLoadingWarningType::InvalidAudioEffectParam,
+								.scope = WarningScope::EditorOnly,
+								.message = "Audio effect parameter '" + std::string(paramSV) + "' in '" + name + "' is ignored as it is not in 'key=value' format.",
+								.lineNo = fileLineNo,
+							});
+							if (semicolonIdx == std::string_view::npos)
+							{
+								break;
+							}
+							sv = sv.substr(semicolonIdx + 1);
+							continue;
+						}
+
 						const auto [paramName, value] = SplitOptionLine(paramSV, isUTF8);
 						if (paramName.empty())
 						{
