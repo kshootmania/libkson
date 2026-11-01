@@ -2185,6 +2185,7 @@ namespace
 								switch (buf[j])
 								{
 								case '2': // Chip FX note
+									preparedLongNoteRef.publishLongFXNote();
 									chartData.note.fx[laneIdx].emplace(time, Interval{ .length = 0 });
 									if (currentMeasureFXKeySounds[laneIdx].contains(i))
 									{
