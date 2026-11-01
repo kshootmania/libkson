@@ -914,7 +914,15 @@ namespace
 
 	RelPulse KshLengthToRelPulse(std::string_view str)
 	{
-		return ParseNumeric<RelPulse>(str) * kResolution4 / 192;
+		const RelPulse value = ParseNumeric<RelPulse>(str);
+
+		// Reject negative values and values that overflow in the multiplication below
+		if (value < 0 || value > std::numeric_limits<RelPulse>::max() / kResolution4)
+		{
+			return 0;
+		}
+
+		return value * kResolution4 / 192;
 	}
 
 	std::tuple<RelPulse, std::int32_t, std::int32_t, std::int32_t> SplitSwingParams(std::string_view paramStr)

@@ -994,6 +994,64 @@ namespace
 		return std::nullopt;
 	}
 
+	// Read a non-negative pulse value (floating-point values are truncated; non-numeric values throw)
+	std::optional<Pulse> ReadPulse(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	{
+		if (!j.is_number())
+		{
+			return j.get<Pulse>();
+		}
+
+		if (j.is_number_float())
+		{
+			// Range check to avoid undefined behavior in the conversion
+			const double value = j.get<double>();
+			if (0.0 <= value && value < 9223372036854775808.0)
+			{
+				return static_cast<Pulse>(value);
+			}
+		}
+		else if (j.is_number_unsigned())
+		{
+			const std::uint64_t value = j.get<std::uint64_t>();
+			if (value <= static_cast<std::uint64_t>(std::numeric_limits<Pulse>::max()))
+			{
+				return static_cast<Pulse>(value);
+			}
+		}
+		else
+		{
+			const std::int64_t value = j.get<std::int64_t>();
+			if (value >= 0)
+			{
+				return value;
+			}
+		}
+
+		pDiag->warnings.push_back({
+			.type = KsonLoadingWarningType::InvalidByPulseEntryFormat,
+			.scope = WarningScope::EditorOnly,
+			.message = "Invalid pulse value " + j.dump() + " is ignored (must be a non-negative value)",
+		});
+		return std::nullopt;
+	}
+
+	// Read a non-negative relative pulse value whose sum with basePulse (non-negative) does not overflow
+	std::optional<RelPulse> ReadRelPulse(const nlohmann::json& j, Pulse basePulse, KsonLoadingDiag* pDiag)
+	{
+		const std::optional<RelPulse> value = ReadPulse(j, pDiag);
+		if (value.has_value() && *value > std::numeric_limits<Pulse>::max() - basePulse)
+		{
+			pDiag->warnings.push_back({
+				.type = KsonLoadingWarningType::InvalidByPulseEntryFormat,
+				.scope = WarningScope::EditorOnly,
+				.message = "Invalid relative pulse value " + j.dump() + " at pulse " + std::to_string(basePulse) + " is ignored (the end pulse overflows)",
+			});
+			return std::nullopt;
+		}
+		return value;
+	}
+
 	GraphValue ParseGraphValue(const nlohmann::json& j, KsonLoadingDiag* pDiag)
 	{
 		if (j.is_number())
@@ -1052,8 +1110,37 @@ namespace
 		{
 			if (item.is_array() && item.size() >= 2)
 			{
-				Pulse pulse = item[0].get<Pulse>();
-				T value = item[1].get<T>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
+				T value;
+				if constexpr (std::is_same_v<T, RelPulse>)
+				{
+					// Relative pulse value (stop length)
+					if (item[1].is_number() && item[1].get<double>() < 0.0)
+					{
+						// Negative values are left to the caller's stop length check
+						value = item[1].is_number_integer()
+							? item[1].get<std::int64_t>()
+							: static_cast<RelPulse>(std::max(item[1].get<double>(), -9223372036854775808.0));
+					}
+					else
+					{
+						const std::optional<RelPulse> relPulse = ReadRelPulse(item[1], pulse, pDiag);
+						if (!relPulse.has_value())
+						{
+							continue;
+						}
+						value = *relPulse;
+					}
+				}
+				else
+				{
+					value = item[1].get<T>();
+				}
 				result[pulse] = value;
 			}
 			else
@@ -1081,7 +1168,12 @@ namespace
 		{
 			if (item.is_array() && item.size() >= 2)
 			{
-				Pulse pulse = item[0].get<Pulse>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
 				T value = item[1].get<T>();
 				result.emplace(pulse, value);
 			}
@@ -1109,7 +1201,12 @@ namespace
 		{
 			if (item.is_array() && item.size() >= 2)
 			{
-				Pulse pulse = item[0].get<Pulse>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
 				GraphPoint point = ParseGraphPointFromArrayItem(item, 1, 2, pDiag);
 				result[pulse] = point;
 			}
@@ -1303,15 +1400,30 @@ namespace
 		{
 			if (item.is_array() && item.size() >= 2)
 			{
-				Pulse pulse = item[0].get<Pulse>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
+				const std::optional<RelPulse> length = ReadRelPulse(item[1], pulse, pDiag);
+				if (!length.has_value())
+				{
+					continue;
+				}
 				Interval interval;
-				interval.length = item[1].get<RelPulse>();
+				interval.length = *length;
 				lane[pulse] = interval;
 			}
 			else if (item.is_number_integer())
 			{
 				// Compact format: pulse only (chip note with length=0)
-				Pulse pulse = item.get<Pulse>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item, pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
 				lane[pulse] = Interval{ 0 };
 			}
 			else
@@ -1336,7 +1448,12 @@ namespace
 		{
 			if (item.is_array() && item.size() >= 2)
 			{
-				Pulse pulse = item[0].get<Pulse>();
+				const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+				if (!pulseOpt.has_value())
+				{
+					continue;
+				}
+				Pulse pulse = *pulseOpt;
 				LaserSection section;
 
 				// Parse laser points
@@ -1347,7 +1464,12 @@ namespace
 					{
 						if (point.is_array() && point.size() >= 2)
 						{
-							RelPulse ry = point[0].get<RelPulse>();
+							const std::optional<RelPulse> ryOpt = ReadRelPulse(point[0], pulse, pDiag);
+							if (!ryOpt.has_value())
+							{
+								continue;
+							}
+							RelPulse ry = *ryOpt;
 							GraphPoint graphPoint = ParseGraphPointFromArrayItem(point, 1, 2, pDiag);
 							section.v[ry] = graphPoint;
 						}
@@ -1578,13 +1700,23 @@ namespace
 							{
 								if (event.is_number_unsigned())
 								{
-									Pulse pulse = event.get<Pulse>();
+									const std::optional<Pulse> pulseOpt = ReadPulse(event, pDiag);
+									if (!pulseOpt.has_value())
+									{
+										continue;
+									}
+									Pulse pulse = *pulseOpt;
 									AudioEffectParams params;
 									fxLanes[i][pulse] = params;
 								}
 								else if (event.is_array() && event.size() >= 2)
 								{
-									Pulse pulse = event[0].get<Pulse>();
+									const std::optional<Pulse> pulseOpt = ReadPulse(event[0], pDiag);
+									if (!pulseOpt.has_value())
+									{
+										continue;
+									}
+									Pulse pulse = *pulseOpt;
 									AudioEffectParams params;
 									if (event[1].is_object())
 									{
@@ -1658,7 +1790,10 @@ namespace
 					{
 						if (pulse.is_number_integer())
 						{
-							pulseSet.insert(pulse.get<Pulse>());
+							if (const std::optional<Pulse> pulseValue = ReadPulse(pulse, pDiag))
+							{
+								pulseSet.insert(*pulseValue);
+							}
 						}
 					}
 					laser.pulseEvent[effectName] = pulseSet;
@@ -1699,7 +1834,7 @@ namespace
 		return audioEffect;
 	}
 
-	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, KsonLoadingDiag*)
+	KeySoundFXInfo ParseKeySoundFXInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
 	{
 		KeySoundFXInfo fx;
 		
@@ -1718,13 +1853,23 @@ namespace
 							{
 								if (event.is_number_unsigned())
 								{
-									Pulse pulse = event.get<Pulse>();
+									const std::optional<Pulse> pulseOpt = ReadPulse(event, pDiag);
+									if (!pulseOpt.has_value())
+									{
+										continue;
+									}
+									Pulse pulse = *pulseOpt;
 									KeySoundInvokeFX invoke;
 									fxLanes[i][pulse] = invoke;
 								}
 								else if (event.is_array() && event.size() >= 2)
 								{
-									Pulse pulse = event[0].get<Pulse>();
+									const std::optional<Pulse> pulseOpt = ReadPulse(event[0], pDiag);
+									if (!pulseOpt.has_value())
+									{
+										continue;
+									}
+									Pulse pulse = *pulseOpt;
 									KeySoundInvokeFX invoke;
 									if (event[1].is_object() && event[1].contains("vol"))
 									{
@@ -1763,7 +1908,10 @@ namespace
 					{
 						if (pulse.is_number_integer())
 						{
-							pulseSet.insert(pulse.get<Pulse>());
+							if (const std::optional<Pulse> pulseValue = ReadPulse(pulse, pDiag))
+							{
+								pulseSet.insert(*pulseValue);
+							}
 						}
 					}
 					laser.slamEvent[eventName] = pulseSet;
@@ -1852,7 +2000,12 @@ namespace
 			{
 				if (item.is_array() && item.size() >= 2)
 				{
-					Pulse pulse = item[0].get<Pulse>();
+					const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+					if (!pulseOpt.has_value())
+					{
+						continue;
+					}
+					Pulse pulse = *pulseOpt;
 
 					if (item[1].is_string())
 					{
@@ -1969,11 +2122,21 @@ namespace
 							{
 								if (item.is_array() && item.size() >= 3)
 								{
-									Pulse y = item[0].get<Pulse>();
+									const std::optional<Pulse> yOpt = ReadPulse(item[0], pDiag);
+									if (!yOpt.has_value())
+									{
+										continue;
+									}
+									Pulse y = *yOpt;
+									const std::optional<RelPulse> length = ReadRelPulse(item[2], y, pDiag);
+									if (!length.has_value())
+									{
+										continue;
+									}
 									camera.cam.pattern.laser.slamEvent.spin[y] = CamPatternInvokeSpin
 									{
 										.d = item[1].get<std::int32_t>(),
-										.length = item[2].get<RelPulse>(),
+										.length = *length,
 									};
 								}
 							}
@@ -1985,11 +2148,21 @@ namespace
 							{
 								if (item.is_array() && item.size() >= 3)
 								{
-									Pulse y = item[0].get<Pulse>();
+									const std::optional<Pulse> yOpt = ReadPulse(item[0], pDiag);
+									if (!yOpt.has_value())
+									{
+										continue;
+									}
+									Pulse y = *yOpt;
+									const std::optional<RelPulse> length = ReadRelPulse(item[2], y, pDiag);
+									if (!length.has_value())
+									{
+										continue;
+									}
 									camera.cam.pattern.laser.slamEvent.halfSpin[y] = CamPatternInvokeSpin
 									{
 										.d = item[1].get<std::int32_t>(),
-										.length = item[2].get<RelPulse>(),
+										.length = *length,
 									};
 								}
 							}
@@ -2001,10 +2174,20 @@ namespace
 							{
 								if (item.is_array() && item.size() >= 3)
 								{
-									Pulse y = item[0].get<Pulse>();
+									const std::optional<Pulse> yOpt = ReadPulse(item[0], pDiag);
+									if (!yOpt.has_value())
+									{
+										continue;
+									}
+									Pulse y = *yOpt;
+									const std::optional<RelPulse> length = ReadRelPulse(item[2], y, pDiag);
+									if (!length.has_value())
+									{
+										continue;
+									}
 									CamPatternInvokeSwing swing;
 									swing.d = item[1].get<std::int32_t>();
-									swing.length = item[2].get<RelPulse>();
+									swing.length = *length;
 									if (item.size() >= 4 && item[3].is_object())
 									{
 										if (item[3].contains("scale"))
@@ -2107,7 +2290,7 @@ namespace
 		return editor;
 	}
 
-	CompatInfo ParseCompatInfo(const nlohmann::json& j, KsonLoadingDiag*)
+	CompatInfo ParseCompatInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
 	{
 		CompatInfo compat;
 		
@@ -2138,7 +2321,12 @@ namespace
 						{
 							if (item.is_array() && item.size() >= 2)
 							{
-								Pulse pulse = item[0].get<Pulse>();
+								const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+								if (!pulseOpt.has_value())
+								{
+									continue;
+								}
+								Pulse pulse = *pulseOpt;
 								compat.kshUnknown.option[key].emplace(pulse, item[1].get<std::string>());
 							}
 						}
@@ -2152,7 +2340,12 @@ namespace
 				{
 					if (item.is_array() && item.size() >= 2)
 					{
-						Pulse pulse = item[0].get<Pulse>();
+						const std::optional<Pulse> pulseOpt = ReadPulse(item[0], pDiag);
+						if (!pulseOpt.has_value())
+						{
+							continue;
+						}
+						Pulse pulse = *pulseOpt;
 						compat.kshUnknown.line.emplace(pulse, item[1].get<std::string>());
 					}
 				}
