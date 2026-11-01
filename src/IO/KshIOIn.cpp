@@ -1851,7 +1851,8 @@ namespace
 				continue;
 			}
 
-			if (IsChartLine(line))
+			// Note: Option lines are excluded here because option values may contain "|" (e.g., 0x7C in a Shift-JIS multibyte character)
+			if (IsChartLine(line) && !IsOptionLine(line))
 			{
 				chartLines.push_back(line);
 				continue;
