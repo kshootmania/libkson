@@ -130,6 +130,11 @@ kson::Graph kson::BakeStopIntoScrollSpeed(const Graph& scrollSpeed, const ByPuls
 	std::vector<std::pair<Pulse, Pulse>> mergedStopRanges;
 	for (const auto& [stopY, stopLength] : stop)
 	{
+		if (stopLength <= 0)
+		{
+			continue;
+		}
+
 		const Pulse start = stopY;
 		const Pulse end = stopY + stopLength;
 

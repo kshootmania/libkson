@@ -1384,6 +1384,24 @@ namespace
 		if (j.contains("stop"))
 		{
 			beat.stop = ParseByPulse<RelPulse>(j["stop"], pDiag);
+
+			// Stop length must be positive
+			for (auto itr = beat.stop.begin(); itr != beat.stop.end();)
+			{
+				if (itr->second <= 0)
+				{
+					pDiag->warnings.push_back({
+						.type = KsonLoadingWarningType::InvalidByPulseEntryFormat,
+						.scope = WarningScope::PlayerAndEditor,
+						.message = "Stop with non-positive length " + std::to_string(itr->second) + " at pulse " + std::to_string(itr->first) + " is ignored",
+					});
+					itr = beat.stop.erase(itr);
+				}
+				else
+				{
+					++itr;
+				}
+			}
 		}
 
 		return beat;
