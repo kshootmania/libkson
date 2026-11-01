@@ -1332,7 +1332,16 @@ namespace
 				{
 					if (item.is_array() && item.size() >= 2)
 					{
-						std::size_t idx = item[0].get<std::size_t>();
+						const std::int64_t idx = item[0].get<std::int64_t>();
+						if (idx < 0)
+						{
+							pDiag->warnings.push_back({
+								.type = KsonLoadingWarningType::InvalidByMeasureIdxEntryFormat,
+								.scope = WarningScope::EditorOnly,
+								.message = "Time signature with negative measure index " + std::to_string(idx) + " is ignored",
+							});
+							continue;
+						}
 						const auto& tsData = item[1];
 						if (tsData.is_array() && tsData.size() >= 2)
 						{
