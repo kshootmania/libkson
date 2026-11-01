@@ -104,6 +104,12 @@ namespace kson
 			++itr;
 		}
 
+		// Clear curve data from all points (already expanded to linear segments)
+		for (auto& [y, point] : result)
+		{
+			point.curve = GraphCurveValue{};
+		}
+
 		return result;
 	}
 
@@ -164,6 +170,12 @@ namespace kson
 			result.v.insert(*nextItr);
 
 			++itr;
+		}
+
+		// Clear curve data from all points (already expanded to linear segments)
+		for (auto& [ry, point] : result.v)
+		{
+			point.curve = GraphCurveValue{};
 		}
 
 		return result;
