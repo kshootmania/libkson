@@ -1174,7 +1174,16 @@ namespace
 
 				if (data.points.size() < 2)
 				{
-					assert(false && "Laser section must have at least two points");
+					// Laser section must have at least two points
+					if (m_pKshDiag)
+					{
+						m_pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::SinglePointLaserSection,
+							.scope = WarningScope::EditorOnly,
+							.message = "Laser section with only one point is ignored.",
+							.lineNo = lineNo,
+						});
+					}
 					return;
 				}
 

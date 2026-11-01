@@ -20,6 +20,7 @@ namespace kson
 		UncommittedFXNote,
 		UndefinedAudioEffect,
 		Sub32ndSlamLasers,
+		SinglePointLaserSection,
 		MeasureSplitNotDivisible,
 		AudioEffectDuplicateName,
 		UnexpectedError,
