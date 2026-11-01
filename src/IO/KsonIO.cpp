@@ -1842,7 +1842,7 @@ namespace
 		return AutoTiltType::kNormal;
 	}
 
-	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, KsonLoadingDiag*)
+	ByPulse<TiltValue> ParseTilt(const nlohmann::json& j, KsonLoadingDiag* pDiag)
 	{
 		ByPulse<TiltValue> tilt;
 
@@ -1867,6 +1867,19 @@ namespace
 					else if (item[1].is_array() && item[1].size() == 2)
 					{
 						// Check if this is [v, vf], [v, [a, b]], or [[v, vf], [a, b]]
+						const bool isInvalidArraySize =
+							(item[1][0].is_array() && item[1][0].size() < 2) ||
+							(item[1][1].is_array() && item[1][1].size() < 2);
+						if (isInvalidArraySize)
+						{
+							pDiag->warnings.push_back({
+								.type = KsonLoadingWarningType::InvalidGraphValueFormat,
+								.scope = WarningScope::EditorOnly,
+								.message = "Invalid tilt value format",
+							});
+							continue;
+						}
+
 						if (item[1][0].is_array())
 						{
 							// [[v, vf], [a, b]]: TiltGraphValue with immediate change and curve
