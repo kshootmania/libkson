@@ -1520,6 +1520,12 @@ namespace
 			}
 		}
 
+		// Echo: param2 requires param1, so output the default wave_length (1/4)
+		if (param1 == kAudioEffectParamUnspecified && param2 != kAudioEffectParamUnspecified && type == AudioEffectType::Echo)
+		{
+			param1 = 4;
+		}
+
 		if (param1 != kAudioEffectParamUnspecified)
 		{
 			result += ";" + std::to_string(param1);

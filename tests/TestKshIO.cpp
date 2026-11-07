@@ -2610,3 +2610,24 @@ t=120
 	}
 }
 
+
+TEST_CASE("KSH Echo feedback_level without wave_length", "[ksh_io][audio_effect]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test";
+	chartData.audio.bgm.filename = "test.ogg";
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+	chartData.note.fx[0].emplace(0, kson::Interval{ 960 });
+	chartData.audio.audioEffect.fx.longEvent["echo"][0].emplace(0, kson::AudioEffectParams{ { "feedback_level", "30%" } });
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("fx-l=Echo;4;30") != std::string::npos);
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKshChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	const auto& params = loaded.audio.audioEffect.fx.longEvent.at("echo")[0].at(0);
+	REQUIRE(params.at("feedback_level") == "30%");
+}
