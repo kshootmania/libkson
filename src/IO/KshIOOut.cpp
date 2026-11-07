@@ -655,6 +655,10 @@ namespace
 		{
 			maxPulse = std::max(maxPulse, chartData.audio.keySound.laser.vol.rbegin()->first);
 		}
+		if (!chartData.audio.audioEffect.laser.legacy.filterGain.empty())
+		{
+			maxPulse = std::max(maxPulse, chartData.audio.audioEffect.laser.legacy.filterGain.rbegin()->first);
+		}
 		if (!chartData.audio.keySound.laser.slamEvent.empty())
 		{
 			for (const auto& [eventType, pulses] : chartData.audio.keySound.laser.slamEvent)

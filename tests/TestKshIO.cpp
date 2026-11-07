@@ -2631,3 +2631,24 @@ TEST_CASE("KSH Echo feedback_level without wave_length", "[ksh_io][audio_effect]
 	const auto& params = loaded.audio.audioEffect.fx.longEvent.at("echo")[0].at(0);
 	REQUIRE(params.at("feedback_level") == "30%");
 }
+
+TEST_CASE("KSH pfiltergain after the last note", "[ksh_io][filter_gain]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test";
+	chartData.audio.bgm.filename = "test.ogg";
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+	chartData.note.bt[0].emplace(0, kson::Interval{ 0 });
+	chartData.audio.audioEffect.laser.legacy.filterGain[0] = 0.5;
+	chartData.audio.audioEffect.laser.legacy.filterGain[1920] = 0.3;
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKshChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	REQUIRE(loaded.audio.audioEffect.laser.legacy.filterGain.contains(1920));
+	REQUIRE(loaded.audio.audioEffect.laser.legacy.filterGain.at(1920) == Approx(0.3));
+}
