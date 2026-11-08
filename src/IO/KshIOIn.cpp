@@ -2103,7 +2103,7 @@ namespace
 						else if (key == "pfiltergain")
 						{
 							const std::int32_t pfiltergainValue = ParseNumeric<std::int32_t>(value, 50);
-							chartData.audio.audioEffect.laser.legacy.filterGain.emplace(time, pfiltergainValue / 100.0);
+							chartData.audio.audioEffect.laser.legacy.filterGain.insert_or_assign(time, pfiltergainValue / 100.0);
 						}
 						else if (key == "fx-l")
 						{
