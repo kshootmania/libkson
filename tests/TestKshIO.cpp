@@ -2906,3 +2906,25 @@ TEST_CASE("KSH saving slams followed closely by another laser section", "[ksh_io
 		REQUIRE(loaded.note.laser[0].contains(kson::kResolution4 * 5 / 16));
 	}
 }
+
+TEST_CASE("KSH duplicate pfiltergain at the same pulse", "[ksh_io][filter_gain]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"pfiltergain=30\n"
+		"--\n"
+		"pfiltergain=70\n"
+		"0000|00|--\n"
+		"pfiltergain=10\n"
+		"pfiltergain=90\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	const auto& filterGain = chartData.audio.audioEffect.laser.legacy.filterGain;
+	REQUIRE(filterGain.at(0) == Approx(0.7));
+	REQUIRE(filterGain.at(kson::kResolution4 / 2) == Approx(0.9));
+}
