@@ -1282,7 +1282,9 @@ namespace
 						const Pulse distanceToNext = nextRelPulse - relPulse;
 						const std::int32_t nextStartValue = GraphValueToLaserX(nextPoint.v.v, section.wide());
 
-						if (distanceToNext < kPreferredSlamLength)
+						// A non-slam point with the same value exactly 1/32 after the slam would be lost without shortening the slam
+						const bool nextIsHoldAfterSlam = distanceToNext == kPreferredSlamLength && nextStartValue == endValue && AlmostEquals(nextPoint.v.v, nextPoint.v.vf);
+						if (distanceToNext < kPreferredSlamLength || nextIsHoldAfterSlam)
 						{
 							// If next point has same value as slam end, shorten slam to allow next point to be output
 							// This preserves the intermediate point in lossless roundtrip

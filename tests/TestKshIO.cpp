@@ -2781,3 +2781,48 @@ TEST_CASE("KSH legacy manual tilt scale with immediate change", "[ksh_io][tilt]"
 	REQUIRE(kson::SaveKsonChartData(ksonAfter, loaded) == kson::ErrorType::None);
 	REQUIRE(ksonBefore.str() == ksonAfter.str());
 }
+
+TEST_CASE("KSH saving point just after laser slam", "[ksh_io][laser]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test";
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+
+	SECTION("same value point 1/32 after slam is kept")
+	{
+		kson::LaserSection section;
+		section.v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.86, 0.4 } });
+		section.v.emplace(kson::kResolution4 / 32, kson::GraphPoint{ kson::GraphValue{ 0.4 } });
+		chartData.note.laser[0].emplace(0, section);
+
+		std::ostringstream oss;
+		REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+		std::istringstream iss(oss.str());
+		const auto loaded = kson::LoadKshChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.note.laser[0].size() == 1);
+		const auto& loadedSection = loaded.note.laser[0].at(0);
+		REQUIRE(loadedSection.v.size() == 2);
+		REQUIRE(loadedSection.v.rbegin()->first == kson::kResolution4 / 32);
+		REQUIRE(loadedSection.v.rbegin()->second.v.v == Approx(0.4));
+	}
+
+	SECTION("different value point 1/32 after slam is not lost")
+	{
+		kson::LaserSection section;
+		section.v.emplace(0, kson::GraphPoint{ kson::GraphValue{ 0.0, 0.5 } });
+		section.v.emplace(kson::kResolution4 / 32, kson::GraphPoint{ kson::GraphValue{ 1.0 } });
+		section.v.emplace(kson::kResolution4 / 2, kson::GraphPoint{ kson::GraphValue{ 1.0 } });
+		chartData.note.laser[0].emplace(0, section);
+
+		std::ostringstream oss;
+		REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+		std::istringstream iss(oss.str());
+		const auto loaded = kson::LoadKshChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		const auto& loadedSection = loaded.note.laser[0].at(0);
+		REQUIRE(loadedSection.v.size() == 3);
+		REQUIRE(loadedSection.v.rbegin()->first == kson::kResolution4 / 2);
+	}
+}
