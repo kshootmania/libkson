@@ -2826,3 +2826,83 @@ TEST_CASE("KSH saving point just after laser slam", "[ksh_io][laser]")
 		REQUIRE(loadedSection.v.rbegin()->first == kson::kResolution4 / 2);
 	}
 }
+
+TEST_CASE("KSH saving slams followed closely by another laser section", "[ksh_io][laser]")
+{
+	SECTION("1/192 slams separated by one blank line")
+	{
+		const std::string kshContent =
+			"title=Test\n"
+			"t=120\n"
+			"--\n"
+			"0000|00|-o\n"
+			"0000|00|-0\n"
+			"0000|00|--\n"
+			"0000|00|-o\n"
+			"0000|00|-0\n"
+			"0000|00|--\n"
+			"0000|00|-o\n"
+			"0000|00|-0\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		const auto chartData = kson::LoadKshChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.note.laser[1].size() == 3);
+
+		std::ostringstream ksonBefore;
+		REQUIRE(kson::SaveKsonChartData(ksonBefore, chartData) == kson::ErrorType::None);
+
+		std::ostringstream oss;
+		REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+		std::istringstream iss2(oss.str());
+		const auto loaded = kson::LoadKshChartData(iss2);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.note.laser[1].size() == 3);
+		std::ostringstream ksonAfter;
+		REQUIRE(kson::SaveKsonChartData(ksonAfter, loaded) == kson::ErrorType::None);
+		REQUIRE(ksonBefore.str() == ksonAfter.str());
+	}
+
+	SECTION("slam followed by a section starting within 1/32")
+	{
+		const std::string kshContent =
+			"title=Test\n"
+			"t=120\n"
+			"--\n"
+			"0000|00|U-\n"
+			"0000|00|0-\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|C-\n"
+			"0000|00|:-\n"
+			"0000|00|:-\n"
+			"0000|00|:-\n"
+			"0000|00|:-\n"
+			"0000|00|:-\n"
+			"0000|00|o-\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"0000|00|--\n"
+			"--\n";
+
+		std::istringstream iss(kshContent);
+		const auto chartData = kson::LoadKshChartData(iss);
+		REQUIRE(chartData.error == kson::ErrorType::None);
+		REQUIRE(chartData.note.laser[0].size() == 2);
+
+		std::ostringstream oss;
+		REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+		std::istringstream iss2(oss.str());
+		const auto loaded = kson::LoadKshChartData(iss2);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.note.laser[0].size() == 2);
+		REQUIRE(loaded.note.laser[0].contains(kson::kResolution4 * 5 / 16));
+	}
+}

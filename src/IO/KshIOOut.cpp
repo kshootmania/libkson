@@ -1205,13 +1205,36 @@ namespace
 		constexpr Pulse kPulse1_96 = kResolution4 / 96;
 		constexpr Pulse kPulse1_192 = kResolution4 / 192;
 
-		for (const auto& [sectionStart, section] : lane)
+		for (auto sectionIt = lane.begin(); sectionIt != lane.end(); ++sectionIt)
 		{
+			const auto& [sectionStart, section] = *sectionIt;
+
 			// Skip empty sections
 			if (section.v.empty())
 			{
 				continue;
 			}
+
+			// Shorten a slam so that at least one blank line fits before the next section
+			const auto nextSectionIt = std::next(sectionIt);
+			const auto limitSlamLength = [&](Pulse slamStart, Pulse slamLength) -> Pulse
+			{
+				if (nextSectionIt == lane.end())
+				{
+					return slamLength;
+				}
+				Pulse maxLength = nextSectionIt->first - slamStart - kPulse1_192 * 2;
+				if (maxLength < kPulse1_192)
+				{
+					// Use a finer resolution than 1/192 only when the gap is too small
+					maxLength = nextSectionIt->first - slamStart - 2;
+				}
+				if (maxLength < 1)
+				{
+					return slamLength;
+				}
+				return std::min(slamLength, maxLength);
+			};
 
 			// Handle single-point laser section
 			if (section.v.size() == 1 && section.v.begin()->first == 0)
@@ -1229,7 +1252,7 @@ namespace
 					segments.push_back(KshLaserSegment{
 						.laneIdx = laneIdx,
 						.startPulse = sectionStart,
-						.length = kPreferredSlamLength,
+						.length = limitSlamLength(sectionStart, kPreferredSlamLength),
 						.startValue = startValue,
 						.endValue = endValue,
 						.isSectionStart = true,
@@ -1327,6 +1350,8 @@ namespace
 							}
 						}
 					}
+
+					slamLength = limitSlamLength(absolutePulse, slamLength);
 
 					segments.push_back(KshLaserSegment{
 						.laneIdx = laneIdx,
@@ -2463,40 +2488,70 @@ namespace
 			updateGCD(pulse);
 		}
 
-		// Calculate division in KSON resolution (960) to preserve all note timings
-		std::int32_t division = gcd > 0 ? static_cast<std::int32_t>(measureLength / gcd) : static_cast<std::int32_t>(measureLength);
-
-		// Apply doubling for long notes/lasers
-		if (division < measureLength && shouldDoubleResolution)
+		const auto calcDivision = [&]() -> std::int32_t
 		{
-			const int doubled = division * 2;
-			// Only apply doubling if it divides measureLength evenly
-			if (measureLength % doubled == 0)
+			// Calculate division in KSON resolution (960) to preserve all note timings
+			std::int32_t division = gcd > 0 ? static_cast<std::int32_t>(measureLength / gcd) : static_cast<std::int32_t>(measureLength);
+
+			// Apply doubling for long notes/lasers
+			if (division < measureLength && shouldDoubleResolution)
 			{
-				division = doubled;
-			}
-			// If 1 line = 15 pulses (1/64th), try tripling when doubling doesn't work
-			// Without this, Heliodor[EX] (SFES2022) kson->ksh->kson roundtrip causes unexpected laser section merging
-			else if (measureLength / division == 15)
-			{
-				const int tripled = division * 3;
-				if (measureLength % tripled == 0)
+				const int doubled = division * 2;
+				// Only apply doubling if it divides measureLength evenly
+				if (measureLength % doubled == 0)
 				{
-					division = tripled;
+					division = doubled;
+				}
+				// If 1 line = 15 pulses (1/64th), try tripling when doubling doesn't work
+				// Without this, Heliodor[EX] (SFES2022) kson->ksh->kson roundtrip causes unexpected laser section merging
+				else if (measureLength / division == 15)
+				{
+					const int tripled = division * 3;
+					if (measureLength % tripled == 0)
+					{
+						division = tripled;
+					}
 				}
 			}
-		}
 
-		// Ensure division divides measureLength evenly
-		if (measureLength % division != 0)
-		{
-			division = static_cast<std::int32_t>(measureLength);
-		}
+			// Ensure division divides measureLength evenly
+			if (measureLength % division != 0)
+			{
+				division = static_cast<std::int32_t>(measureLength);
+			}
 
-		// Ensure division is at least 1
-		if (division < 1)
+			// Ensure division is at least 1
+			if (division < 1)
+			{
+				division = 1;
+			}
+
+			return division;
+		};
+		std::int32_t division = calcDivision();
+
+		// Make a blank line between laser sections (otherwise they are merged on loading)
 		{
-			division = 1;
+			bool gcdUpdated = false;
+			const Pulse oneLinePulse = measureLength / division;
+			for (std::int32_t laneIdx = 0; laneIdx < kNumLaserLanes; ++laneIdx)
+			{
+				const auto& segments = laserSegments[laneIdx];
+				for (std::size_t segIdx = 0; segIdx + 1 < segments.size(); ++segIdx)
+				{
+					const Pulse endPulse = segments[segIdx].startPulse + segments[segIdx].length;
+					const Pulse gap = segments[segIdx + 1].startPulse - endPulse;
+					if (gap > 0 && gap < oneLinePulse * 2 && endPulse >= measureStart && endPulse < measureEnd)
+					{
+						updateGCD(endPulse + std::min(kResolution4 / 192, gap / 2));
+						gcdUpdated = true;
+					}
+				}
+			}
+			if (gcdUpdated)
+			{
+				division = calcDivision();
+			}
 		}
 
 		// Limit division to reasonable range (use measureLength as max)
