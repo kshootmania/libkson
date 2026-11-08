@@ -243,6 +243,46 @@ TEST_CASE("KSH saving FXLongEventParamsLost warning", "[ksh_saving_diag]")
 	}
 }
 
+TEST_CASE("KSH saving AdjacentLaserSections warning", "[ksh_saving_diag]")
+{
+	SECTION("no warning for separated sections")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::LaserSection section1;
+		section1.v[0] = kson::GraphPoint(0.0);
+		section1.v[kson::kResolution] = kson::GraphPoint(1.0);
+		chartData.note.laser[0][0] = section1;
+		kson::LaserSection section2;
+		section2.v[0] = kson::GraphPoint(0.5);
+		section2.v[kson::kResolution] = kson::GraphPoint(1.0);
+		chartData.note.laser[0][kson::kResolution * 2] = section2;
+
+		auto warnings = FilterByDetails<kson::AdjacentLaserSectionsWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.empty());
+	}
+
+	SECTION("warning for a section starting at the end of the previous one")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::LaserSection section1;
+		section1.v[0] = kson::GraphPoint(0.0);
+		section1.v[kson::kResolution] = kson::GraphPoint(1.0);
+		chartData.note.laser[1][0] = section1;
+		kson::LaserSection section2;
+		section2.v[0] = kson::GraphPoint(0.5);
+		section2.v[kson::kResolution] = kson::GraphPoint(1.0);
+		chartData.note.laser[1][kson::kResolution] = section2;
+
+		auto warnings = FilterByDetails<kson::AdjacentLaserSectionsWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(warnings[0].scope == kson::WarningScope::EditorOnly);
+		REQUIRE(warnings[0].message.find("LASER-R") != std::string::npos);
+		const auto& details = std::get<kson::AdjacentLaserSectionsWarningDetails>(warnings[0].details);
+		REQUIRE(details.pulse == kson::kResolution);
+		REQUIRE(details.laneIdx == 1);
+	}
+}
+
 TEST_CASE("KSH saving multiple data loss warnings", "[ksh_saving_diag]")
 {
 	auto chartData = MakeMinimalChartData();

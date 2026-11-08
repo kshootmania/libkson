@@ -71,6 +71,12 @@ namespace kson
 		std::string effectName;
 	};
 
+	struct AdjacentLaserSectionsWarningDetails
+	{
+		Pulse pulse;
+		size_t laneIdx;
+	};
+
 	using KshSavingWarningDetails = std::variant<
 		BpmClampedWarningDetails,
 		ZoomValueClampedWarningDetails,
@@ -79,7 +85,8 @@ namespace kson
 		RotationDegClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
 		LaserPrecisionLostWarningDetails,
-		FXLongEventParamsLostWarningDetails>;
+		FXLongEventParamsLostWarningDetails,
+		AdjacentLaserSectionsWarningDetails>;
 
 	struct KshSavingWarning
 	{

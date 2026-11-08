@@ -494,6 +494,33 @@ namespace
 				}
 			}
 		}
+
+		// Adjacent laser sections (a section starting at the end of the previous one cannot be represented in KSH)
+		for (size_t laneIdx = 0; laneIdx < kNumLaserLanesSZ; ++laneIdx)
+		{
+			const auto& laserLane = chartData.note.laser[laneIdx];
+			const std::string lane = laneIdx == 0 ? "LASER-L" : "LASER-R";
+			for (auto it = laserLane.begin(); it != laserLane.end(); ++it)
+			{
+				const auto nextIt = std::next(it);
+				if (nextIt == laserLane.end() || it->second.v.empty())
+				{
+					continue;
+				}
+				const Pulse sectionEnd = it->first + it->second.v.rbegin()->first;
+				if (sectionEnd == nextIt->first)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.scope = WarningScope::EditorOnly,
+						.message = "Adjacent laser sections at pulse " + std::to_string(sectionEnd) + " in " + lane + " will be merged (KSH limitation)",
+						.details = AdjacentLaserSectionsWarningDetails{
+							.pulse = sectionEnd,
+							.laneIdx = laneIdx,
+						},
+					});
+				}
+			}
+		}
 	}
 
 	// Write UTF-8 BOM
