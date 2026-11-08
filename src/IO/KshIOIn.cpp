@@ -476,6 +476,14 @@ namespace
 	void InsertFiltertype(ChartData& chartData, Pulse time, const std::string& value)
 	{
 		auto& audioEffectLaser = chartData.audio.audioEffect.laser;
+
+		// Only one filter can be active at a time, so the later "filtertype=" at the same pulse wins
+		for (auto& [name, pulses] : audioEffectLaser.pulseEvent)
+		{
+			pulses.erase(time);
+		}
+		std::erase_if(audioEffectLaser.pulseEvent, [](const auto& kvp) { return kvp.second.empty(); });
+
 		if (s_kshFilterToKsonAudioEffectNameTable.contains(value))
 		{
 			std::string name(s_kshFilterToKsonAudioEffectNameTable.at(value));

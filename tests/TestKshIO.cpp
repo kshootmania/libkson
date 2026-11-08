@@ -2681,3 +2681,71 @@ TEST_CASE("KSH chokkakuse with audio filename", "[ksh_io][key_sound]")
 	REQUIRE(loaded.audio.keySound.laser.slamEvent.contains("foo.wav"));
 	REQUIRE(loaded.audio.keySound.laser.slamEvent.at("foo.wav").contains(0));
 }
+
+TEST_CASE("KSH legacy fx filtertype", "[ksh_io][audio_effect]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"m=song.ogg;song_f.ogg\n"
+		"filtertype=fx\n"
+		"--\n"
+		"0000|00|0-\n"
+		"0000|00|:-\n"
+		"0000|00|o-\n"
+		"0000|00|--\n"
+		"--\n"
+		"filtertype=fx;bitc\n"
+		"0000|00|0-\n"
+		"0000|00|:-\n"
+		"0000|00|o-\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.audio.audioEffect.laser.pulseEvent.contains("fx"));
+	REQUIRE(chartData.audio.audioEffect.laser.pulseEvent.contains("fx;bitcrusher"));
+	REQUIRE(chartData.audio.audioEffect.laser.defContains("fx"));
+	REQUIRE(chartData.audio.audioEffect.laser.defContains("fx;bitcrusher"));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	const std::string ksh = oss.str();
+	REQUIRE(ksh.find("filtertype=fx\r\n") != std::string::npos);
+	REQUIRE(ksh.find("filtertype=fx;bitc\r\n") != std::string::npos);
+	REQUIRE(ksh.find("fx;bitcrusher") == std::string::npos);
+	REQUIRE(ksh.find("#define_filter") == std::string::npos);
+
+	std::istringstream iss2(ksh);
+	kson::KshLoadingDiag diag;
+	const auto loaded = kson::LoadKshChartData(iss2, &diag);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	REQUIRE(diag.warnings.empty());
+	REQUIRE(loaded.audio.audioEffect.laser.pulseEvent.at("fx").contains(0));
+	REQUIRE(loaded.audio.audioEffect.laser.pulseEvent.at("fx;bitcrusher").contains(kson::kResolution4));
+	REQUIRE(loaded.audio.audioEffect.laser.defByName("fx").v.at("filename") == "song_f.ogg");
+}
+
+TEST_CASE("KSH later filtertype at the same pulse wins", "[ksh_io][audio_effect]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"filtertype=peak\n"
+		"--\n"
+		"filtertype=lpf1\n"
+		"0000|00|0-\n"
+		"0000|00|o-\n"
+		"0000|00|--\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	const auto& pulseEvent = chartData.audio.audioEffect.laser.pulseEvent;
+	REQUIRE(!pulseEvent.contains("peaking_filter"));
+	REQUIRE(pulseEvent.at("low_pass_filter").contains(0));
+}
