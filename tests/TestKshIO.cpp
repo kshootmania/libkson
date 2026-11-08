@@ -2928,3 +2928,19 @@ TEST_CASE("KSH duplicate pfiltergain at the same pulse", "[ksh_io][filter_gain]"
 	REQUIRE(filterGain.at(0) == Approx(0.7));
 	REQUIRE(filterGain.at(kson::kResolution4 / 2) == Approx(0.9));
 }
+
+TEST_CASE("KSH center_split with fractional value", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"center_split=36.9140625\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.camera.cam.body.centerSplit.at(0).v.v == Approx(36.9140625));
+}

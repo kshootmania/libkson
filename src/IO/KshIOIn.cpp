@@ -2030,7 +2030,7 @@ namespace
 						}
 						else if (key == "center_split")
 						{
-							const double dValue = static_cast<double>(ParseNumeric<std::int32_t>(value));
+							const double dValue = ParseNumeric<double>(value);
 							if (std::abs(dValue) <= kCenterSplitAbsMax)
 							{
 								InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
