@@ -2749,3 +2749,35 @@ TEST_CASE("KSH later filtertype at the same pulse wins", "[ksh_io][audio_effect]
 	REQUIRE(!pulseEvent.contains("peaking_filter"));
 	REQUIRE(pulseEvent.at("low_pass_filter").contains(0));
 }
+
+TEST_CASE("KSH legacy manual tilt scale with immediate change", "[ksh_io][tilt]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"ver=167\n"
+		"--\n"
+		"tilt=0\n"
+		"tilt=12.8\n"
+		"0000|00|--\n"
+		"tilt=0\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	std::ostringstream ksonBefore;
+	REQUIRE(kson::SaveKsonChartData(ksonBefore, chartData) == kson::ErrorType::None);
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("tilt=12.8\r\n") != std::string::npos);
+
+	std::istringstream iss2(oss.str());
+	const auto loaded = kson::LoadKshChartData(iss2);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	std::ostringstream ksonAfter;
+	REQUIRE(kson::SaveKsonChartData(ksonAfter, loaded) == kson::ErrorType::None);
+	REQUIRE(ksonBefore.str() == ksonAfter.str());
+}

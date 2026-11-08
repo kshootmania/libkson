@@ -2057,6 +2057,11 @@ namespace
 							{
 								const double rawValue = ParseNumeric<double>(value);
 								const double dValue = RoundToKshDoubleValue(rawValue);
+								if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
+								{
+									// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
+									useLegacyScaleForManualTilt = true;
+								}
 								if (std::abs(dValue) <= kManualTiltAbsMax)
 								{
 									// Check for immediate change (consecutive tilt values at the same pulse)
@@ -2072,11 +2077,6 @@ namespace
 									}
 
 									target.insert_or_assign(time, TiltGraphPoint{ TiltGraphValue{ dValue } });
-								}
-								if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
-								{
-									// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
-									useLegacyScaleForManualTilt = true;
 								}
 							}
 							else
