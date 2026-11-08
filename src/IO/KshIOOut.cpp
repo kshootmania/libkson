@@ -1856,33 +1856,13 @@ namespace
 		}
 
 		// Check for laser slam key sounds (chokkakuse)
-		if (!chartData.audio.keySound.laser.slamEvent.empty())
+		// (the value is a preset name or an audio filename)
+		for (const auto& [name, pulses] : chartData.audio.keySound.laser.slamEvent)
 		{
-			const auto& slamEvent = chartData.audio.keySound.laser.slamEvent;
-
-			// Check for down slam
-			if (slamEvent.contains("down") &&
-				slamEvent.at("down").contains(pulse))
+			if (!name.empty() && pulses.contains(pulse))
 			{
-				stream << "chokkakuse=down\r\n";
-			}
-			// Check for up slam
-			else if (slamEvent.contains("up") &&
-				slamEvent.at("up").contains(pulse))
-			{
-				stream << "chokkakuse=up\r\n";
-			}
-			// Check for swing slam
-			else if (slamEvent.contains("swing") &&
-				slamEvent.at("swing").contains(pulse))
-			{
-				stream << "chokkakuse=swing\r\n";
-			}
-			// Check for mute slam
-			else if (slamEvent.contains("mute") &&
-				slamEvent.at("mute").contains(pulse))
-			{
-				stream << "chokkakuse=mute\r\n";
+				stream << "chokkakuse=" << name << "\r\n";
+				break;
 			}
 		}
 

@@ -2652,3 +2652,32 @@ TEST_CASE("KSH pfiltergain after the last note", "[ksh_io][filter_gain]")
 	REQUIRE(loaded.audio.audioEffect.laser.legacy.filterGain.contains(1920));
 	REQUIRE(loaded.audio.audioEffect.laser.legacy.filterGain.at(1920) == Approx(0.3));
 }
+
+TEST_CASE("KSH chokkakuse with audio filename", "[ksh_io][key_sound]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"chokkakuse=foo.wav\n"
+		"0000|00|0-\n"
+		"0000|00|o-\n"
+		"0000|00|--\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.audio.keySound.laser.slamEvent.contains("foo.wav"));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("chokkakuse=foo.wav\r\n") != std::string::npos);
+
+	std::istringstream iss2(oss.str());
+	const auto loaded = kson::LoadKshChartData(iss2);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	REQUIRE(loaded.audio.keySound.laser.slamEvent.contains("foo.wav"));
+	REQUIRE(loaded.audio.keySound.laser.slamEvent.at("foo.wav").contains(0));
+}
