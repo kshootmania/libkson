@@ -2632,6 +2632,32 @@ TEST_CASE("KSH Echo feedback_level without wave_length", "[ksh_io][audio_effect]
 	REQUIRE(params.at("feedback_level") == "30%");
 }
 
+TEST_CASE("KSH Echo feedback_level without wave_length uses the wave_length of the definition", "[ksh_io][audio_effect]")
+{
+	kson::ChartData chartData;
+	chartData.meta.title = "Test";
+	chartData.audio.bgm.filename = "test.ogg";
+	chartData.beat.bpm[0] = 120.0;
+	chartData.beat.timeSig[0] = kson::TimeSig{ .n = 4, .d = 4 };
+	chartData.note.fx[0].emplace(0, kson::Interval{ 960 });
+	chartData.audio.audioEffect.fx.def.push_back(kson::AudioEffectDefKVP{
+		.name = "myecho",
+		.v = kson::AudioEffectDef{ .type = kson::AudioEffectType::Echo, .v = { { "wave_length", "1/8" } } },
+	});
+	chartData.audio.audioEffect.fx.longEvent["myecho"][0].emplace(0, kson::AudioEffectParams{ { "feedback_level", "30%" } });
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("fx-l=myecho;8;30") != std::string::npos);
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKshChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	const auto& params = loaded.audio.audioEffect.fx.longEvent.at("myecho")[0].at(0);
+	REQUIRE(params.at("wave_length") == "1/8");
+	REQUIRE(params.at("feedback_level") == "30%");
+}
+
 TEST_CASE("KSH pfiltergain after the last note", "[ksh_io][filter_gain]")
 {
 	kson::ChartData chartData;

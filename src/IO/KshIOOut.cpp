@@ -1523,11 +1523,16 @@ namespace
 
 		// First, try to find in custom definitions
 		const auto& defs = isFX ? chartData.audio.audioEffect.fx.def : chartData.audio.audioEffect.laser.def;
+		std::string defWaveLengthStr;
 		for (const auto& [name, def] : defs)
 		{
 			if (name == effectName)
 			{
 				type = def.type;
+				if (def.v.contains("wave_length"))
+				{
+					defWaveLengthStr = def.v.at("wave_length");
+				}
 				break;
 			}
 		}
@@ -1614,10 +1619,21 @@ namespace
 			}
 		}
 
-		// Echo: param2 requires param1, so output the default wave_length (1/4)
+		// Echo: param2 requires param1, so output the wave_length of the definition (or the default 1/4 if not specified)
 		if (param1 == kAudioEffectParamUnspecified && param2 != kAudioEffectParamUnspecified && type == AudioEffectType::Echo)
 		{
-			param1 = 4;
+			if (defWaveLengthStr.starts_with("1/"))
+			{
+				param1 = std::atoi(defWaveLengthStr.c_str() + 2);
+			}
+			else if (defWaveLengthStr == "0")
+			{
+				param1 = 0;
+			}
+			else
+			{
+				param1 = 4;
+			}
 		}
 
 		if (param1 != kAudioEffectParamUnspecified)
