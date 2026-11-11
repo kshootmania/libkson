@@ -11,7 +11,8 @@ namespace
 	using namespace kson;
 
 	// Maximum value of BPM
-	constexpr double kBPMMax = 65535.0;
+	constexpr double kBPMMax = 65535.0; // ver >= 130
+	constexpr std::int32_t kVerBPMLimitAdded = 130;
 
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
@@ -1290,7 +1291,18 @@ namespace
 		return meta;
 	}
 
-	ByPulse<double> ParseBPM(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	// Returns whether BPM values should be clamped (not clamped for charts converted from KSH older than ver 130)
+	bool ShouldClampBPM(const nlohmann::json& j)
+	{
+		CompatInfo compat;
+		if (j.contains("compat") && j["compat"].contains("ksh_version") && j["compat"]["ksh_version"].is_string())
+		{
+			compat.kshVersion = j["compat"]["ksh_version"].get<std::string>();
+		}
+		return !compat.isKshVersionOlderThan(kVerBPMLimitAdded);
+	}
+
+	ByPulse<double> ParseBPM(const nlohmann::json& j, bool shouldClampBPM, KsonLoadingDiag* pDiag)
 	{
 		ByPulse<double> bpm = ParseByPulse<double>(j, pDiag);
 		for (auto itr = bpm.begin(); itr != bpm.end();)
@@ -1308,19 +1320,22 @@ namespace
 				continue;
 			}
 
-			value = std::min(value, kBPMMax);
+			if (shouldClampBPM)
+			{
+				value = std::min(value, kBPMMax);
+			}
 			++itr;
 		}
 		return bpm;
 	}
 
-	BeatInfo ParseBeatInfo(const nlohmann::json& j, KsonLoadingDiag* pDiag)
+	BeatInfo ParseBeatInfo(const nlohmann::json& j, bool shouldClampBPM, KsonLoadingDiag* pDiag)
 	{
 		BeatInfo beat;
 		
 		if (j.contains("bpm"))
 		{
-			beat.bpm = ParseBPM(j["bpm"], pDiag);
+			beat.bpm = ParseBPM(j["bpm"], shouldClampBPM, pDiag);
 		}
 		
 		if (j.contains("time_sig"))
@@ -2605,7 +2620,7 @@ kson::ChartData kson::LoadKsonChartData(std::istream& stream, KsonLoadingDiag* p
 
 		if (j.contains("beat"))
 		{
-			chartData.beat = ParseBeatInfo(j["beat"], pKsonDiag);
+			chartData.beat = ParseBeatInfo(j["beat"], ShouldClampBPM(j), pKsonDiag);
 		}
 
 		if (j.contains("gauge"))
@@ -2780,7 +2795,7 @@ kson::MetaChartData kson::LoadKsonMetaChartData(std::istream& stream, KsonLoadin
 
 		if (j.contains("beat") && j["beat"].contains("bpm"))
 		{
-			const ByPulse<double> bpm = ParseBPM(j["beat"]["bpm"], pKsonDiag);
+			const ByPulse<double> bpm = ParseBPM(j["beat"]["bpm"], ShouldClampBPM(j), pKsonDiag);
 			if (!bpm.empty())
 			{
 				metaChartData.firstBPM = bpm.begin()->second;

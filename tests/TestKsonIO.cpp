@@ -1076,3 +1076,32 @@ TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][sav
 	REQUIRE(result == kson::ErrorType::None);
 	REQUIRE(diag.warnings.empty());
 }
+
+TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")
+{
+	const auto makeKsonData = [](const std::string& compat)
+	{
+		return R"({"format_version": 1, "beat": {"bpm": [[0, 100000.0]]})" + compat + "}";
+	};
+
+	SECTION("Limited without ksh_version")
+	{
+		std::istringstream stream(makeKsonData(""));
+		const auto chart = kson::LoadKsonChartData(stream);
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.beat.bpm.at(0) == Approx(65535.0));
+	}
+
+	SECTION("Not limited for ksh_version older than 130")
+	{
+		std::istringstream stream(makeKsonData(R"(, "compat": {"ksh_version": "120"})"));
+		const auto chart = kson::LoadKsonChartData(stream);
+		REQUIRE(chart.error == kson::ErrorType::None);
+		REQUIRE(chart.beat.bpm.at(0) == Approx(100000.0));
+
+		std::istringstream metaStream(makeKsonData(R"(, "compat": {"ksh_version": "120"})"));
+		const auto metaChart = kson::LoadKsonMetaChartData(metaStream);
+		REQUIRE(metaChart.error == kson::ErrorType::None);
+		REQUIRE(metaChart.firstBPM == Approx(100000.0));
+	}
+}
