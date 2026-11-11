@@ -57,6 +57,41 @@ namespace
 	constexpr std::int32_t kAudioEffectParamUnspecified = -99999;
 	const std::string kAudioEffectParamUnspecifiedStr = std::to_string(kAudioEffectParamUnspecified);
 
+#ifndef _MSC_VER
+	// Returns the string without the exponent part (e.g., "1e-5" -> "1")
+	// (the exponent part is not parsed, the same as std::from_chars with std::chars_format::fixed used on MSVC)
+	std::string_view RemoveExponentPart(std::string_view str)
+	{
+		std::size_t idx = 0;
+		if (idx < str.size() && str[idx] == '-')
+		{
+			++idx;
+		}
+
+		bool hasDigit = false;
+		while (idx < str.size() && str[idx] >= '0' && str[idx] <= '9')
+		{
+			++idx;
+			hasDigit = true;
+		}
+		if (idx < str.size() && str[idx] == '.')
+		{
+			++idx;
+			while (idx < str.size() && str[idx] >= '0' && str[idx] <= '9')
+			{
+				++idx;
+				hasDigit = true;
+			}
+		}
+
+		if (hasDigit && idx < str.size() && (str[idx] == 'e' || str[idx] == 'E'))
+		{
+			return str.substr(0, idx);
+		}
+		return str;
+	}
+#endif
+
 	template <typename T>
 	T ParseNumeric(std::string_view str, T defaultValue = T{ 0 })
 	{
@@ -79,7 +114,7 @@ namespace
 
 		return defaultValue;
 #elif defined(__EMSCRIPTEN__)
-		const std::string s{ str };
+		const std::string s{ std::is_integral_v<T> ? str : RemoveExponentPart(str) };
 		const char* begin = s.c_str();
 		char* end = nullptr;
 		errno = 0;
@@ -118,7 +153,7 @@ namespace
 			}
 			else
 			{
-				return static_cast<T>(std::stod(std::string(str)));
+				return static_cast<T>(std::stod(std::string(RemoveExponentPart(str))));
 			}
 		}
 		catch (const std::out_of_range& e)

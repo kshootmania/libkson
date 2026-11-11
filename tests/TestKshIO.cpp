@@ -3017,3 +3017,22 @@ TEST_CASE("KSH manual tilt is not rounded", "[ksh_io][tilt]")
 	REQUIRE(oss.str().find("tilt=0.5625\r\n") != std::string::npos);
 	REQUIRE(oss.str().find("tilt=0.12345\r\n") != std::string::npos);
 }
+
+TEST_CASE("KSH exponent part of values is not parsed", "[ksh_io]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=1.2e2\n"
+		"--\n"
+		"tilt=5e-05\n"
+		"center_split=1.5E1\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.beat.bpm.at(0) == Approx(1.2));
+	REQUIRE(std::get<kson::TiltGraphPoint>(chartData.camera.tilt.at(0)).v.v == Approx(5.0));
+	REQUIRE(chartData.camera.cam.body.centerSplit.at(0).v.v == Approx(1.5));
+}
