@@ -2993,3 +2993,27 @@ TEST_CASE("KSH saving fractional graph values and curves", "[ksh_io][camera]")
 	REQUIRE(oss.str().find("center_split=12345.678\r\n") != std::string::npos);
 	REQUIRE(oss.str().find("center_split_curve=0.12345;0.98765\r\n") != std::string::npos);
 }
+
+TEST_CASE("KSH manual tilt is not rounded", "[ksh_io][tilt]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"tilt=0.5625\n"
+		"0000|00|--\n"
+		"tilt=0.12345\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(std::get<kson::TiltGraphPoint>(chartData.camera.tilt.at(0)).v.v == Approx(0.5625));
+	REQUIRE(std::get<kson::TiltGraphPoint>(chartData.camera.tilt.at(480)).v.v == Approx(0.12345));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("tilt=0.5625\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("tilt=0.12345\r\n") != std::string::npos);
+}

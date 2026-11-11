@@ -2038,6 +2038,7 @@ namespace
 				// Legacy charts with large manual tilt values depend on the tilt scale (14 degrees) used before v1.70
 				constexpr double kFromLegacyScale = 10.0 / 14.0;
 				const double scale = useLegacyScaleForManualTilt ? kFromLegacyScale : 1.0;
+				const double loadScale = useLegacyScaleForManualTilt ? (14.0 / 10.0) : 1.0;
 
 				// Output curve if present
 				if (!graphPoint.curve.isLinear())
@@ -2060,7 +2061,7 @@ namespace
 						},
 					});
 				}
-				stream << "tilt=" << FormatDouble(clampedV) << "\r\n";
+				stream << "tilt=" << FormatDoublePrecise(clampedV, loadScale, (clampedV == scaledV) ? std::optional<double>{ graphPoint.v.v } : std::nullopt) << "\r\n";
 
 				// Output vf on next line if v != vf (immediate change)
 				if (std::holds_alternative<double>(graphPoint.v.vf))
@@ -2083,7 +2084,7 @@ namespace
 								},
 							});
 						}
-						stream << "tilt=" << FormatDouble(clampedVf) << "\r\n";
+						stream << "tilt=" << FormatDoublePrecise(clampedVf, loadScale, (clampedVf == scaledVf) ? std::optional<double>{ vfValue } : std::nullopt) << "\r\n";
 					}
 				}
 				else if (std::holds_alternative<AutoTiltType>(graphPoint.v.vf))

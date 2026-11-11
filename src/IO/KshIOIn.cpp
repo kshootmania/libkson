@@ -2055,8 +2055,7 @@ namespace
 
 							if (IsTiltValueManual(value))
 							{
-								const double rawValue = ParseNumeric<double>(value);
-								const double dValue = RoundToKshDoubleValue(rawValue);
+								const double dValue = ParseNumeric<double>(value);
 								if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
 								{
 									// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
@@ -2613,11 +2612,11 @@ namespace
 				if (std::holds_alternative<TiltGraphPoint>(tiltValue))
 				{
 					TiltGraphPoint& point = std::get<TiltGraphPoint>(tiltValue);
-					point.v.v = RoundToKshDoubleValue(point.v.v * kToLegacyScale);
+					point.v.v *= kToLegacyScale;
 					// Only scale vf if it's a double value (not AutoTiltType)
 					if (std::holds_alternative<double>(point.v.vf))
 					{
-						std::get<double>(point.v.vf) = RoundToKshDoubleValue(std::get<double>(point.v.vf) * kToLegacyScale);
+						std::get<double>(point.v.vf) *= kToLegacyScale;
 					}
 				}
 			}
