@@ -5,7 +5,9 @@
 #include <sstream>
 #include <iomanip>
 #include <numeric>
+#include <optional>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <set>
 
@@ -555,6 +557,58 @@ namespace
 		}
 
 		return str;
+	}
+
+	// Format double value with the fewest significant digits (15 to 17) that are read back as the same value (remove trailing zeros)
+	// - loadScale: Scale applied to the value in KSH loading
+	// - loadedValue: Value expected after KSH loading (value * loadScale if not specified)
+	std::string FormatDoublePrecise(double value, double loadScale = 1.0, std::optional<double> loadedValue = std::nullopt)
+	{
+		if (!std::isfinite(value))
+		{
+			return FormatDouble(value);
+		}
+
+		const double expectedLoadedValue = loadedValue.value_or(value * loadScale);
+		const double absValue = std::abs(value);
+		const int intDigits = (absValue == 0.0) ? 0 : static_cast<int>(std::floor(std::log10(absValue))) + 1;
+
+		std::string result;
+		for (int significantDigits = 15; significantDigits <= 17; ++significantDigits)
+		{
+			std::ostringstream oss;
+			oss << std::fixed << std::setprecision(std::max(significantDigits - intDigits, 0)) << value;
+			std::string str = oss.str();
+
+			if (str.find('.') != std::string::npos)
+			{
+				// Remove trailing zeros
+				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+
+				// Remove trailing decimal point
+				if (!str.empty() && str.back() == '.')
+				{
+					str.pop_back();
+				}
+			}
+
+			if (str == "-0")
+			{
+				str = "0";
+			}
+
+			if (result.empty())
+			{
+				result = str;
+			}
+
+			if (std::strtod(str.c_str(), nullptr) * loadScale == expectedLoadedValue)
+			{
+				return str;
+			}
+		}
+
+		return result;
 	}
 
 	// Convert RelPulse to KSH length string
@@ -1697,7 +1751,7 @@ namespace
 
 		if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
 		{
-			stream << paramName << "_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+			stream << paramName << "_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
 		}
 	}
 
@@ -1803,7 +1857,7 @@ namespace
 					},
 				});
 			}
-			stream << "center_split=" << clampedV << "\r\n";
+			stream << "center_split=" << FormatDoublePrecise(clampedV) << "\r\n";
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
@@ -1822,12 +1876,12 @@ namespace
 						},
 					});
 				}
-				stream << "center_split=" << clampedVf << "\r\n";
+				stream << "center_split=" << FormatDoublePrecise(clampedVf) << "\r\n";
 			}
 
 			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
 			{
-				stream << "center_split_curve=" << graphPoint.curve.a << ";" << graphPoint.curve.b << "\r\n";
+				stream << "center_split_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
 			}
 		}
 
@@ -1988,7 +2042,7 @@ namespace
 				// Output curve if present
 				if (!graphPoint.curve.isLinear())
 				{
-					stream << "tilt_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
+					stream << "tilt_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
 				}
 
 				const double scaledV = graphPoint.v.v * scale;
@@ -2094,7 +2148,7 @@ namespace
 					if (point.curve.a != 0.0 || point.curve.b != 0.0)
 					{
 						stream << "laser_" << (i == 0 ? 'l' : 'r') << "_curve="
-							<< FormatDouble(point.curve.a) << ";" << FormatDouble(point.curve.b) << "\r\n";
+							<< FormatDoublePrecise(point.curve.a) << ";" << FormatDoublePrecise(point.curve.b) << "\r\n";
 					}
 					break;
 				}
@@ -2117,18 +2171,18 @@ namespace
 				AlmostEquals(chartData.beat.scrollSpeed.begin()->second.v.v, 1.0);
 			if (!isDefaultOnly)
 			{
-				stream << "scroll_speed=" << FormatDouble(scrollSpeed) << "\r\n";
+				stream << "scroll_speed=" << FormatDoublePrecise(scrollSpeed) << "\r\n";
 			}
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
 			{
-				stream << "scroll_speed=" << FormatDouble(graphPoint.v.vf) << "\r\n";
+				stream << "scroll_speed=" << FormatDoublePrecise(graphPoint.v.vf) << "\r\n";
 			}
 
 			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
 			{
-				stream << "scroll_speed_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
+				stream << "scroll_speed_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
 			}
 		}
 
@@ -2150,7 +2204,7 @@ namespace
 					},
 				});
 			}
-			stream << "rotation_deg=" << FormatDouble(clampedV) << "\r\n";
+			stream << "rotation_deg=" << FormatDoublePrecise(clampedV) << "\r\n";
 
 			// Output vf on next line if v != vf (immediate change)
 			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
@@ -2169,12 +2223,12 @@ namespace
 						},
 					});
 				}
-				stream << "rotation_deg=" << FormatDouble(clampedVf) << "\r\n";
+				stream << "rotation_deg=" << FormatDoublePrecise(clampedVf) << "\r\n";
 			}
 
 			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
 			{
-				stream << "rotation_deg_curve=" << FormatDouble(graphPoint.curve.a) << ";" << FormatDouble(graphPoint.curve.b) << "\r\n";
+				stream << "rotation_deg_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
 			}
 		}
 
