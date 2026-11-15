@@ -1,5 +1,6 @@
 #include "kson/IO/KshIO.hpp"
 #include "kson/Util/GraphUtils.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -10,6 +11,8 @@
 #include <cstdlib>
 #include <limits>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace
 {
@@ -618,6 +621,41 @@ namespace
 		return std::to_string(kshLength);
 	}
 
+	// Lookup table for finding a pulse range containing a pulse by binary search (available only if sorted)
+	struct PulseRangeLookup
+	{
+		std::vector<Pulse> starts;
+		std::vector<Pulse> prefixMaxEnds; // Max end pulse among ranges [0, i]
+		bool sorted = true; // Whether ranges were added in ascending order of start pulse
+
+		// Add range
+		void add(Pulse start, Pulse end)
+		{
+			if (!starts.empty() && start < starts.back())
+			{
+				sorted = false;
+			}
+			starts.push_back(start);
+			prefixMaxEnds.push_back(prefixMaxEnds.empty() ? end : std::max(prefixMaxEnds.back(), end));
+		}
+
+		// Check if any range satisfies start < pulse < end
+		bool containsExclusive(Pulse pulse) const
+		{
+			const auto count = std::lower_bound(starts.begin(), starts.end(), pulse) - starts.begin();
+			return count > 0 && prefixMaxEnds[static_cast<std::size_t>(count - 1)] > pulse;
+		}
+
+		// Get index of the first added range that satisfies start <= pulse <= end (-1 if not found)
+		std::ptrdiff_t firstIndexInclusive(Pulse pulse) const
+		{
+			const auto count = std::upper_bound(starts.begin(), starts.end(), pulse) - starts.begin();
+			const auto it = std::lower_bound(prefixMaxEnds.begin(), prefixMaxEnds.begin() + count, pulse);
+			const auto idx = it - prefixMaxEnds.begin();
+			return idx < count ? idx : -1;
+		}
+	};
+
 	// State for measure export
 	struct MeasureExportState
 	{
@@ -1199,7 +1237,7 @@ namespace
 	}
 
 	// Get BT char at pulse
-	char GetBTCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse)
+	char GetBTCharAt(const ByPulse<Interval>& lane, Pulse pulse, const PulseRangeLookup& noteLookup)
 	{
 		// Check if note starts at this pulse
 		if (lane.contains(pulse))
@@ -1215,23 +1253,17 @@ namespace
 			}
 		}
 
-		// Check if note continues at this pulse
-		for (const auto& [startPulse, interval] : lane)
+		// Check if note continues at this pulse (but not at the end)
+		if (noteLookup.containsExclusive(pulse))
 		{
-			const Pulse endPulse = startPulse + interval.length;
-
-			// Note continues at this pulse (but not at the end)
-			if (pulse > startPulse && pulse < endPulse)
-			{
-				return '2'; // Long note continuation
-			}
+			return '2'; // Long note continuation
 		}
 
 		return '0'; // No note
 	}
 
 	// Get FX char at pulse
-	char GetFXCharAt(const ByPulse<Interval>& lane, Pulse pulse, Pulse)
+	char GetFXCharAt(const ByPulse<Interval>& lane, Pulse pulse, const PulseRangeLookup& noteLookup)
 	{
 		// Check if note starts at this pulse
 		if (lane.contains(pulse))
@@ -1247,16 +1279,10 @@ namespace
 			}
 		}
 
-		// Check if note continues at this pulse
-		for (const auto& [startPulse, interval] : lane)
+		// Check if note continues at this pulse (but not at the end)
+		if (noteLookup.containsExclusive(pulse))
 		{
-			const Pulse endPulse = startPulse + interval.length;
-
-			// Note continues at this pulse (but not at the end)
-			if (pulse > startPulse && pulse < endPulse)
-			{
-				return '1'; // Long note continuation
-			}
+			return '1'; // Long note continuation
 		}
 
 		return '0'; // No note
@@ -1506,21 +1532,103 @@ namespace
 		return segments;
 	}
 
+	// Lookup tables for writing note lines
+	// (created once so that all notes and laser segments are not scanned for every line)
+	struct NoteLineLookup
+	{
+		std::array<PulseRangeLookup, kNumBTLanesSZ> btNotes;
+		std::array<PulseRangeLookup, kNumFXLanesSZ> fxNotes;
+		std::array<PulseRangeLookup, kNumLaserLanesSZ> laserSegments;
+		std::array<std::unordered_map<Pulse, bool>, kNumLaserLanesSZ> laserSectionStartWide; // Section start pulse -> wide
+		std::array<std::unordered_map<Pulse, GraphCurveValue>, kNumLaserLanesSZ> laserCurves; // Absolute pulse of laser point -> curve
+		std::unordered_set<Pulse> laserPulseEventPulses; // Pulses of all laser audio effect pulse events
+	};
+
+	// Create lookup tables for writing note lines
+	NoteLineLookup CreateNoteLineLookup(const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments)
+	{
+		NoteLineLookup lookup;
+
+		// BT notes
+		for (std::int32_t laneIdx = 0; laneIdx < kNumBTLanes; ++laneIdx)
+		{
+			for (const auto& [pulse, interval] : chartData.note.bt[laneIdx])
+			{
+				lookup.btNotes[laneIdx].add(pulse, pulse + interval.length);
+			}
+		}
+
+		// FX notes
+		for (std::int32_t laneIdx = 0; laneIdx < kNumFXLanes; ++laneIdx)
+		{
+			for (const auto& [pulse, interval] : chartData.note.fx[laneIdx])
+			{
+				lookup.fxNotes[laneIdx].add(pulse, pulse + interval.length);
+			}
+		}
+
+		// Laser notes
+		// (emplace keeps the first one found, which is the same as first-match linear search)
+		for (std::int32_t laneIdx = 0; laneIdx < kNumLaserLanes; ++laneIdx)
+		{
+			for (const auto& seg : laserSegments[laneIdx])
+			{
+				lookup.laserSegments[laneIdx].add(seg.startPulse, seg.startPulse + seg.length);
+				if (seg.isSectionStart)
+				{
+					lookup.laserSectionStartWide[laneIdx].emplace(seg.startPulse, seg.wide);
+				}
+			}
+
+			for (const auto& [sectionPulse, section] : chartData.note.laser[laneIdx])
+			{
+				for (const auto& [relPulse, point] : section.v)
+				{
+					if (relPulse >= 0)
+					{
+						lookup.laserCurves[laneIdx].emplace(sectionPulse + relPulse, point.curve);
+					}
+				}
+			}
+		}
+
+		// Laser audio effect pulse events
+		for (const auto& [effectName, pulses] : chartData.audio.audioEffect.laser.pulseEvent)
+		{
+			lookup.laserPulseEventPulses.insert(pulses.begin(), pulses.end());
+		}
+
+		return lookup;
+	}
+
 	// Get laser char at pulse using intermediate representation
-	char GetLaserCharAt(const std::vector<KshLaserSegment>& segments, Pulse pulse, std::int32_t laneIdx, MeasureExportState& state)
+	char GetLaserCharAt(const std::vector<KshLaserSegment>& segments, const PulseRangeLookup& segmentLookup, Pulse pulse, std::int32_t laneIdx, MeasureExportState& state)
 	{
 		auto& laserState = state.laserStates[laneIdx];
 
-		// Find the segment containing this pulse
-		for (const auto& seg : segments)
+		// Find the first segment containing this pulse
+		std::ptrdiff_t segIdx = -1;
+		if (segmentLookup.sorted)
 		{
-			const Pulse segmentEnd = seg.startPulse + seg.length;
-
-			// Check if pulse is within this segment
-			if (pulse < seg.startPulse || pulse > segmentEnd)
+			segIdx = segmentLookup.firstIndexInclusive(pulse);
+		}
+		else
+		{
+			// Fallback to linear search (not expected to happen as segments are generated in ascending order)
+			for (std::size_t i = 0; i < segments.size(); ++i)
 			{
-				continue;
+				if (segments[i].startPulse <= pulse && pulse <= segments[i].startPulse + segments[i].length)
+				{
+					segIdx = static_cast<std::ptrdiff_t>(i);
+					break;
+				}
 			}
+		}
+
+		if (segIdx >= 0)
+		{
+			const auto& seg = segments[static_cast<std::size_t>(segIdx)];
+			const Pulse segmentEnd = seg.startPulse + seg.length;
 
 			if (pulse == seg.startPulse)
 			{
@@ -1756,7 +1864,7 @@ namespace
 	}
 
 	// Write note line
-	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, Pulse pulse, Pulse oneLinePulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
+	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, const NoteLineLookup& lookup, Pulse pulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
 	{
 		// Note: The output order below should be the same as v1's order (*command_save in kshooteditor.hsp) for better compatibility of internet ranking hashing
 
@@ -1955,7 +2063,7 @@ namespace
 		}
 
 		// Check for filter type changes
-		if (!chartData.audio.audioEffect.laser.pulseEvent.empty())
+		if (lookup.laserPulseEventPulses.contains(pulse))
 		{
 			std::string newFilterType;
 			const auto& pulseEvent = chartData.audio.audioEffect.laser.pulseEvent;
@@ -2123,35 +2231,27 @@ namespace
 		for (std::int32_t i = 0; i < kNumLaserLanes; ++i)
 		{
 			// Find segment starting at this pulse
-			for (const auto& seg : laserSegments[i])
+			const auto& sectionStartWide = lookup.laserSectionStartWide[i];
+			const auto it = sectionStartWide.find(pulse);
+			if (it != sectionStartWide.end() && it->second)
 			{
-				if (seg.startPulse == pulse && seg.isSectionStart)
-				{
-					// Output wide annotation
-					if (seg.wide)
-					{
-						stream << "laserrange_" << (i == 0 ? 'l' : 'r') << "=2x\r\n";
-					}
-					break;
-				}
+				// Output wide annotation
+				stream << "laserrange_" << (i == 0 ? 'l' : 'r') << "=2x\r\n";
 			}
 		}
 
 		// Output laser curve for points at this pulse
 		for (std::int32_t i = 0; i < kNumLaserLanes; ++i)
 		{
-			for (const auto& [sectionPulse, section] : chartData.note.laser[i])
+			const auto& curves = lookup.laserCurves[i];
+			const auto it = curves.find(pulse);
+			if (it != curves.end())
 			{
-				const RelPulse relPulse = pulse - sectionPulse;
-				if (relPulse >= 0 && section.v.contains(relPulse))
+				const auto& curve = it->second;
+				if (curve.a != 0.0 || curve.b != 0.0)
 				{
-					const auto& point = section.v.at(relPulse);
-					if (point.curve.a != 0.0 || point.curve.b != 0.0)
-					{
-						stream << "laser_" << (i == 0 ? 'l' : 'r') << "_curve="
-							<< FormatDoublePrecise(point.curve.a) << ";" << FormatDoublePrecise(point.curve.b) << "\r\n";
-					}
-					break;
+					stream << "laser_" << (i == 0 ? 'l' : 'r') << "_curve="
+						<< FormatDoublePrecise(curve.a) << ";" << FormatDoublePrecise(curve.b) << "\r\n";
 				}
 			}
 		}
@@ -2269,21 +2369,21 @@ namespace
 		std::array<char, kNumBTLanes> btChars;
 		for (std::int32_t i = 0; i < kNumBTLanes; ++i)
 		{
-			btChars[i] = GetBTCharAt(chartData.note.bt[i], pulse, oneLinePulse);
+			btChars[i] = GetBTCharAt(chartData.note.bt[i], pulse, lookup.btNotes[i]);
 		}
 
 		// FX notes (2 chars)
 		std::array<char, kNumFXLanes> fxChars;
 		for (std::int32_t i = 0; i < kNumFXLanes; ++i)
 		{
-			fxChars[i] = GetFXCharAt(chartData.note.fx[i], pulse, oneLinePulse);
+			fxChars[i] = GetFXCharAt(chartData.note.fx[i], pulse, lookup.fxNotes[i]);
 		}
 
 		// Laser notes (2 chars)
 		std::array<char, kNumLaserLanes> laserChars;
 		for (std::int32_t i = 0; i < kNumLaserLanes; ++i)
 		{
-			laserChars[i] = GetLaserCharAt(laserSegments[i], pulse, i, state);
+			laserChars[i] = GetLaserCharAt(laserSegments[i], lookup.laserSegments[i], pulse, i, state);
 		}
 
 		// Output: "0011|22|AB" or "0011|22|AB@)240"
@@ -2328,44 +2428,43 @@ namespace
 		stream << "\r\n";
 	}
 
-	// Calculate optimal division for a measure
-	std::int32_t CalculateOptimalDivision(const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, Pulse measureStart, Pulse measureLength)
+	// Pulses used for calculating the optimal division of each measure
+	// (created once so that all notes and events are not scanned for every measure)
+	struct DivisionLookup
 	{
-		const Pulse measureEnd = measureStart + measureLength;
-		Pulse gcd = measureLength;
-		bool shouldDoubleResolution = false;
+		std::vector<Pulse> gcdPulses; // Pulses of all notes and events (sorted, unique)
+		std::vector<Pulse> doubleResolutionPulses; // Start/end pulses of long notes and laser segments (sorted, unique)
+		std::vector<std::pair<Pulse, Pulse>> laserGaps; // End pulse of a laser segment and gap to the next segment (sorted, gap > 0 only)
+	};
 
-		// Helper function to update GCD with a pulse if it's within the measure
-		auto updateGCD = [&](Pulse pulse) {
-			if (pulse >= measureStart && pulse < measureEnd)
-			{
-				const Pulse relPulse = pulse - measureStart;
-				if (relPulse > 0 && relPulse < measureLength)
-				{
-					gcd = std::gcd(gcd, relPulse);
-				}
-			}
-		};
+	// Get range of elements within [measureStart, measureEnd) in a sorted vector
+	template <typename T>
+	auto PulseRangeInMeasure(const std::vector<T>& sortedValues, const T& measureStart, const T& measureEnd)
+	{
+		const auto beginIt = std::lower_bound(sortedValues.begin(), sortedValues.end(), measureStart);
+		const auto endIt = std::lower_bound(beginIt, sortedValues.end(), measureEnd);
+		return std::pair{ beginIt, endIt };
+	}
+
+	// Create pulse lists for calculating optimal division
+	DivisionLookup CreateDivisionLookup(const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments)
+	{
+		DivisionLookup lookup;
 
 		// BT notes
 		for (const auto& lane : chartData.note.bt)
 		{
 			for (const auto& [pulse, interval] : lane)
 			{
-				updateGCD(pulse);
-				updateGCD(pulse + interval.length);
-
-				// Long BT notes starting in this measure require doubled resolution
-				if (interval.length > 0 && pulse >= measureStart && pulse < measureEnd)
-				{
-					shouldDoubleResolution = true;
-				}
-
-				// Long BT notes ending in this measure require doubled resolution
 				const Pulse endPulse = pulse + interval.length;
-				if (interval.length > 0 && endPulse >= measureStart && endPulse < measureEnd)
+				lookup.gcdPulses.push_back(pulse);
+				lookup.gcdPulses.push_back(endPulse);
+
+				// Long BT notes starting or ending in a measure require doubled resolution
+				if (interval.length > 0)
 				{
-					shouldDoubleResolution = true;
+					lookup.doubleResolutionPulses.push_back(pulse);
+					lookup.doubleResolutionPulses.push_back(endPulse);
 				}
 			}
 		}
@@ -2375,20 +2474,15 @@ namespace
 		{
 			for (const auto& [pulse, interval] : lane)
 			{
-				updateGCD(pulse);
-				updateGCD(pulse + interval.length);
-
-				// Long FX notes starting in this measure require doubled resolution
-				if (interval.length > 0 && pulse >= measureStart && pulse < measureEnd)
-				{
-					shouldDoubleResolution = true;
-				}
-
-				// Long FX notes ending in this measure require doubled resolution
 				const Pulse endPulse = pulse + interval.length;
-				if (interval.length > 0 && endPulse >= measureStart && endPulse < measureEnd)
+				lookup.gcdPulses.push_back(pulse);
+				lookup.gcdPulses.push_back(endPulse);
+
+				// Long FX notes starting or ending in a measure require doubled resolution
+				if (interval.length > 0)
 				{
-					shouldDoubleResolution = true;
+					lookup.doubleResolutionPulses.push_back(pulse);
+					lookup.doubleResolutionPulses.push_back(endPulse);
 				}
 			}
 		}
@@ -2400,19 +2494,22 @@ namespace
 			for (std::size_t segIdx = 0; segIdx < segments.size(); ++segIdx)
 			{
 				const auto& seg = segments[segIdx];
-				updateGCD(seg.startPulse);
-				updateGCD(seg.startPulse + seg.length);
-
-				// Laser segments starting or ending in this measure require doubled resolution
-				if (seg.startPulse >= measureStart && seg.startPulse < measureEnd)
-				{
-					shouldDoubleResolution = true;
-				}
-
 				const Pulse endPulse = seg.startPulse + seg.length;
-				if (endPulse >= measureStart && endPulse < measureEnd)
+				lookup.gcdPulses.push_back(seg.startPulse);
+				lookup.gcdPulses.push_back(endPulse);
+
+				// Laser segments starting or ending in a measure require doubled resolution
+				lookup.doubleResolutionPulses.push_back(seg.startPulse);
+				lookup.doubleResolutionPulses.push_back(endPulse);
+
+				// Gap to the next laser segment
+				if (segIdx + 1 < segments.size())
 				{
-					shouldDoubleResolution = true;
+					const Pulse gap = segments[segIdx + 1].startPulse - endPulse;
+					if (gap > 0)
+					{
+						lookup.laserGaps.emplace_back(endPulse, gap);
+					}
 				}
 			}
 		}
@@ -2420,63 +2517,63 @@ namespace
 		// BPM changes
 		for (const auto& [pulse, bpm] : chartData.beat.bpm)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Stops
 		for (const auto& [pulse, length] : chartData.beat.stop)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Scroll speed
 		for (const auto& [pulse, graphPoint] : chartData.beat.scrollSpeed)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Camera rotation
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.rotationDeg)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Camera zoom
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.zoomTop)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.zoomBottom)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.zoomSide)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.centerSplit)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Camera tilt
 		for (const auto& [pulse, tiltValue] : chartData.camera.tilt)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		// Spin events
 		for (const auto& [pulse, spinEvent] : chartData.camera.cam.pattern.laser.slamEvent.spin)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, spinEvent] : chartData.camera.cam.pattern.laser.slamEvent.halfSpin)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, swingEvent] : chartData.camera.cam.pattern.laser.slamEvent.swing)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		if (!chartData.audio.audioEffect.fx.longEvent.empty())
@@ -2487,7 +2584,7 @@ namespace
 				{
 					for (const auto& [pulse, params] : laneEvents[laneIdx])
 					{
-						updateGCD(pulse);
+						lookup.gcdPulses.push_back(pulse);
 					}
 				}
 			}
@@ -2501,7 +2598,7 @@ namespace
 				{
 					for (const auto& [pulse, value] : pulseValueMap)
 					{
-						updateGCD(pulse);
+						lookup.gcdPulses.push_back(pulse);
 					}
 				}
 			}
@@ -2515,7 +2612,7 @@ namespace
 				{
 					for (const auto& [pulse, value] : pulseValueMap)
 					{
-						updateGCD(pulse);
+						lookup.gcdPulses.push_back(pulse);
 					}
 				}
 			}
@@ -2527,19 +2624,19 @@ namespace
 			{
 				for (const auto& pulse : pulses)
 				{
-					updateGCD(pulse);
+					lookup.gcdPulses.push_back(pulse);
 				}
 			}
 		}
 
 		for (const auto& [pulse, vol] : chartData.audio.keySound.laser.vol)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		for (const auto& [pulse, gain] : chartData.audio.audioEffect.laser.legacy.filterGain)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		if (!chartData.audio.keySound.laser.slamEvent.empty())
@@ -2548,7 +2645,7 @@ namespace
 			{
 				for (const auto& pulse : pulses)
 				{
-					updateGCD(pulse);
+					lookup.gcdPulses.push_back(pulse);
 				}
 			}
 		}
@@ -2562,7 +2659,7 @@ namespace
 				{
 					for (const auto& [pulse, chipData] : lanes[laneIdx])
 					{
-						updateGCD(pulse);
+						lookup.gcdPulses.push_back(pulse);
 					}
 				}
 			}
@@ -2570,21 +2667,62 @@ namespace
 
 		for (const auto& [pulse, comment] : chartData.editor.comment)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
 
 		for (const auto& [optionKey, pulseValueMap] : chartData.compat.kshUnknown.option)
 		{
 			for (const auto& [pulse, values] : pulseValueMap)
 			{
-				updateGCD(pulse);
+				lookup.gcdPulses.push_back(pulse);
 			}
 		}
 
 		for (const auto& [pulse, line] : chartData.compat.kshUnknown.line)
 		{
-			updateGCD(pulse);
+			lookup.gcdPulses.push_back(pulse);
 		}
+
+		const auto sortUnique = [](auto& values)
+		{
+			std::sort(values.begin(), values.end());
+			values.erase(std::unique(values.begin(), values.end()), values.end());
+		};
+		sortUnique(lookup.gcdPulses);
+		sortUnique(lookup.doubleResolutionPulses);
+		std::sort(lookup.laserGaps.begin(), lookup.laserGaps.end());
+
+		return lookup;
+	}
+
+	// Calculate optimal division for a measure
+	std::int32_t CalculateOptimalDivision(const DivisionLookup& lookup, Pulse measureStart, Pulse measureLength)
+	{
+		const Pulse measureEnd = measureStart + measureLength;
+		Pulse gcd = measureLength;
+
+		// Helper function to update GCD with a pulse if it's within the measure
+		auto updateGCD = [&](Pulse pulse) {
+			if (pulse >= measureStart && pulse < measureEnd)
+			{
+				const Pulse relPulse = pulse - measureStart;
+				if (relPulse > 0 && relPulse < measureLength)
+				{
+					gcd = std::gcd(gcd, relPulse);
+				}
+			}
+		};
+
+		// Pulses of notes and events in this measure
+		const auto [gcdBegin, gcdEnd] = PulseRangeInMeasure(lookup.gcdPulses, measureStart, measureEnd);
+		for (auto it = gcdBegin; it != gcdEnd; ++it)
+		{
+			updateGCD(*it);
+		}
+
+		// Long notes and laser segments starting or ending in this measure require doubled resolution
+		const auto [doubleBegin, doubleEnd] = PulseRangeInMeasure(lookup.doubleResolutionPulses, measureStart, measureEnd);
+		const bool shouldDoubleResolution = doubleBegin != doubleEnd;
 
 		const auto calcDivision = [&]() -> std::int32_t
 		{
@@ -2632,18 +2770,15 @@ namespace
 		{
 			bool gcdUpdated = false;
 			const Pulse oneLinePulse = measureLength / division;
-			for (std::int32_t laneIdx = 0; laneIdx < kNumLaserLanes; ++laneIdx)
+			// (gap is always positive, so 0 can be used for the bounds)
+			const auto [gapBegin, gapEnd] = PulseRangeInMeasure(lookup.laserGaps, std::pair<Pulse, Pulse>{ measureStart, 0 }, std::pair<Pulse, Pulse>{ measureEnd, 0 });
+			for (auto it = gapBegin; it != gapEnd; ++it)
 			{
-				const auto& segments = laserSegments[laneIdx];
-				for (std::size_t segIdx = 0; segIdx + 1 < segments.size(); ++segIdx)
+				const auto& [endPulse, gap] = *it;
+				if (gap < oneLinePulse * 2)
 				{
-					const Pulse endPulse = segments[segIdx].startPulse + segments[segIdx].length;
-					const Pulse gap = segments[segIdx + 1].startPulse - endPulse;
-					if (gap > 0 && gap < oneLinePulse * 2 && endPulse >= measureStart && endPulse < measureEnd)
-					{
-						updateGCD(endPulse + std::min(kResolution4 / 192, gap / 2));
-						gcdUpdated = true;
-					}
+					updateGCD(endPulse + std::min(kResolution4 / 192, gap / 2));
+					gcdUpdated = true;
 				}
 			}
 			if (gcdUpdated)
@@ -2721,6 +2856,9 @@ namespace
 			laserSegments[laneIdx] = ConvertLaserToKshSegments(chartData.note.laser[laneIdx], laneIdx);
 		}
 
+		const NoteLineLookup noteLineLookup = CreateNoteLineLookup(chartData, laserSegments);
+		const DivisionLookup divisionLookup = CreateDivisionLookup(chartData, laserSegments);
+
 		const Pulse maxPulse = CalculateMaxPulse(chartData);
 		Pulse currentPulse = 0;
 		std::int64_t measureIdx = 0;
@@ -2740,7 +2878,7 @@ namespace
 			}
 
 			// Calculate optimal division for this measure
-			const std::int32_t division = CalculateOptimalDivision(chartData, laserSegments, currentPulse, measureLength);
+			const std::int32_t division = CalculateOptimalDivision(divisionLookup, currentPulse, measureLength);
 			const Pulse oneLinePulse = measureLength / division;
 
 			// Write each line
@@ -2748,7 +2886,7 @@ namespace
 			{
 				const Pulse pulse = currentPulse + lineIdx * oneLinePulse;
 
-				WriteNoteLine(stream, chartData, laserSegments, pulse, oneLinePulse, state, useLegacyScaleForManualTilt, pKshSavingDiag);
+				WriteNoteLine(stream, chartData, laserSegments, noteLineLookup, pulse, state, useLegacyScaleForManualTilt, pKshSavingDiag);
 			}
 
 			stream << kMeasureSeparator << "\r\n";
