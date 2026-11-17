@@ -18,6 +18,11 @@ namespace kson
 		std::int32_t count = 1;
 	};
 
+	struct CamPatternInvokeHalfSpinValue
+	{
+		double deg = 60.0;
+	};
+
 	struct CamPatternInvokeSwingValue
 	{
 		double scale = 250.0;
@@ -37,12 +42,13 @@ namespace kson
 	}
 
 	using CamPatternInvokeSpin = detail::BasicCamPatternInvoke<CamPatternInvokeSpinValue>;
+	using CamPatternInvokeHalfSpin = detail::BasicCamPatternInvoke<CamPatternInvokeHalfSpinValue>;
 	using CamPatternInvokeSwing = detail::BasicCamPatternInvoke<CamPatternInvokeSwingValue>;
 
 	struct CamPatternLaserInvokeList
 	{
 		ByPulse<CamPatternInvokeSpin> spin;
-		ByPulse<CamPatternInvokeSpin> halfSpin;
+		ByPulse<CamPatternInvokeHalfSpin> halfSpin;
 		ByPulse<CamPatternInvokeSwing> swing;
 	};
 

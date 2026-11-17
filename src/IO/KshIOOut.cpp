@@ -58,6 +58,7 @@ namespace
 	constexpr double kBPMMax = 65535.0; // ver >= 130
 
 	constexpr std::int32_t kSpinCountMax = 65535;
+	constexpr double kHalfSpinDegAbsMax = 65535.0;
 
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
@@ -2476,6 +2477,23 @@ namespace
 			const char dirChar = spinEvent.d < 0 ? '<' : '>';
 			const std::int32_t kshLength = ToKshResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
+			const double deg = std::clamp(spinEvent.v.deg, -kHalfSpinDegAbsMax, kHalfSpinDegAbsMax);
+			if (pKshSavingDiag && deg != spinEvent.v.deg)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "Half spin deg " + std::to_string(spinEvent.v.deg) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(deg),
+					.details = HalfSpinDegClampedWarningDetails{
+						.pulse = pulse,
+						.minValue = -kHalfSpinDegAbsMax,
+						.maxValue = kHalfSpinDegAbsMax,
+					},
+				});
+			}
+			if (deg != 60.0)
+			{
+				stream << ";" << FormatDoublePrecise(deg);
+			}
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.swing.contains(pulse))
 		{

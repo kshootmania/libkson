@@ -15,6 +15,7 @@ namespace
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 
 	constexpr double kSpinCountMax = 65535.0;
+	constexpr double kHalfSpinDegAbsMax = 65535.0;
 
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
@@ -501,6 +502,32 @@ namespace
 		}
 	}
 
+	void WriteCamPatternInvokeHalfSpinByPulse(nlohmann::json& json, const char* key, const ByPulse<CamPatternInvokeHalfSpin>& byPulse)
+	{
+		if (byPulse.empty())
+		{
+			return;
+		}
+
+		nlohmann::json& j = json[key];
+		j = nlohmann::json::array();
+		for (const auto& [y, invoke] : byPulse)
+		{
+			nlohmann::json vJSON = nlohmann::json::object();
+			{
+				Write(vJSON, "deg", invoke.v.deg, 60.0);
+			}
+			if (vJSON.empty())
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
+			}
+			else
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length, std::move(vJSON) }));
+			}
+		}
+	}
+
 	void WriteCamPatternInvokeSwingByPulse(nlohmann::json& json, const char* key, const ByPulse<CamPatternInvokeSwing>& byPulse)
 	{
 		if (byPulse.empty())
@@ -898,7 +925,7 @@ namespace
 					{
 						nlohmann::json slamEventJSON = nlohmann::json::object();
 						WriteCamPatternInvokeSpinByPulse(slamEventJSON, "spin", d.cam.pattern.laser.slamEvent.spin);
-						WriteCamPatternInvokeSpinByPulse(slamEventJSON, "half_spin", d.cam.pattern.laser.slamEvent.halfSpin);
+						WriteCamPatternInvokeHalfSpinByPulse(slamEventJSON, "half_spin", d.cam.pattern.laser.slamEvent.halfSpin);
 						WriteCamPatternInvokeSwingByPulse(slamEventJSON, "swing", d.cam.pattern.laser.slamEvent.swing);
 						Write(laserJSON, "slam_event", std::move(slamEventJSON));
 					}
@@ -2226,11 +2253,21 @@ namespace
 									{
 										continue;
 									}
-									camera.cam.pattern.laser.slamEvent.halfSpin[y] = CamPatternInvokeSpin
+									CamPatternInvokeHalfSpin halfSpin;
+									halfSpin.d = item[1].get<std::int32_t>();
+									halfSpin.length = *length;
+									if (item.size() >= 4 && item[3].is_object())
 									{
-										.d = item[1].get<std::int32_t>(),
-										.length = *length,
-									};
+										if (item[3].contains("deg"))
+										{
+											const double deg = item[3]["deg"].get<double>();
+											if (std::abs(deg) <= kHalfSpinDegAbsMax)
+											{
+												halfSpin.v.deg = deg;
+											}
+										}
+									}
+									camera.cam.pattern.laser.slamEvent.halfSpin[y] = std::move(halfSpin);
 								}
 							}
 						}

@@ -1077,10 +1077,11 @@ TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][sav
 	REQUIRE(diag.warnings.empty());
 }
 
-TEST_CASE("KSON spin count", "[kson_io][camera]")
+TEST_CASE("KSON spin count and half spin deg", "[kson_io][camera]")
 {
 	const std::string ksonData = R"({"format_version": 1, "camera": {"cam": {"pattern": {"laser": {"slam_event": {
-		"spin": [[0, 1, 960, {"count": 2}], [960, 1, 960, {"count": 1e30}], [1920, 1, 960, {"count": 65535}]]
+		"spin": [[0, 1, 960, {"count": 2}], [960, 1, 960, {"count": 1e30}], [1920, 1, 960, {"count": 65535}]],
+		"half_spin": [[0, 1, 960, {"deg": 90.5}], [960, 1, 960, {"deg": 1e300}], [1920, 1, 960, {"deg": -65535.0}]]
 	}}}}}})";
 
 	std::istringstream stream(ksonData);
@@ -1096,6 +1097,9 @@ TEST_CASE("KSON spin count", "[kson_io][camera]")
 	REQUIRE(slamEvent.spin.at(0).v.count == 2);
 	REQUIRE(slamEvent.spin.at(960).v.count == 1);
 	REQUIRE(slamEvent.spin.at(1920).v.count == 65535);
+	REQUIRE(slamEvent.halfSpin.at(0).v.deg == Approx(90.5));
+	REQUIRE(slamEvent.halfSpin.at(960).v.deg == Approx(60.0));
+	REQUIRE(slamEvent.halfSpin.at(1920).v.deg == Approx(-65535.0));
 }
 
 TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")

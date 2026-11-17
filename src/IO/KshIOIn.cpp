@@ -53,6 +53,7 @@ namespace
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 
 	constexpr std::int64_t kSpinCountMax = 65535;
+	constexpr double kHalfSpinDegAbsMax = 65535.0;
 
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
@@ -1017,6 +1018,8 @@ namespace
 
 		std::int32_t spinCount = 1;
 
+		double halfSpinDeg = 60.0;
+
 		std::int32_t swingAmplitude = 0;
 
 		std::int32_t swingRepeat = 0;
@@ -1115,7 +1118,7 @@ namespace
 			}
 			else
 			{
-				// The second parameter is the count for normal spins
+				// The second parameter is the count for normal spins, or the degree for half spins
 				const std::string_view paramStr = strFromKsh.substr(2);
 				const std::size_t separatorPos = paramStr.find(';');
 				const std::string_view secondParamStr = (separatorPos == std::string_view::npos) ? std::string_view{} : paramStr.substr(separatorPos + 1);
@@ -1125,12 +1128,23 @@ namespace
 					.direction = direction,
 					.duration = KshLengthToRelPulse(paramStr.substr(0, separatorPos)),
 				};
-				if (type == Type::kNormal && !secondParamStr.empty())
+				if (!secondParamStr.empty())
 				{
-					const std::int64_t count = ParseNumeric<std::int64_t>(secondParamStr, 1);
-					if (0 <= count && count <= kSpinCountMax)
+					if (type == Type::kNormal)
 					{
-						laneSpin.spinCount = static_cast<std::int32_t>(count);
+						const std::int64_t count = ParseNumeric<std::int64_t>(secondParamStr, 1);
+						if (0 <= count && count <= kSpinCountMax)
+						{
+							laneSpin.spinCount = static_cast<std::int32_t>(count);
+						}
+					}
+					else
+					{
+						const double deg = ParseNumeric<double>(secondParamStr, 60.0);
+						if (std::abs(deg) <= kHalfSpinDegAbsMax)
+						{
+							laneSpin.halfSpinDeg = deg;
+						}
 					}
 				}
 				return laneSpin;
@@ -2396,9 +2410,12 @@ namespace
 									case PreparedLaneSpin::Type::kHalf:
 										chartData.camera.cam.pattern.laser.slamEvent.halfSpin.emplace(
 											time,
-											CamPatternInvokeSpin{
+											CamPatternInvokeHalfSpin{
 												.d = d,
 												.length = laneSpin.duration,
+												.v = {
+													.deg = laneSpin.halfSpinDeg,
+												},
 											});
 										break;
 									case PreparedLaneSpin::Type::kSwing:
