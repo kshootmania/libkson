@@ -52,6 +52,8 @@ namespace
 	constexpr double kBPMMax = 65535.0; // ver >= 130
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 
+	constexpr std::int64_t kSpinCountMax = 65535;
+
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
 
@@ -1013,6 +1015,8 @@ namespace
 
 		RelPulse duration = 0;
 
+		std::int32_t spinCount = 1;
+
 		std::int32_t swingAmplitude = 0;
 
 		std::int32_t swingRepeat = 0;
@@ -1111,11 +1115,25 @@ namespace
 			}
 			else
 			{
-				return {
+				// The second parameter is the count for normal spins
+				const std::string_view paramStr = strFromKsh.substr(2);
+				const std::size_t separatorPos = paramStr.find(';');
+				const std::string_view secondParamStr = (separatorPos == std::string_view::npos) ? std::string_view{} : paramStr.substr(separatorPos + 1);
+
+				PreparedLaneSpin laneSpin{
 					.type = type,
 					.direction = direction,
-					.duration = KshLengthToRelPulse(strFromKsh.substr(2)),
+					.duration = KshLengthToRelPulse(paramStr.substr(0, separatorPos)),
 				};
+				if (type == Type::kNormal && !secondParamStr.empty())
+				{
+					const std::int64_t count = ParseNumeric<std::int64_t>(secondParamStr, 1);
+					if (0 <= count && count <= kSpinCountMax)
+					{
+						laneSpin.spinCount = static_cast<std::int32_t>(count);
+					}
+				}
+				return laneSpin;
 			}
 		}
 
@@ -2370,6 +2388,9 @@ namespace
 											CamPatternInvokeSpin{
 												.d = d,
 												.length = laneSpin.duration,
+												.v = {
+													.count = laneSpin.spinCount,
+												},
 											});
 										break;
 									case PreparedLaneSpin::Type::kHalf:

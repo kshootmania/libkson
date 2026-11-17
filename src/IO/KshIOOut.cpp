@@ -57,6 +57,8 @@ namespace
 	// Maximum value of BPM
 	constexpr double kBPMMax = 65535.0; // ver >= 130
 
+	constexpr std::int32_t kSpinCountMax = 65535;
+
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
 	constexpr std::int32_t kVerLayerDelimiterChanged = 166; // Layer delimiter changed from "/" to ";"
@@ -2450,6 +2452,23 @@ namespace
 			const char dirChar = spinEvent.d < 0 ? '(' : ')';
 			const std::int32_t kshLength = ToKshResolution(spinEvent.length);
 			stream << "@" << dirChar << kshLength;
+			const std::int32_t count = std::clamp(spinEvent.v.count, 0, kSpinCountMax);
+			if (pKshSavingDiag && count != spinEvent.v.count)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "Spin count " + std::to_string(spinEvent.v.count) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(count),
+					.details = SpinCountClampedWarningDetails{
+						.pulse = pulse,
+						.minValue = 0,
+						.maxValue = kSpinCountMax,
+					},
+				});
+			}
+			if (count != 1)
+			{
+				stream << ";" << count;
+			}
 		}
 		else if (chartData.camera.cam.pattern.laser.slamEvent.halfSpin.contains(pulse))
 		{

@@ -63,6 +63,13 @@ namespace kson
 		double maxValue;
 	};
 
+	struct SpinCountClampedWarningDetails
+	{
+		Pulse pulse;
+		std::int32_t minValue;
+		std::int32_t maxValue;
+	};
+
 	struct ZoomFractionLostWarningDetails
 	{
 		std::vector<KshCameraParam> params;
@@ -92,6 +99,7 @@ namespace kson
 		HighwayWipeClampedWarningDetails,
 		ManualTiltClampedWarningDetails,
 		RotationDegClampedWarningDetails,
+		SpinCountClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
 		LaserPrecisionLostWarningDetails,
 		FXLongEventParamsLostWarningDetails,

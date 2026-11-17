@@ -3017,6 +3017,45 @@ TEST_CASE("KSH saving fractional graph values and curves", "[ksh_io][camera]")
 	REQUIRE(oss.str().find("center_split_curve=0.12345;0.98765\r\n") != std::string::npos);
 }
 
+TEST_CASE("KSH spin count loading and saving", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"0000|00|--@(192;2\n"
+		"0000|00|--@)192\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.camera.cam.pattern.laser.slamEvent.spin.at(0).v.count == 2);
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("@(192;2\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("@)192\r\n") != std::string::npos);
+}
+
+TEST_CASE("KSH spin count out of range", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"0000|00|--@(192;65536\n"
+		"0000|00|--@)192;65535\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	const auto& slamEvent = chartData.camera.cam.pattern.laser.slamEvent;
+	REQUIRE(slamEvent.spin.at(0).v.count == 1);
+	REQUIRE(slamEvent.spin.at(kson::kResolution * 2).v.count == 65535);
+}
+
 TEST_CASE("KSH manual tilt is not rounded", "[ksh_io][tilt]")
 {
 	const std::string kshContent =

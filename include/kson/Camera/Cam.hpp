@@ -1,5 +1,4 @@
 #pragma once
-#include <tuple>
 #include "kson/Common/Common.hpp"
 
 namespace kson
@@ -12,6 +11,11 @@ namespace kson
 		Graph rotationDeg; // Rotation degree
 		Graph centerSplit; // "center_split"
 		Graph highwayWipe; // "highway_wipe"
+	};
+
+	struct CamPatternInvokeSpinValue
+	{
+		std::int32_t count = 1;
 	};
 
 	struct CamPatternInvokeSwingValue
@@ -32,7 +36,7 @@ namespace kson
 		};
 	}
 
-	using CamPatternInvokeSpin = detail::BasicCamPatternInvoke<std::tuple<>>; // Note: std::tuple<> is empty
+	using CamPatternInvokeSpin = detail::BasicCamPatternInvoke<CamPatternInvokeSpinValue>;
 	using CamPatternInvokeSwing = detail::BasicCamPatternInvoke<CamPatternInvokeSwingValue>;
 
 	struct CamPatternLaserInvokeList

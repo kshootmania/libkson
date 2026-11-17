@@ -14,6 +14,8 @@ namespace
 	constexpr double kBPMMax = 65535.0; // ver >= 130
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 
+	constexpr double kSpinCountMax = 65535.0;
+
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
 		return std::filesystem::path(
@@ -484,7 +486,18 @@ namespace
 		j = nlohmann::json::array();
 		for (const auto& [y, invoke] : byPulse)
 		{
-			j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
+			nlohmann::json vJSON = nlohmann::json::object();
+			{
+				Write(vJSON, "count", invoke.v.count, 1);
+			}
+			if (vJSON.empty())
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
+			}
+			else
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length, std::move(vJSON) }));
+			}
 		}
 	}
 
@@ -2177,11 +2190,21 @@ namespace
 									{
 										continue;
 									}
-									camera.cam.pattern.laser.slamEvent.spin[y] = CamPatternInvokeSpin
+									CamPatternInvokeSpin spin;
+									spin.d = item[1].get<std::int32_t>();
+									spin.length = *length;
+									if (item.size() >= 4 && item[3].is_object())
 									{
-										.d = item[1].get<std::int32_t>(),
-										.length = *length,
-									};
+										if (item[3].contains("count"))
+										{
+											const double count = item[3]["count"].get<double>();
+											if (0.0 <= count && count <= kSpinCountMax)
+											{
+												spin.v.count = static_cast<std::int32_t>(count);
+											}
+										}
+									}
+									camera.cam.pattern.laser.slamEvent.spin[y] = std::move(spin);
 								}
 							}
 						}

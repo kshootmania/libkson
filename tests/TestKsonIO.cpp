@@ -1077,6 +1077,27 @@ TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][sav
 	REQUIRE(diag.warnings.empty());
 }
 
+TEST_CASE("KSON spin count", "[kson_io][camera]")
+{
+	const std::string ksonData = R"({"format_version": 1, "camera": {"cam": {"pattern": {"laser": {"slam_event": {
+		"spin": [[0, 1, 960, {"count": 2}], [960, 1, 960, {"count": 1e30}], [1920, 1, 960, {"count": 65535}]]
+	}}}}}})";
+
+	std::istringstream stream(ksonData);
+	const auto chart = kson::LoadKsonChartData(stream);
+	REQUIRE(chart.error == kson::ErrorType::None);
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKsonChartData(oss, chart) == kson::ErrorType::None);
+	std::istringstream savedStream(oss.str());
+	const auto savedChart = kson::LoadKsonChartData(savedStream);
+	REQUIRE(savedChart.error == kson::ErrorType::None);
+	const auto& slamEvent = savedChart.camera.cam.pattern.laser.slamEvent;
+	REQUIRE(slamEvent.spin.at(0).v.count == 2);
+	REQUIRE(slamEvent.spin.at(960).v.count == 1);
+	REQUIRE(slamEvent.spin.at(1920).v.count == 65535);
+}
+
 TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")
 {
 	const auto makeKsonData = [](const std::string& compat)
