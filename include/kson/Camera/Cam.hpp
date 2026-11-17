@@ -11,6 +11,7 @@ namespace kson
 		Graph zoomTop; // "zoom_top"
 		Graph rotationDeg; // Rotation degree
 		Graph centerSplit; // "center_split"
+		Graph highwayWipe; // "highway_wipe"
 	};
 
 	struct CamPatternInvokeSwingValue

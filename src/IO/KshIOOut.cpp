@@ -48,6 +48,7 @@ namespace
 	constexpr double kManualTiltAbsMax = 1000.0;
 	constexpr double kZoomAbsMax = 65535.0;
 	constexpr double kCenterSplitAbsMax = 65535.0;
+	constexpr double kHighwayWipeAbsMax = 65535.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
 
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
@@ -783,6 +784,10 @@ namespace
 		if (!chartData.camera.cam.body.centerSplit.empty())
 		{
 			maxPulse = std::max(maxPulse, chartData.camera.cam.body.centerSplit.rbegin()->first);
+		}
+		if (!chartData.camera.cam.body.highwayWipe.empty())
+		{
+			maxPulse = std::max(maxPulse, chartData.camera.cam.body.highwayWipe.rbegin()->first);
 		}
 
 		// Camera tilt
@@ -1993,6 +1998,53 @@ namespace
 			}
 		}
 
+		// Output highway_wipe
+		if (chartData.camera.cam.body.highwayWipe.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.highwayWipe.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kHighwayWipeAbsMax, kHighwayWipeAbsMax);
+			if (pKshSavingDiag && clampedV != graphPoint.v.v)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "highway_wipe value " + std::to_string(graphPoint.v.v) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+					.details = HighwayWipeClampedWarningDetails{
+						.pulse = pulse,
+						.isFinalValue = false,
+						.minValue = -kHighwayWipeAbsMax,
+						.maxValue = kHighwayWipeAbsMax,
+					},
+				});
+			}
+			stream << "highway_wipe=" << FormatDoublePrecise(clampedV) << "\r\n";
+
+			// Output vf on next line if v != vf (immediate change)
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kHighwayWipeAbsMax, kHighwayWipeAbsMax);
+				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.scope = WarningScope::EditorOnly,
+						.message = "highway_wipe vf value " + std::to_string(graphPoint.v.vf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+						.details = HighwayWipeClampedWarningDetails{
+							.pulse = pulse,
+							.isFinalValue = true,
+							.minValue = -kHighwayWipeAbsMax,
+							.maxValue = kHighwayWipeAbsMax,
+						},
+					});
+				}
+				stream << "highway_wipe=" << FormatDoublePrecise(clampedVf) << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "highway_wipe_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
+			}
+		}
+
 		// Check for FX param_change (fx:effect_name:param_name=value)
 		if (!chartData.audio.audioEffect.fx.paramChange.empty())
 		{
@@ -2552,6 +2604,10 @@ namespace
 			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.centerSplit)
+		{
+			lookup.gcdPulses.push_back(pulse);
+		}
+		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.highwayWipe)
 		{
 			lookup.gcdPulses.push_back(pulse);
 		}

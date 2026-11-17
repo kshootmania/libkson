@@ -369,6 +369,8 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|--\n";
         ss << "center_split_curve=0.2;0.8\n";
         ss << "center_split=200\n";
+        ss << "highway_wipe_curve=0.1;0.6\n";
+        ss << "highway_wipe=50\n";
         ss << "scroll_speed_curve=0.3;0.6\n";
         ss << "scroll_speed=1.5\n";
         ss << "0000|00|--\n";
@@ -404,6 +406,11 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        REQUIRE(chart.camera.cam.body.highwayWipe.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).v.v == Approx(50.0));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.1));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.6));
 
         REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
         REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.5));
@@ -461,6 +468,8 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "0000|00|--\n";
         ss << "center_split=200\n";
         ss << "center_split_curve=0.2;0.8\n";
+        ss << "highway_wipe=50\n";
+        ss << "highway_wipe_curve=0.1;0.6\n";
         ss << "scroll_speed=1.5\n";
         ss << "scroll_speed_curve=0.3;0.6\n";
         ss << "0000|00|--\n";
@@ -496,6 +505,11 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).v.v == Approx(200.0));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.2));
         REQUIRE(chart.camera.cam.body.centerSplit.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.8));
+
+        REQUIRE(chart.camera.cam.body.highwayWipe.contains(kMeasurePulse * 3 / 8));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).v.v == Approx(50.0));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).curve.a == Approx(0.1));
+        REQUIRE(chart.camera.cam.body.highwayWipe.at(kMeasurePulse * 3 / 8).curve.b == Approx(0.6));
 
         REQUIRE(chart.beat.scrollSpeed.contains(kMeasurePulse * 3 / 8));
         REQUIRE(chart.beat.scrollSpeed.at(kMeasurePulse * 3 / 8).v.v == Approx(1.5));
@@ -555,8 +569,10 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         ss << "zoom_side=-25\n";
         ss << "0000|00|--\n";
         ss << "center_split_curve=0.2;0.8\n";
+        ss << "highway_wipe_curve=0.1;0.6\n";
         ss << "0000|00|--\n";
         ss << "center_split=200\n";
+        ss << "highway_wipe=50\n";
         ss << "0000|00|--\n";
         ss << "tilt_curve=0.1;0.9\n";
         ss << "laser_l_curve=0.6;0.4\n";
@@ -595,6 +611,13 @@ TEST_CASE("KSH Curve Parameter Loading", "[ksh_io][curve]") {
         REQUIRE(centerSplitItr->second.v.v == Approx(200.0));
         REQUIRE(centerSplitItr->second.curve.a == Approx(0.0));
         REQUIRE(centerSplitItr->second.curve.b == Approx(0.0));
+
+        // highway_wipe should NOT have curve (curve was at different pulse)
+        const auto highwayWipeItr = chart.camera.cam.body.highwayWipe.begin();
+        REQUIRE(highwayWipeItr != chart.camera.cam.body.highwayWipe.end());
+        REQUIRE(highwayWipeItr->second.v.v == Approx(50.0));
+        REQUIRE(highwayWipeItr->second.curve.a == Approx(0.0));
+        REQUIRE(highwayWipeItr->second.curve.b == Approx(0.0));
 
         // tilt should NOT have curve (curve was at different pulse)
         REQUIRE(chart.camera.tilt.size() == 2); // 1 default at pulse 0 + 1 user-specified tilt

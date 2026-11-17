@@ -110,6 +110,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	chartData.beat.bpm[kson::kResolution4] = 100000.0;
 	chartData.camera.cam.body.zoomTop[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.cam.body.centerSplit[kson::kResolution4] = kson::GraphPoint(100000.0);
+	chartData.camera.cam.body.highwayWipe[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.tilt[kson::kResolution4] = kson::TiltGraphPoint{ kson::TiltGraphValue{ 100000.0 } };
 	chartData.camera.cam.body.rotationDeg[kson::kResolution4] = kson::GraphPoint(100000.0);
 
@@ -117,17 +118,20 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	const auto bpmWarnings = FilterByDetails<kson::BpmClampedWarningDetails>(warnings);
 	const auto zoomWarnings = FilterByDetails<kson::ZoomValueClampedWarningDetails>(warnings);
 	const auto centerSplitWarnings = FilterByDetails<kson::CenterSplitClampedWarningDetails>(warnings);
+	const auto highwayWipeWarnings = FilterByDetails<kson::HighwayWipeClampedWarningDetails>(warnings);
 	const auto manualTiltWarnings = FilterByDetails<kson::ManualTiltClampedWarningDetails>(warnings);
 	const auto rotationWarnings = FilterByDetails<kson::RotationDegClampedWarningDetails>(warnings);
 
 	REQUIRE(bpmWarnings.size() == 1);
 	REQUIRE(zoomWarnings.size() == 1);
 	REQUIRE(centerSplitWarnings.size() == 1);
+	REQUIRE(highwayWipeWarnings.size() == 1);
 	REQUIRE(manualTiltWarnings.size() == 1);
 	REQUIRE(rotationWarnings.size() == 1);
 	REQUIRE(std::get<kson::BpmClampedWarningDetails>(bpmWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::ZoomValueClampedWarningDetails>(zoomWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::CenterSplitClampedWarningDetails>(centerSplitWarnings[0].details).pulse == kson::kResolution4);
+	REQUIRE(std::get<kson::HighwayWipeClampedWarningDetails>(highwayWipeWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::ManualTiltClampedWarningDetails>(manualTiltWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::RotationDegClampedWarningDetails>(rotationWarnings[0].details).pulse == kson::kResolution4);
 }

@@ -42,8 +42,9 @@ namespace
 	constexpr std::size_t kZoomMaxCharLegacy = 4;       // ver <  1.67
 	constexpr std::size_t kZoomMaxChar = std::string::npos; // ver >= 1.67
 
-	// Maximum value of center_split, manual tilt, rotation_deg
+	// Maximum value of center_split, highway_wipe, manual tilt, rotation_deg
 	constexpr double kCenterSplitAbsMax = 65535.0;
+	constexpr double kHighwayWipeAbsMax = 65535.0;
 	constexpr double kManualTiltAbsMax = 1000.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
 
@@ -2071,6 +2072,14 @@ namespace
 								InsertGraphPointOrAssignVf(chartData.camera.cam.body.centerSplit, time, dValue);
 							}
 						}
+						else if (key == "highway_wipe")
+						{
+							const double dValue = ParseNumeric<double>(value);
+							if (std::abs(dValue) <= kHighwayWipeAbsMax)
+							{
+								InsertGraphPointOrAssignVf(chartData.camera.cam.body.highwayWipe, time, dValue);
+							}
+						}
 						else if (key == "scroll_speed")
 						{
 							const double dValue = ParseNumeric<double>(value);
@@ -2484,6 +2493,7 @@ namespace
 		ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
 		ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
 		ApplyBufferedCurvesToGraph("center_split", chartData.camera.cam.body.centerSplit, bufferedCurves);
+		ApplyBufferedCurvesToGraph("highway_wipe", chartData.camera.cam.body.highwayWipe, bufferedCurves);
 		ApplyBufferedCurvesToTilt("tilt", chartData.camera.tilt, bufferedCurves);
 
 		// Convert scroll speeds
