@@ -3017,7 +3017,7 @@ TEST_CASE("KSH saving fractional graph values and curves", "[ksh_io][camera]")
 	REQUIRE(oss.str().find("center_split_curve=0.12345;0.98765\r\n") != std::string::npos);
 }
 
-TEST_CASE("KSH rotation_deg_highway and rotation_deg_jdgline loading and saving", "[ksh_io][camera]")
+TEST_CASE("KSH rotation_deg_highway, rotation_deg_jdgline, and rotation_deg_layer loading and saving", "[ksh_io][camera]")
 {
 	const std::string kshContent =
 		"title=Test\n"
@@ -3025,6 +3025,7 @@ TEST_CASE("KSH rotation_deg_highway and rotation_deg_jdgline loading and saving"
 		"--\n"
 		"rotation_deg_highway=10.5\n"
 		"rotation_deg_jdgline=-20\n"
+		"rotation_deg_layer=30\n"
 		"0000|00|--\n"
 		"--\n";
 
@@ -3033,11 +3034,13 @@ TEST_CASE("KSH rotation_deg_highway and rotation_deg_jdgline loading and saving"
 	REQUIRE(chartData.error == kson::ErrorType::None);
 	REQUIRE(chartData.camera.cam.body.rotationDegHighway.at(0).v.v == Approx(10.5));
 	REQUIRE(chartData.camera.cam.body.rotationDegJdgline.at(0).v.v == Approx(-20.0));
+	REQUIRE(chartData.camera.cam.body.rotationDegLayer.at(0).v.v == Approx(30.0));
 
 	std::ostringstream oss;
 	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
 	REQUIRE(oss.str().find("rotation_deg_highway=10.5\r\n") != std::string::npos);
 	REQUIRE(oss.str().find("rotation_deg_jdgline=-20\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("rotation_deg_layer=30\r\n") != std::string::npos);
 }
 
 TEST_CASE("KSH spin count and half spin deg loading and saving", "[ksh_io][camera]")

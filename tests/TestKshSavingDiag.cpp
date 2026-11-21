@@ -115,6 +115,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	chartData.camera.cam.body.rotationDeg[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.cam.body.rotationDegHighway[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.cam.body.rotationDegJdgline[kson::kResolution4] = kson::GraphPoint(100000.0);
+	chartData.camera.cam.body.rotationDegLayer[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.cam.pattern.laser.slamEvent.spin[kson::kResolution4] = kson::CamPatternInvokeSpin{ .d = 1, .length = kson::kResolution4, .v = { .count = 65536 } };
 	chartData.camera.cam.pattern.laser.slamEvent.halfSpin[kson::kResolution4 * 2] = kson::CamPatternInvokeHalfSpin{ .d = 1, .length = kson::kResolution4, .v = { .deg = 100000.0 } };
 
@@ -127,6 +128,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	const auto rotationWarnings = FilterByDetails<kson::RotationDegClampedWarningDetails>(warnings);
 	const auto rotationHighwayWarnings = FilterByDetails<kson::RotationDegHighwayClampedWarningDetails>(warnings);
 	const auto rotationJdglineWarnings = FilterByDetails<kson::RotationDegJdglineClampedWarningDetails>(warnings);
+	const auto rotationLayerWarnings = FilterByDetails<kson::RotationDegLayerClampedWarningDetails>(warnings);
 	const auto spinCountWarnings = FilterByDetails<kson::SpinCountClampedWarningDetails>(warnings);
 	const auto halfSpinDegWarnings = FilterByDetails<kson::HalfSpinDegClampedWarningDetails>(warnings);
 
@@ -138,6 +140,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	REQUIRE(rotationWarnings.size() == 1);
 	REQUIRE(rotationHighwayWarnings.size() == 1);
 	REQUIRE(rotationJdglineWarnings.size() == 1);
+	REQUIRE(rotationLayerWarnings.size() == 1);
 	REQUIRE(spinCountWarnings.size() == 1);
 	REQUIRE(halfSpinDegWarnings.size() == 1);
 	REQUIRE(std::get<kson::BpmClampedWarningDetails>(bpmWarnings[0].details).pulse == kson::kResolution4);
@@ -148,6 +151,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	REQUIRE(std::get<kson::RotationDegClampedWarningDetails>(rotationWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::RotationDegHighwayClampedWarningDetails>(rotationHighwayWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::RotationDegJdglineClampedWarningDetails>(rotationJdglineWarnings[0].details).pulse == kson::kResolution4);
+	REQUIRE(std::get<kson::RotationDegLayerClampedWarningDetails>(rotationLayerWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::SpinCountClampedWarningDetails>(spinCountWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::HalfSpinDegClampedWarningDetails>(halfSpinDegWarnings[0].details).pulse == kson::kResolution4 * 2);
 }

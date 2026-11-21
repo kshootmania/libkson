@@ -11,6 +11,7 @@ namespace kson
 		Graph rotationDeg; // Rotation degree
 		Graph rotationDegHighway; // "rotation_deg_highway"
 		Graph rotationDegJdgline; // "rotation_deg_jdgline"
+		Graph rotationDegLayer; // "rotation_deg_layer"
 		Graph centerSplit; // "center_split"
 		Graph highwayWipe; // "highway_wipe"
 	};

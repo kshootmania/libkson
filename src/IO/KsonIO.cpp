@@ -916,6 +916,7 @@ namespace
 				WriteGraph(bodyJSON, "rotation_deg", d.cam.body.rotationDeg, 0.0);
 				WriteGraph(bodyJSON, "rotation_deg_highway", d.cam.body.rotationDegHighway, 0.0);
 				WriteGraph(bodyJSON, "rotation_deg_jdgline", d.cam.body.rotationDegJdgline, 0.0);
+				WriteGraph(bodyJSON, "rotation_deg_layer", d.cam.body.rotationDegLayer, 0.0);
 				WriteGraph(bodyJSON, "center_split", d.cam.body.centerSplit, 0.0);
 				WriteGraph(bodyJSON, "highway_wipe", d.cam.body.highwayWipe, 0.0);
 				Write(camJSON, "body", bodyJSON);
@@ -2061,6 +2062,7 @@ namespace
 		if (j.contains("rotation_deg")) graphs.rotationDeg = ParseGraph(j["rotation_deg"], pDiag);
 		if (j.contains("rotation_deg_highway")) graphs.rotationDegHighway = ParseGraph(j["rotation_deg_highway"], pDiag);
 		if (j.contains("rotation_deg_jdgline")) graphs.rotationDegJdgline = ParseGraph(j["rotation_deg_jdgline"], pDiag);
+		if (j.contains("rotation_deg_layer")) graphs.rotationDegLayer = ParseGraph(j["rotation_deg_layer"], pDiag);
 		if (j.contains("center_split")) graphs.centerSplit = ParseGraph(j["center_split"], pDiag);
 		if (j.contains("highway_wipe")) graphs.highwayWipe = ParseGraph(j["highway_wipe"], pDiag);
 

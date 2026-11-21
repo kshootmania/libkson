@@ -2141,6 +2141,14 @@ namespace
 								InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDegJdgline, time, dValue);
 							}
 						}
+						else if (key == "rotation_deg_layer")
+						{
+							const double dValue = ParseNumeric<double>(value);
+							if (std::abs(dValue) <= kRotationDegAbsMax)
+							{
+								InsertGraphPointOrAssignVf(chartData.camera.cam.body.rotationDegLayer, time, dValue);
+							}
+						}
 						else if (key == "tilt")
 						{
 							auto& target = chartData.camera.tilt;
@@ -2545,6 +2553,7 @@ namespace
 		ApplyBufferedCurvesToGraph("rotation_deg", chartData.camera.cam.body.rotationDeg, bufferedCurves);
 		ApplyBufferedCurvesToGraph("rotation_deg_highway", chartData.camera.cam.body.rotationDegHighway, bufferedCurves);
 		ApplyBufferedCurvesToGraph("rotation_deg_jdgline", chartData.camera.cam.body.rotationDegJdgline, bufferedCurves);
+		ApplyBufferedCurvesToGraph("rotation_deg_layer", chartData.camera.cam.body.rotationDegLayer, bufferedCurves);
 		ApplyBufferedCurvesToGraph("zoom_top", chartData.camera.cam.body.zoomTop, bufferedCurves);
 		ApplyBufferedCurvesToGraph("zoom_bottom", chartData.camera.cam.body.zoomBottom, bufferedCurves);
 		ApplyBufferedCurvesToGraph("zoom_side", chartData.camera.cam.body.zoomSide, bufferedCurves);
