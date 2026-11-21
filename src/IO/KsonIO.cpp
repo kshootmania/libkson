@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <set>
 #include <limits>
 #include <cmath>
 
@@ -16,6 +17,7 @@ namespace
 
 	constexpr double kSpinCountMax = 65535.0;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
+	constexpr double kCamPatternScaleAbsMax = 65535.0;
 
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
@@ -556,6 +558,67 @@ namespace
 		}
 	}
 
+	void WriteCamPatternInvokeCustomByPulse(nlohmann::json& json, const char* key, const ByPulseMulti<CamPatternInvokeCustom>& byPulse)
+	{
+		if (byPulse.empty())
+		{
+			return;
+		}
+
+		nlohmann::json& j = json[key];
+		j = nlohmann::json::array();
+		for (const auto& [y, invoke] : byPulse)
+		{
+			nlohmann::json vJSON = nlohmann::json::object();
+			{
+				Write(vJSON, "scale", invoke.v.scale, 1.0);
+			}
+			if (vJSON.empty())
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length }));
+			}
+			else
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.d, invoke.length, std::move(vJSON) }));
+			}
+		}
+	}
+
+	void WriteCamPatternDef(nlohmann::json& json, const char* key, const std::vector<CamPatternDefKVP>& def)
+	{
+		if (def.empty())
+		{
+			return;
+		}
+
+		nlohmann::json j = nlohmann::json::array();
+		for (const auto& kvp : def)
+		{
+			if (IsBuiltInCamPatternName(kvp.name))
+			{
+				continue;
+			}
+			nlohmann::json bodyJSON = nlohmann::json::object();
+			WriteGraph(bodyJSON, "zoom_bottom", kvp.v.body.zoomBottom);
+			WriteGraph(bodyJSON, "zoom_side", kvp.v.body.zoomSide);
+			WriteGraph(bodyJSON, "zoom_top", kvp.v.body.zoomTop);
+			WriteGraph(bodyJSON, "rotation_deg", kvp.v.body.rotationDeg);
+			WriteGraph(bodyJSON, "rotation_deg_highway", kvp.v.body.rotationDegHighway);
+			WriteGraph(bodyJSON, "rotation_deg_jdgline", kvp.v.body.rotationDegJdgline);
+			WriteGraph(bodyJSON, "rotation_deg_layer", kvp.v.body.rotationDegLayer);
+			WriteGraph(bodyJSON, "center_split", kvp.v.body.centerSplit);
+			WriteGraph(bodyJSON, "highway_wipe", kvp.v.body.highwayWipe);
+			nlohmann::json defJSON = {
+				{ "body", std::move(bodyJSON) },
+			};
+			j.push_back(nlohmann::json::array({ kvp.name, std::move(defJSON) }));
+		}
+		if (!j.empty())
+		{
+			json[key] = std::move(j);
+		}
+	}
+
 	nlohmann::json ToJSON(const MetaInfo& d)
 	{
 		nlohmann::json j = nlohmann::json::object();
@@ -923,6 +986,7 @@ namespace
 			}
 			{
 				nlohmann::json patternJSON = nlohmann::json::object();
+				WriteCamPatternDef(patternJSON, "def", d.cam.pattern.def);
 				{
 					nlohmann::json laserJSON = nlohmann::json::object();
 					{
@@ -930,6 +994,14 @@ namespace
 						WriteCamPatternInvokeSpinByPulse(slamEventJSON, "spin", d.cam.pattern.laser.slamEvent.spin);
 						WriteCamPatternInvokeHalfSpinByPulse(slamEventJSON, "half_spin", d.cam.pattern.laser.slamEvent.halfSpin);
 						WriteCamPatternInvokeSwingByPulse(slamEventJSON, "swing", d.cam.pattern.laser.slamEvent.swing);
+						for (const auto& [name, byPulse] : d.cam.pattern.laser.slamEvent.custom)
+						{
+							if (IsBuiltInCamPatternName(name))
+							{
+								continue;
+							}
+							WriteCamPatternInvokeCustomByPulse(slamEventJSON, name.c_str(), byPulse);
+						}
 						Write(laserJSON, "slam_event", std::move(slamEventJSON));
 					}
 					Write(patternJSON, "laser", std::move(laserJSON));
@@ -2199,6 +2271,45 @@ namespace
 			if (camJ.contains("pattern") && camJ["pattern"].is_object())
 			{
 				const auto& patternJ = camJ["pattern"];
+				if (patternJ.contains("def") && patternJ["def"].is_array())
+				{
+					for (const auto& item : patternJ["def"])
+					{
+						if (item.is_array() && item.size() >= 2 && item[1].is_object())
+						{
+							CamPatternDefKVP kvp;
+							kvp.name = item[0].get<std::string>();
+							if (IsBuiltInCamPatternName(kvp.name))
+							{
+								pDiag->warnings.push_back({
+									.type = KsonLoadingWarningType::InvalidCamPatternName,
+									.scope = WarningScope::EditorOnly,
+									.message = "Camera pattern definition '" + kvp.name + "' is ignored as the name cannot be used",
+								});
+								continue;
+							}
+							if (item[1].contains("body") && item[1]["body"].is_object())
+							{
+								kvp.v.body = ParseCamGraphs(item[1]["body"], pDiag);
+							}
+							const auto existingIt = std::find_if(camera.cam.pattern.def.begin(), camera.cam.pattern.def.end(),
+								[&kvp](const CamPatternDefKVP& existing) { return existing.name == kvp.name; });
+							if (existingIt != camera.cam.pattern.def.end())
+							{
+								pDiag->warnings.push_back({
+									.type = KsonLoadingWarningType::CamPatternDuplicateName,
+									.scope = WarningScope::EditorOnly,
+									.message = "Duplicate camera pattern definition '" + kvp.name + "' found (the later definition is used)",
+								});
+								existingIt->v = std::move(kvp.v);
+							}
+							else
+							{
+								camera.cam.pattern.def.push_back(std::move(kvp));
+							}
+						}
+					}
+				}
 				if (patternJ.contains("laser") && patternJ["laser"].is_object())
 				{
 					const auto& laserJ = patternJ["laser"];
@@ -2315,6 +2426,95 @@ namespace
 									}
 									camera.cam.pattern.laser.slamEvent.swing[y] = std::move(swing);
 								}
+							}
+						}
+
+						for (const auto& [name, items] : slamEventJ.items())
+						{
+							if (IsBuiltInCamPatternName(name) || !items.is_array())
+							{
+								continue;
+							}
+
+							for (const auto& item : items)
+							{
+								if (item.is_array() && item.size() >= 3)
+								{
+									const std::optional<Pulse> yOpt = ReadPulse(item[0], pDiag);
+									if (!yOpt.has_value())
+									{
+										continue;
+									}
+									Pulse y = *yOpt;
+									const std::optional<RelPulse> length = ReadRelPulse(item[2], y, pDiag);
+									if (!length.has_value())
+									{
+										continue;
+									}
+									CamPatternInvokeCustom custom;
+									custom.d = item[1].get<std::int32_t>();
+									custom.length = *length;
+									if (item.size() >= 4 && item[3].is_object())
+									{
+										if (item[3].contains("scale"))
+										{
+											const double scale = item[3]["scale"].get<double>();
+											if (std::abs(scale) <= kCamPatternScaleAbsMax)
+											{
+												custom.v.scale = scale;
+											}
+										}
+									}
+									// Laser slams in different directions at the same position are different laser slams
+									auto& customEvents = camera.cam.pattern.laser.slamEvent.custom[name];
+									const auto [first, last] = customEvents.equal_range(y);
+									const auto itr = std::find_if(first, last, [&custom](const auto& kvp) { return kvp.second.d == custom.d; });
+									if (itr != last)
+									{
+										pDiag->warnings.push_back({
+											.type = KsonLoadingWarningType::DuplicateCamPatternInvocation,
+											.scope = WarningScope::EditorOnly,
+											.message = "Camera pattern '" + name + "' is invoked more than once at the same position (the later one is used)",
+										});
+										itr->second = std::move(custom);
+									}
+									else
+									{
+										customEvents.emplace(y, std::move(custom));
+									}
+								}
+							}
+						}
+					}
+				}
+				for (const auto& [name, byPulse] : camera.cam.pattern.laser.slamEvent.custom)
+				{
+					if (camera.cam.pattern.defByName(name) == nullptr)
+					{
+						pDiag->warnings.push_back({
+							.type = KsonLoadingWarningType::UndefinedCamPattern,
+							.scope = WarningScope::EditorOnly,
+							.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.laser.slam_event",
+						});
+					}
+				}
+
+				// Only one cam pattern can be invoked by a laser slam
+				{
+					std::set<std::pair<Pulse, std::int32_t>> invokedSlams;
+					std::set<std::pair<Pulse, std::int32_t>> warnedSlams;
+					for (const auto& [name, byPulse] : camera.cam.pattern.laser.slamEvent.custom)
+					{
+						for (const auto& [y, custom] : byPulse)
+						{
+							const std::pair<Pulse, std::int32_t> slam{ y, custom.d };
+							if (!invokedSlams.insert(slam).second && warnedSlams.insert(slam).second)
+							{
+								pDiag->warnings.push_back({
+									.type = KsonLoadingWarningType::DuplicateCamPatternInvocation,
+									.scope = WarningScope::EditorOnly,
+									.message = "Multiple camera patterns are invoked by the same laser slam at pulse " + std::to_string(y) + " (only the one defined first is used)",
+								});
 							}
 						}
 					}
@@ -2507,6 +2707,23 @@ namespace
 		}
 	}
 
+	void ScanForUndefinedCamPatterns(const kson::ChartData& chartData, kson::KsonSavingDiag* pKsonDiag)
+	{
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (byPulse.empty() || kson::IsBuiltInCamPatternName(name) || chartData.camera.cam.pattern.defByName(name) != nullptr)
+			{
+				continue;
+			}
+
+			pKsonDiag->warnings.push_back({
+				.scope = kson::WarningScope::EditorOnly,
+				.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.laser.slam_event",
+				.details = kson::CamPatternUndefinedWarningDetails{ .name = name },
+			});
+		}
+	}
+
 	void ScanForKsonSavingWarnings(const kson::ChartData& chartData, kson::KsonSavingDiag* pKsonDiag)
 	{
 		if (!pKsonDiag)
@@ -2515,6 +2732,7 @@ namespace
 		}
 
 		ScanForOverlappingLaserSections(chartData, pKsonDiag);
+		ScanForUndefinedCamPatterns(chartData, pKsonDiag);
 	}
 }
 

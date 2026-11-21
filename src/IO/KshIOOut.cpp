@@ -50,6 +50,8 @@ namespace
 	constexpr double kCenterSplitAbsMax = 65535.0;
 	constexpr double kHighwayWipeAbsMax = 65535.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
+	constexpr double kCamPatternValueAbsMax = 65535.0;
+	constexpr double kCamPatternScaleAbsMax = 65535.0;
 
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
@@ -359,6 +361,23 @@ namespace
 		return "";
 	}
 
+	void ScanForUndefinedCamPatterns(const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
+	{
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (byPulse.empty() || IsBuiltInCamPatternName(name) || chartData.camera.cam.pattern.defByName(name) != nullptr)
+			{
+				continue;
+			}
+
+			pKshSavingDiag->warnings.push_back({
+				.scope = WarningScope::EditorOnly,
+				.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.laser.slam_event",
+				.details = CamPatternUndefinedWarningDetails{ .name = name },
+			});
+		}
+	}
+
 	void ScanForDataLossWarnings(const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 	{
 		if (!pKshSavingDiag)
@@ -530,6 +549,8 @@ namespace
 				}
 			}
 		}
+
+		ScanForUndefinedCamPatterns(chartData, pKshSavingDiag);
 	}
 
 	// Write UTF-8 BOM
@@ -823,6 +844,13 @@ namespace
 		if (!chartData.camera.cam.pattern.laser.slamEvent.swing.empty())
 		{
 			maxPulse = std::max(maxPulse, chartData.camera.cam.pattern.laser.slamEvent.swing.rbegin()->first);
+		}
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (!byPulse.empty())
+			{
+				maxPulse = std::max(maxPulse, byPulse.rbegin()->first);
+			}
 		}
 
 		// Laser audio effects
@@ -1883,6 +1911,29 @@ namespace
 		}
 	}
 
+	// Write the scale of a cam pattern invocation (omitted if it is the default)
+	void WriteCamPatternScale(std::ostream& stream, const std::string& name, Pulse pulse, double scale, KshSavingDiag* pKshSavingDiag)
+	{
+		const double clampedScale = std::clamp(scale, -kCamPatternScaleAbsMax, kCamPatternScaleAbsMax);
+		if (pKshSavingDiag && clampedScale != scale)
+		{
+			pKshSavingDiag->warnings.push_back({
+				.scope = WarningScope::EditorOnly,
+				.message = "Scale " + std::to_string(scale) + " of the camera pattern '" + name + "' at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedScale),
+				.details = CamPatternScaleClampedWarningDetails{
+					.name = name,
+					.pulse = pulse,
+					.minValue = -kCamPatternScaleAbsMax,
+					.maxValue = kCamPatternScaleAbsMax,
+				},
+			});
+		}
+		if (clampedScale != 1.0)
+		{
+			stream << ";" << FormatDoublePrecise(clampedScale);
+		}
+	}
+
 	// Write note line
 	void WriteNoteLine(std::ostream& stream, const ChartData& chartData, const std::array<std::vector<KshLaserSegment>, kNumLaserLanes>& laserSegments, const NoteLineLookup& lookup, Pulse pulse, MeasureExportState& state, bool useLegacyScaleForManualTilt, KshSavingDiag* pKshSavingDiag)
 	{
@@ -2198,6 +2249,23 @@ namespace
 			{
 				stream << "chokkakuse=" << name << "\r\n";
 				break;
+			}
+		}
+
+		// Check for custom cam patterns (cam_slam_l, cam_slam_r)
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (!IsValidKshCamPatternName(name))
+			{
+				continue;
+			}
+			const auto [first, last] = byPulse.equal_range(pulse);
+			for (auto itr = first; itr != last; ++itr)
+			{
+				const CamPatternInvokeCustom& customEvent = itr->second;
+				stream << (customEvent.d < 0 ? "cam_slam_l=" : "cam_slam_r=") << name << ";" << ToKshResolution(customEvent.length);
+				WriteCamPatternScale(stream, name, pulse, customEvent.v.scale, pKshSavingDiag);
+				stream << "\r\n";
 			}
 		}
 
@@ -2830,6 +2898,13 @@ namespace
 		{
 			lookup.gcdPulses.push_back(pulse);
 		}
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			for (const auto& [pulse, customEvent] : byPulse)
+			{
+				lookup.gcdPulses.push_back(pulse);
+			}
+		}
 
 		if (!chartData.audio.audioEffect.fx.longEvent.empty())
 		{
@@ -3218,6 +3293,157 @@ namespace
 	}
 }
 
+namespace
+{
+	// Write a graph of a cam pattern definition (e.g., "0:0,48:100,144:-100:0.3:0.7,192:0")
+	// Returns the first value that is clamped, or std::nullopt if no value is clamped
+	std::optional<double> WriteCamPatternGraph(std::ostream& stream, const Graph& graph, bool isIntValue)
+	{
+		std::optional<double> firstClampedValue;
+		const auto fnToWrittenValue = [&firstClampedValue, isIntValue](double value)
+		{
+			const double clampedValue = std::clamp(value, -kCamPatternValueAbsMax, kCamPatternValueAbsMax);
+			if (clampedValue != value && !firstClampedValue.has_value())
+			{
+				firstClampedValue = value;
+			}
+			return isIntValue ? std::round(clampedValue) : clampedValue;
+		};
+		const auto fnWriteValue = [&stream, isIntValue](double writtenValue)
+		{
+			if (isIntValue)
+			{
+				stream << static_cast<std::int32_t>(writtenValue);
+			}
+			else
+			{
+				stream << FormatDoublePrecise(writtenValue);
+			}
+		};
+
+		bool isFirst = true;
+		for (const auto& [ry, graphPoint] : graph)
+		{
+			if (!isFirst)
+			{
+				stream << ",";
+			}
+			isFirst = false;
+
+			const std::int32_t position = ToKshResolution(ry);
+			stream << position << ":";
+			const double v = fnToWrittenValue(graphPoint.v.v);
+			fnWriteValue(v);
+
+			// Output vf as the second point at the same position if v != vf (immediate change)
+			const double vf = fnToWrittenValue(graphPoint.v.vf);
+			if (!AlmostEquals(v, vf))
+			{
+				stream << "," << position << ":";
+				fnWriteValue(vf);
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << ":" << FormatDoublePrecise(graphPoint.curve.a) << ":" << FormatDoublePrecise(graphPoint.curve.b);
+			}
+		}
+		return firstClampedValue;
+	}
+
+	// Write cam pattern definitions (#define_cam)
+	void WriteCamPatternDefinitions(std::ostream& stream, const std::vector<CamPatternDefKVP>& defs, KshSavingDiag* pKshSavingDiag)
+	{
+		for (const auto& [name, def] : defs)
+		{
+			if (!IsValidKshCamPatternName(name))
+			{
+				if (pKshSavingDiag)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.scope = WarningScope::EditorOnly,
+						.message = "Camera pattern definition '" + name + "' is not saved as the name cannot be used in KSH",
+						.details = CamPatternInvalidNameWarningDetails{ .name = name },
+					});
+				}
+				continue;
+			}
+
+			struct Param
+			{
+				const char* name;
+				const Graph& graph;
+				bool isIntValue;
+			};
+			const Param params[] = {
+				{ "zoom_top", def.body.zoomTop, true },
+				{ "zoom_bottom", def.body.zoomBottom, true },
+				{ "zoom_side", def.body.zoomSide, true },
+				{ "rotation_deg", def.body.rotationDeg, false },
+				{ "rotation_deg_highway", def.body.rotationDegHighway, false },
+				{ "rotation_deg_jdgline", def.body.rotationDegJdgline, false },
+				{ "rotation_deg_layer", def.body.rotationDegLayer, false },
+				{ "center_split", def.body.centerSplit, false },
+				{ "highway_wipe", def.body.highwayWipe, false },
+			};
+
+			stream << "#define_cam " << name;
+			bool isFirst = true;
+			bool precisionLost = false;
+			std::optional<double> firstClampedValue;
+			for (const Param& param : params)
+			{
+				if (param.graph.empty())
+				{
+					continue;
+				}
+				stream << (isFirst ? " " : ";") << param.name << "=";
+				isFirst = false;
+				const std::optional<double> clampedValue = WriteCamPatternGraph(stream, param.graph, param.isIntValue);
+				if (clampedValue.has_value() && !firstClampedValue.has_value())
+				{
+					firstClampedValue = clampedValue;
+				}
+
+				for (const auto& [ry, graphPoint] : param.graph)
+				{
+					if (ry % (kResolution4 / kKshResolution4) != 0)
+					{
+						precisionLost = true;
+					}
+				}
+				if (param.isIntValue && HasZoomFractionLoss(param.graph))
+				{
+					precisionLost = true;
+				}
+			}
+			stream << "\r\n";
+
+			if (pKshSavingDiag && precisionLost)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "Positions or values of the camera pattern definition '" + name + "' will be rounded (KSH limitation)",
+					.details = CamPatternPrecisionLostWarningDetails{ .name = name },
+				});
+			}
+
+			if (pKshSavingDiag && firstClampedValue.has_value())
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "Value " + std::to_string(*firstClampedValue) + " of the camera pattern definition '" + name + "' clamped to " + std::to_string(std::clamp(*firstClampedValue, -kCamPatternValueAbsMax, kCamPatternValueAbsMax)),
+					.details = CamPatternValueClampedWarningDetails{
+						.name = name,
+						.minValue = -kCamPatternValueAbsMax,
+						.maxValue = kCamPatternValueAbsMax,
+					},
+				});
+			}
+		}
+	}
+}
+
 kson::ErrorType kson::SaveKshChartData(std::ostream& stream, const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
 {
 	if (!stream.good())
@@ -3237,6 +3463,7 @@ kson::ErrorType kson::SaveKshChartData(std::ostream& stream, const ChartData& ch
 		WriteHeader(stream, chartData, &state.headerBPMStr);
 		WriteMeasures(stream, chartData, state, pKshSavingDiag);
 		WriteAudioEffectDefinitions(stream, chartData);
+		WriteCamPatternDefinitions(stream, chartData.camera.cam.pattern.def, pKshSavingDiag);
 
 		return stream.good() ? ErrorType::None : ErrorType::GeneralIOError;
 	}
@@ -3276,6 +3503,13 @@ std::string kson::SerializeAudioEffectDefsToKsh(
 		WriteAudioEffectDefLine(stream, "#define_filter", name, def, kKsonToKshPresetFilterName);
 	}
 
+	return stream.str();
+}
+
+std::string kson::SerializeCamPatternDefsToKsh(const std::vector<CamPatternDefKVP>& defs, KshSavingDiag* pKshSavingDiag)
+{
+	std::ostringstream stream;
+	WriteCamPatternDefinitions(stream, defs, pKshSavingDiag);
 	return stream.str();
 }
 

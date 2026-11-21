@@ -23,6 +23,11 @@ namespace kson
 		SinglePointLaserSection,
 		MeasureSplitNotDivisible,
 		AudioEffectDuplicateName,
+		InvalidCamPatternName,
+		InvalidCamPatternParam,
+		CamPatternDuplicateName,
+		UndefinedCamPattern,
+		DuplicateCamPatternInvocation,
 		UnexpectedError,
 	};
 

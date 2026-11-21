@@ -43,6 +43,7 @@
     <ClInclude Include="include\kson\IO\KsonIO.hpp" />
     <ClInclude Include="include\kson\IO\KsonParserDiag.hpp" />
     <ClInclude Include="include\kson\IO\KsonSavingDiag.hpp" />
+    <ClInclude Include="include\kson\IO\SavingWarningDetails.hpp" />
     <ClInclude Include="include\kson\IO\WarningScope.hpp" />
     <ClInclude Include="include\kson\kson.hpp" />
     <ClInclude Include="include\kson\Meta\MetaInfo.hpp" />
@@ -55,6 +56,7 @@
   <ItemGroup>
     <ClCompile Include="src\Audio\AudioEffect.cpp" />
     <ClCompile Include="src\Audio\BGMInfo.cpp" />
+    <ClCompile Include="src\Camera\Cam.cpp" />
     <ClCompile Include="src\Camera\Tilt.cpp" />
     <ClCompile Include="src\ChartData.cpp" />
     <ClCompile Include="src\Compat\CompatInfo.cpp" />

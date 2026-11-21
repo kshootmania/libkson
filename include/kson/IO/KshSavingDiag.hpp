@@ -1,6 +1,7 @@
 #pragma once
 #include "kson/Common/Common.hpp"
 #include "IDiag.hpp"
+#include "SavingWarningDetails.hpp"
 #include "WarningScope.hpp"
 #include <string>
 #include <variant>
@@ -110,6 +111,31 @@ namespace kson
 	{
 	};
 
+	struct CamPatternPrecisionLostWarningDetails
+	{
+		std::string name;
+	};
+
+	struct CamPatternInvalidNameWarningDetails
+	{
+		std::string name;
+	};
+
+	struct CamPatternValueClampedWarningDetails
+	{
+		std::string name;
+		double minValue;
+		double maxValue;
+	};
+
+	struct CamPatternScaleClampedWarningDetails
+	{
+		std::string name;
+		Pulse pulse;
+		double minValue;
+		double maxValue;
+	};
+
 	struct FXLongEventParamsLostWarningDetails
 	{
 		Pulse pulse;
@@ -137,6 +163,11 @@ namespace kson
 		HalfSpinDegClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
 		LaserPrecisionLostWarningDetails,
+		CamPatternPrecisionLostWarningDetails,
+		CamPatternInvalidNameWarningDetails,
+		CamPatternValueClampedWarningDetails,
+		CamPatternScaleClampedWarningDetails,
+		CamPatternUndefinedWarningDetails,
 		FXLongEventParamsLostWarningDetails,
 		AdjacentLaserSectionsWarningDetails>;
 

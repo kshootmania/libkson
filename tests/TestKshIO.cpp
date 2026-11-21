@@ -3043,6 +3043,173 @@ TEST_CASE("KSH rotation_deg_highway, rotation_deg_jdgline, and rotation_deg_laye
 	REQUIRE(oss.str().find("rotation_deg_layer=30\r\n") != std::string::npos);
 }
 
+TEST_CASE("KSH custom cam pattern loading and saving", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"cam_slam_l=Shake;192\n"
+		"0000|00|o0\n"
+		"0000|00|::\n"
+		"cam_slam_r=Shake;96;1.5\n"
+		"0000|00|0o\n"
+		"0000|00|::\n"
+		"--\n"
+		"#define_cam Shake zoom_side=0:0,48:100,96:50,96:-50:0.25:0.75,192:0;rotation_deg_highway=0:0,96:15.5,192:0\n";
+
+	std::istringstream iss(kshContent);
+	kson::KshLoadingDiag kshLoadingDiag;
+	const auto chartData = kson::LoadKshChartData(iss, &kshLoadingDiag);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(kshLoadingDiag.warnings.empty());
+
+	const auto& pattern = chartData.camera.cam.pattern;
+	REQUIRE(pattern.def.size() == 1);
+	REQUIRE(pattern.def[0].name == "Shake");
+	const auto& body = pattern.def[0].v.body;
+	REQUIRE(body.zoomSide.size() == 4);
+	REQUIRE(body.zoomSide.at(kson::kResolution).v.v == Approx(100.0));
+	REQUIRE(body.zoomSide.at(kson::kResolution * 2).v.v == Approx(50.0));
+	REQUIRE(body.zoomSide.at(kson::kResolution * 2).v.vf == Approx(-50.0));
+	REQUIRE(body.zoomSide.at(kson::kResolution * 2).curve.a == Approx(0.25));
+	REQUIRE(body.zoomSide.at(kson::kResolution * 2).curve.b == Approx(0.75));
+	REQUIRE(body.rotationDegHighway.at(kson::kResolution * 2).v.v == Approx(15.5));
+	REQUIRE(pattern.def[0].v.length() == kson::kResolution4);
+
+	const auto& customEvents = pattern.laser.slamEvent.custom.at("Shake");
+	REQUIRE(customEvents.size() == 2);
+	REQUIRE(customEvents.find(0)->second.d == -1);
+	REQUIRE(customEvents.find(0)->second.length == kson::kResolution4);
+	REQUIRE(customEvents.find(0)->second.v.scale == Approx(1.0));
+	REQUIRE(customEvents.find(kson::kResolution * 2)->second.d == 1);
+	REQUIRE(customEvents.find(kson::kResolution * 2)->second.length == kson::kResolution * 2);
+	REQUIRE(customEvents.find(kson::kResolution * 2)->second.v.scale == Approx(1.5));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("cam_slam_l=Shake;192\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("cam_slam_r=Shake;96;1.5\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("#define_cam Shake zoom_side=0:0,48:100,96:50,96:-50:0.25:0.75,192:0;rotation_deg_highway=0:0,96:15.5,192:0\r\n") != std::string::npos);
+}
+
+TEST_CASE("KSH Shift-JIS custom cam pattern name", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"cam_slam_r=\x97\x68\x82\xea;192\n"
+		"0000|00|--\n"
+		"--\n"
+		"#define_cam \x97\x68\x82\xea zoom_side=0:0,192:100\n";
+
+	std::istringstream iss(kshContent);
+	kson::KshLoadingDiag kshLoadingDiag;
+	const auto chartData = kson::LoadKshChartData(iss, &kshLoadingDiag);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(kshLoadingDiag.warnings.empty());
+
+	const std::string nameUTF8 = "\xe6\x8f\xba\xe3\x82\x8c";
+	REQUIRE(chartData.camera.cam.pattern.def.size() == 1);
+	REQUIRE(chartData.camera.cam.pattern.def[0].name == nameUTF8);
+	REQUIRE(chartData.camera.cam.pattern.laser.slamEvent.custom.contains(nameUTF8));
+}
+
+TEST_CASE("KSH custom cam pattern loading warnings", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"cam_slam_l=Undefined;192\n"
+		"0000|00|o0\n"
+		"cam_slam_r=swing;192\n"
+		"cam_slam_l=Shake;192\n"
+		"cam_slam_r=Shake;96\n"
+		"cam_slam_r=Shake;48\n"
+		"cam_slam_r=Other;192\n"
+		"0000|00|::\n"
+		"--\n"
+		"#define_cam swing zoom_side=0:0,192:100\n"
+		"#define_cam A;B zoom_side=0:0,192:100\n"
+		"#define_cam Shake zoom_side=0:0,192:100;unknown=0:0\n"
+		"#define_cam Shake zoom_side=0:0,192:200\n"
+		"#define_cam Other zoom_side=0:0,192:100\n";
+
+	std::istringstream iss(kshContent);
+	kson::KshLoadingDiag kshLoadingDiag;
+	const auto chartData = kson::LoadKshChartData(iss, &kshLoadingDiag);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	const auto fnCount = [&kshLoadingDiag](kson::KshLoadingWarningType type)
+	{
+		return std::count_if(kshLoadingDiag.warnings.begin(), kshLoadingDiag.warnings.end(), [type](const kson::KshLoadingWarning& warning) { return warning.type == type; });
+	};
+	REQUIRE(fnCount(kson::KshLoadingWarningType::InvalidCamPatternName) == 3);
+	REQUIRE(fnCount(kson::KshLoadingWarningType::InvalidCamPatternParam) == 1);
+	REQUIRE(fnCount(kson::KshLoadingWarningType::CamPatternDuplicateName) == 1);
+	REQUIRE(fnCount(kson::KshLoadingWarningType::UndefinedCamPattern) == 1);
+	REQUIRE(fnCount(kson::KshLoadingWarningType::DuplicateCamPatternInvocation) == 2);
+
+	const auto& pattern = chartData.camera.cam.pattern;
+	REQUIRE(pattern.def.size() == 2);
+	REQUIRE(pattern.def[0].v.body.zoomSide.at(kson::kResolution4).v.v == Approx(200.0));
+	const auto [first, last] = pattern.laser.slamEvent.custom.at("Shake").equal_range(kson::kResolution4 / 2);
+	REQUIRE(std::distance(first, last) == 2);
+	REQUIRE(first->second.d == -1);
+	REQUIRE(std::next(first)->second.d == 1);
+	REQUIRE(std::next(first)->second.length == kson::kResolution);
+	REQUIRE(pattern.laser.slamEvent.custom.contains("Undefined"));
+	REQUIRE_FALSE(pattern.laser.slamEvent.custom.contains("swing"));
+}
+
+TEST_CASE("KSH custom cam pattern invalid values", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"cam_slam_l=Shake;192;nan\n"
+		"0000|00|o0\n"
+		"0000|00|::\n"
+		"cam_slam_r=Shake;192;65536\n"
+		"0000|00|0o\n"
+		"0000|00|::\n"
+		"--\n"
+		"#define_cam Shake rotation_deg=0:0,96:nan,144:65536,192:10;zoom_side=0:0:nan:0.5,192:0\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	const auto& pattern = chartData.camera.cam.pattern;
+	const auto& customEvents = pattern.laser.slamEvent.custom.at("Shake");
+	REQUIRE(customEvents.find(0)->second.v.scale == Approx(1.0));
+	REQUIRE(customEvents.find(kson::kResolution * 2)->second.v.scale == Approx(1.0));
+
+	const auto& body = pattern.def.at(0).v.body;
+	REQUIRE(body.rotationDeg.size() == 2);
+	REQUIRE(body.rotationDeg.at(kson::kResolution4).v.v == Approx(10.0));
+	REQUIRE(body.zoomSide.size() == 2);
+	REQUIRE(body.zoomSide.at(0).curve.a == Approx(0.0));
+	REQUIRE(body.zoomSide.at(0).curve.b == Approx(0.0));
+}
+
+TEST_CASE("KSH cam pattern definition text serialization", "[ksh_io][camera]")
+{
+	const auto parsed = kson::ParseCamPatternDefsFromKsh("#define_cam A zoom_top=0:0,192:100\n");
+	REQUIRE(parsed.error.empty());
+	REQUIRE(parsed.warnings.empty());
+	REQUIRE(parsed.defs.size() == 1);
+	REQUIRE(parsed.defs[0].name == "A");
+
+	REQUIRE(kson::SerializeCamPatternDefsToKsh(parsed.defs) == "#define_cam A zoom_top=0:0,192:100\r\n");
+
+	REQUIRE_FALSE(kson::ParseCamPatternDefsFromKsh("#define_fx A type=Retrigger\n").error.empty());
+	REQUIRE_FALSE(kson::ParseCamPatternDefsFromKsh("#define_cam swing zoom_side=0:0,192:100\n").error.empty());
+}
+
 TEST_CASE("KSH spin count and half spin deg loading and saving", "[ksh_io][camera]")
 {
 	const std::string kshContent =
@@ -3137,3 +3304,4 @@ TEST_CASE("KSH exponent part of values is not parsed", "[ksh_io]")
 	REQUIRE(std::get<kson::TiltGraphPoint>(chartData.camera.tilt.at(0)).v.v == Approx(5.0));
 	REQUIRE(chartData.camera.cam.body.centerSplit.at(0).v.v == Approx(1.5));
 }
+

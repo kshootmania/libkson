@@ -192,6 +192,159 @@ TEST_CASE("KSH saving LaserPrecisionLost warning", "[ksh_saving_diag]")
 	}
 }
 
+TEST_CASE("KSH saving CamPatternPrecisionLost warning", "[ksh_saving_diag]")
+{
+	SECTION("warning for off-grid position")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::CamPatternDef def;
+		def.body.rotationDeg.emplace(0, kson::GraphPoint{ 0.0 });
+		def.body.rotationDeg.emplace(7, kson::GraphPoint{ 10.0 });
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+
+		const auto warnings = SaveAndGetWarnings(chartData);
+		const auto filtered = FilterByDetails<kson::CamPatternPrecisionLostWarningDetails>(warnings);
+		REQUIRE(filtered.size() == 1);
+		REQUIRE(std::get<kson::CamPatternPrecisionLostWarningDetails>(filtered[0].details).name == "Pattern");
+	}
+
+	SECTION("warning for fractional zoom value")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::CamPatternDef def;
+		def.body.zoomTop.emplace(0, kson::GraphPoint{ 0.5 });
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+
+		const auto warnings = SaveAndGetWarnings(chartData);
+		REQUIRE(FilterByDetails<kson::CamPatternPrecisionLostWarningDetails>(warnings).size() == 1);
+	}
+
+	SECTION("no warning for grid-aligned integer values")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::CamPatternDef def;
+		def.body.zoomTop.emplace(0, kson::GraphPoint{ 0.0 });
+		def.body.zoomTop.emplace(kson::kResolution, kson::GraphPoint{ 100.0 });
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+
+		const auto warnings = SaveAndGetWarnings(chartData);
+		REQUIRE(FilterByDetails<kson::CamPatternPrecisionLostWarningDetails>(warnings).empty());
+	}
+}
+
+TEST_CASE("KSH saving CamPatternInvalidName warning", "[ksh_saving_diag]")
+{
+	SECTION("no warning for valid name")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+
+		auto warnings = FilterByDetails<kson::CamPatternInvalidNameWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.empty());
+	}
+
+	SECTION("warning for name with separator")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.def.push_back({ .name = "Two Words", .v = {} });
+		chartData.camera.cam.pattern.laser.slamEvent.custom["Two Words"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+
+		std::ostringstream oss;
+		kson::KshSavingDiag kshSavingDiag;
+		REQUIRE(kson::SaveKshChartData(oss, chartData, &kshSavingDiag) == kson::ErrorType::None);
+
+		auto warnings = FilterByDetails<kson::CamPatternInvalidNameWarningDetails>(kshSavingDiag.warnings);
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(std::get<kson::CamPatternInvalidNameWarningDetails>(warnings[0].details).name == "Two Words");
+		REQUIRE(oss.str().find("#define_cam") == std::string::npos);
+		REQUIRE(oss.str().find("cam_slam_") == std::string::npos);
+	}
+}
+
+TEST_CASE("KSH saving CamPatternUndefined warning", "[ksh_saving_diag]")
+{
+	SECTION("no warning for defined name")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+		chartData.camera.cam.pattern.laser.slamEvent.custom["Pattern"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+
+		auto warnings = FilterByDetails<kson::CamPatternUndefinedWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.empty());
+	}
+
+	SECTION("warning for undefined name")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+		chartData.camera.cam.pattern.laser.slamEvent.custom["Other"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+		chartData.camera.cam.pattern.laser.slamEvent.custom["Other"].emplace(960, kson::CamPatternInvokeCustom{ .d = -1, .length = kson::kResolution4 });
+
+		auto warnings = FilterByDetails<kson::CamPatternUndefinedWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(warnings[0].details).name == "Other");
+		REQUIRE(warnings[0].scope == kson::WarningScope::EditorOnly);
+	}
+
+	SECTION("warning for undefined name that cannot be used in KSH")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.laser.slamEvent.custom["A B"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+
+		auto warnings = FilterByDetails<kson::CamPatternUndefinedWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(warnings[0].details).name == "A B");
+	}
+}
+
+TEST_CASE("KSH saving CamPatternValueClamped warning", "[ksh_saving_diag]")
+{
+	SECTION("no warning for value in range")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::CamPatternDef def;
+		def.body.zoomTop.emplace(0, kson::GraphPoint{ 65535.0 });
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+
+		auto warnings = FilterByDetails<kson::CamPatternValueClampedWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.empty());
+	}
+
+	SECTION("warning for value out of range")
+	{
+		auto chartData = MakeMinimalChartData();
+		kson::CamPatternDef def;
+		def.body.zoomTop.emplace(0, kson::GraphPoint{ 1e20 });
+		def.body.rotationDeg.emplace(0, kson::GraphPoint{ -100000.0 });
+		chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+
+		std::ostringstream oss;
+		kson::KshSavingDiag kshSavingDiag;
+		REQUIRE(kson::SaveKshChartData(oss, chartData, &kshSavingDiag) == kson::ErrorType::None);
+
+		auto warnings = FilterByDetails<kson::CamPatternValueClampedWarningDetails>(kshSavingDiag.warnings);
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(std::get<kson::CamPatternValueClampedWarningDetails>(warnings[0].details).name == "Pattern");
+		REQUIRE(oss.str().find("#define_cam Pattern zoom_top=0:65535;rotation_deg=0:-65535\r\n") != std::string::npos);
+	}
+}
+
+TEST_CASE("KSH saving CamPatternScaleClamped warning", "[ksh_saving_diag]")
+{
+	auto chartData = MakeMinimalChartData();
+	chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+	chartData.camera.cam.pattern.laser.slamEvent.custom["Pattern"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4, .v = { .scale = 100000.0 } });
+
+	std::ostringstream oss;
+	kson::KshSavingDiag kshSavingDiag;
+	REQUIRE(kson::SaveKshChartData(oss, chartData, &kshSavingDiag) == kson::ErrorType::None);
+
+	auto warnings = FilterByDetails<kson::CamPatternScaleClampedWarningDetails>(kshSavingDiag.warnings);
+	REQUIRE(warnings.size() == 1);
+	REQUIRE(std::get<kson::CamPatternScaleClampedWarningDetails>(warnings[0].details).name == "Pattern");
+	REQUIRE(oss.str().find("cam_slam_r=Pattern;192;65535\r\n") != std::string::npos);
+}
+
 TEST_CASE("KSH saving FXLongEventParamsLost warning", "[ksh_saving_diag]")
 {
 	SECTION("no warning for preservable params")

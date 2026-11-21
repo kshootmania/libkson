@@ -1034,8 +1034,8 @@ TEST_CASE("KSON saving warning for overlapping laser sections", "[kson_io][savin
 
 	REQUIRE(result == kson::ErrorType::None);
 	REQUIRE(diag.warnings.size() == 1);
-	REQUIRE(diag.warnings[0].details.pulse == 480);
-	REQUIRE(diag.warnings[0].details.laneIdx == 0);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[0].details).pulse == 480);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[0].details).laneIdx == 0);
 	REQUIRE(!diag.editorWarnings().empty());
 	REQUIRE(diag.playerWarnings().empty());
 }
@@ -1055,10 +1055,10 @@ TEST_CASE("KSON saving warning for each overlapping laser section", "[kson_io][s
 	kson::SaveKsonChartData(oss, chart, &diag);
 
 	REQUIRE(diag.warnings.size() == 2);
-	REQUIRE(diag.warnings[0].details.pulse == 240);
-	REQUIRE(diag.warnings[0].details.laneIdx == 1);
-	REQUIRE(diag.warnings[1].details.pulse == 480);
-	REQUIRE(diag.warnings[1].details.laneIdx == 1);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[0].details).pulse == 240);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[0].details).laneIdx == 1);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[1].details).pulse == 480);
+	REQUIRE(std::get<kson::OverlappingLaserSectionsWarningDetails>(diag.warnings[1].details).laneIdx == 1);
 }
 
 TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][saving_diag]")
@@ -1075,6 +1075,24 @@ TEST_CASE("KSON saving warning ignores connected laser sections", "[kson_io][sav
 
 	REQUIRE(result == kson::ErrorType::None);
 	REQUIRE(diag.warnings.empty());
+}
+
+TEST_CASE("KSON saving warning for undefined cam pattern", "[kson_io][saving_diag]")
+{
+	kson::ChartData chart;
+	chart.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+	chart.camera.cam.pattern.laser.slamEvent.custom["Pattern"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+	chart.camera.cam.pattern.laser.slamEvent.custom["Other"].emplace(960, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+
+	kson::KsonSavingDiag diag;
+	std::ostringstream oss;
+	const kson::ErrorType result = kson::SaveKsonChartData(oss, chart, &diag);
+
+	REQUIRE(result == kson::ErrorType::None);
+	REQUIRE(diag.warnings.size() == 1);
+	REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(diag.warnings[0].details).name == "Other");
+	REQUIRE(!diag.editorWarnings().empty());
+	REQUIRE(diag.playerWarnings().empty());
 }
 
 TEST_CASE("KSON spin count and half spin deg", "[kson_io][camera]")
@@ -1100,6 +1118,66 @@ TEST_CASE("KSON spin count and half spin deg", "[kson_io][camera]")
 	REQUIRE(slamEvent.halfSpin.at(0).v.deg == Approx(90.5));
 	REQUIRE(slamEvent.halfSpin.at(960).v.deg == Approx(60.0));
 	REQUIRE(slamEvent.halfSpin.at(1920).v.deg == Approx(-65535.0));
+}
+
+TEST_CASE("KSON custom cam pattern", "[kson_io][camera]")
+{
+	kson::ChartData chartData;
+	kson::CamPatternDef def;
+	def.body.zoomTop.emplace(0, kson::GraphPoint{ 0.0 });
+	def.body.zoomTop.emplace(7, kson::GraphPoint{ kson::GraphValue{ 10.5, 20.5 }, kson::GraphCurveValue{ 0.25, 0.75 } });
+	chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = def });
+	chartData.camera.cam.pattern.laser.slamEvent.custom["Pattern"].emplace(960, kson::CamPatternInvokeCustom{ .d = -1, .length = 480, .v = { .scale = 2.0 } });
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKsonChartData(oss, chartData) == kson::ErrorType::None);
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKsonChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+
+	const auto& pattern = loaded.camera.cam.pattern;
+	REQUIRE(pattern.def.size() == 1);
+	REQUIRE(pattern.def[0].name == "Pattern");
+	REQUIRE(pattern.def[0].v.body.zoomTop.at(7).v.v == Approx(10.5));
+	REQUIRE(pattern.def[0].v.body.zoomTop.at(7).v.vf == Approx(20.5));
+	REQUIRE(pattern.def[0].v.body.zoomTop.at(7).curve.a == Approx(0.25));
+	REQUIRE(pattern.laser.slamEvent.custom.at("Pattern").find(960)->second.d == -1);
+	REQUIRE(pattern.laser.slamEvent.custom.at("Pattern").find(960)->second.length == 480);
+	REQUIRE(pattern.laser.slamEvent.custom.at("Pattern").find(960)->second.v.scale == Approx(2.0));
+}
+
+TEST_CASE("KSON custom cam pattern loading warnings", "[kson_io][camera]")
+{
+	const std::string ksonData = R"({"format_version": 1, "camera": {"cam": {"pattern": {
+		"def": [["A", {"body": {"zoom_top": [[0, 10.0]]}}], ["B", {"body": {}}], ["A", {"body": {"zoom_top": [[0, 20.0]]}}], ["spin", {"body": {}}]],
+		"laser": {"slam_event": {"A": [[0, 1, 960, {"scale": 65536.0}]], "B": [[0, 1, 960], [960, -1, 960], [960, 1, 480], [960, 1, 960]], "Undefined": [[1920, 1, 960]]}}
+	}}}})";
+
+	std::istringstream stream(ksonData);
+	kson::KsonLoadingDiag diag;
+	const auto chart = kson::LoadKsonChartData(stream, &diag);
+	REQUIRE(chart.error == kson::ErrorType::None);
+
+	const auto fnCount = [&diag](kson::KsonLoadingWarningType type)
+	{
+		return std::count_if(diag.warnings.begin(), diag.warnings.end(), [type](const kson::KsonLoadingWarning& warning) { return warning.type == type; });
+	};
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::InvalidCamPatternName) == 1);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::CamPatternDuplicateName) == 1);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::UndefinedCamPattern) == 1);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::DuplicateCamPatternInvocation) == 2);
+
+	const auto& pattern = chart.camera.cam.pattern;
+	REQUIRE(pattern.def.size() == 2);
+	REQUIRE(pattern.def[0].name == "A");
+	REQUIRE(pattern.def[0].v.body.zoomTop.at(0).v.v == Approx(20.0));
+	REQUIRE(pattern.def[1].name == "B");
+	REQUIRE(pattern.laser.slamEvent.custom.at("A").find(0)->second.v.scale == Approx(1.0));
+	const auto [first, last] = pattern.laser.slamEvent.custom.at("B").equal_range(960);
+	REQUIRE(std::distance(first, last) == 2);
+	REQUIRE(first->second.d == -1);
+	REQUIRE(std::next(first)->second.length == 960);
 }
 
 TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")

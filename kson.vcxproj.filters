@@ -147,6 +147,9 @@
     <ClInclude Include="include\kson\IO\KsonSavingDiag.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
+    <ClInclude Include="include\kson\IO\SavingWarningDetails.hpp">
+      <Filter>Header Files\io</Filter>
+    </ClInclude>
     <ClInclude Include="include\kson\IO\WarningScope.hpp">
       <Filter>Header Files\io</Filter>
     </ClInclude>
@@ -184,6 +187,9 @@
     </ClCompile>
     <ClCompile Include="src\Util\TiltUtils.cpp">
       <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Camera\Cam.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Camera\Tilt.cpp">
       <Filter>Source Files</Filter>

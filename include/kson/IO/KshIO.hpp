@@ -34,4 +34,18 @@ namespace kson
 
 	[[nodiscard]]
 	AudioEffectDefsParseResult ParseAudioEffectDefsFromKsh(const std::string& text);
+
+	// Camera pattern definition KSH text serialization/deserialization
+	[[nodiscard]]
+	std::string SerializeCamPatternDefsToKsh(const std::vector<CamPatternDefKVP>& defs, KshSavingDiag* pKshSavingDiag = nullptr);
+
+	struct CamPatternDefsParseResult
+	{
+		std::vector<CamPatternDefKVP> defs;
+		std::vector<std::string> warnings;
+		std::string error;
+	};
+
+	[[nodiscard]]
+	CamPatternDefsParseResult ParseCamPatternDefsFromKsh(const std::string& text);
 }

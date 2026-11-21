@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <set>
 #include <unordered_set>
 #include <optional>
 #include <charconv>
@@ -42,11 +43,13 @@ namespace
 	constexpr std::size_t kZoomMaxCharLegacy = 4;       // ver <  1.67
 	constexpr std::size_t kZoomMaxChar = std::string::npos; // ver >= 1.67
 
-	// Maximum value of center_split, highway_wipe, manual tilt, rotation_deg
+	// Maximum value of center_split, highway_wipe, manual tilt, rotation_deg, cam pattern
 	constexpr double kCenterSplitAbsMax = 65535.0;
 	constexpr double kHighwayWipeAbsMax = 65535.0;
 	constexpr double kManualTiltAbsMax = 1000.0;
 	constexpr double kRotationDegAbsMax = 65535.0;
+	constexpr double kCamPatternValueAbsMax = 65535.0;
+	constexpr double kCamPatternScaleAbsMax = 65535.0;
 
 	// Maximum value of BPM
 	constexpr double kBPMMax = 65535.0; // ver >= 130
@@ -972,6 +975,152 @@ namespace
 		return value * kResolution4 / 192;
 	}
 
+	// Returns nullptr if the name is not a camera parameter name
+	Graph* CamGraphByKshName(CamGraphs& graphs, std::string_view name)
+	{
+		if (name == "zoom_top") return &graphs.zoomTop;
+		if (name == "zoom_bottom") return &graphs.zoomBottom;
+		if (name == "zoom_side") return &graphs.zoomSide;
+		if (name == "rotation_deg") return &graphs.rotationDeg;
+		if (name == "rotation_deg_highway") return &graphs.rotationDegHighway;
+		if (name == "rotation_deg_jdgline") return &graphs.rotationDegJdgline;
+		if (name == "rotation_deg_layer") return &graphs.rotationDegLayer;
+		if (name == "center_split") return &graphs.centerSplit;
+		if (name == "highway_wipe") return &graphs.highwayWipe;
+		return nullptr;
+	}
+
+	// Parses a graph of "#define_cam" (e.g., "0:0,48:100,144:-100:0.3:0.7,192:0")
+	Graph ParseCamPatternGraph(std::string_view str, bool isIntValue)
+	{
+		Graph graph;
+		while (!str.empty())
+		{
+			const std::size_t commaIdx = str.find(',');
+			const std::string_view pointSV = str.substr(0, commaIdx);
+			str = (commaIdx == std::string_view::npos) ? std::string_view{} : str.substr(commaIdx + 1);
+
+			std::vector<std::string_view> fields;
+			std::string_view rest = pointSV;
+			while (true)
+			{
+				const std::size_t colonIdx = rest.find(':');
+				fields.push_back(rest.substr(0, colonIdx));
+				if (colonIdx == std::string_view::npos)
+				{
+					break;
+				}
+				rest = rest.substr(colonIdx + 1);
+			}
+			if (fields.size() < 2)
+			{
+				continue;
+			}
+
+			const RelPulse ry = KshLengthToRelPulse(fields[0]);
+			const double v = isIntValue ? static_cast<double>(ParseNumeric<std::int32_t>(fields[1])) : ParseNumeric<double>(fields[1]);
+			if (!(std::abs(v) <= kCamPatternValueAbsMax))
+			{
+				continue;
+			}
+			GraphCurveValue curve;
+			if (fields.size() >= 4)
+			{
+				const double a = ParseNumeric<double>(fields[2]);
+				const double b = ParseNumeric<double>(fields[3]);
+				if (std::isfinite(a) && std::isfinite(b))
+				{
+					curve = GraphCurveValue{ a, b };
+				}
+			}
+
+			const auto itr = graph.find(ry);
+			if (itr != graph.end())
+			{
+				// The second point at the same position is an immediate change
+				itr->second.v.vf = v;
+				itr->second.curve = curve;
+			}
+			else
+			{
+				graph.emplace(ry, GraphPoint{ GraphValue{ v }, curve });
+			}
+		}
+		return graph;
+	}
+
+	// Parses a cam pattern definition line (sv: the string after "#define_cam ")
+	void ParseCamPatternDefLine(std::string_view sv, std::vector<CamPatternDefKVP>& defs, KshLoadingDiag* pKshDiag, std::int64_t lineNo)
+	{
+		while (sv.starts_with(' '))
+		{
+			sv = sv.substr(1);
+		}
+		const std::size_t nameEndIdx = sv.find(' ');
+		const std::string name{ sv.substr(0, nameEndIdx) };
+		sv = (nameEndIdx == std::string_view::npos) ? std::string_view{} : sv.substr(nameEndIdx);
+		while (sv.starts_with(' '))
+		{
+			sv = sv.substr(1);
+		}
+		while (sv.ends_with(' '))
+		{
+			sv = sv.substr(0, sv.length() - 1);
+		}
+
+		if (!IsValidKshCamPatternName(name))
+		{
+			pKshDiag->warnings.push_back({
+				.type = KshLoadingWarningType::InvalidCamPatternName,
+				.scope = WarningScope::EditorOnly,
+				.message = "Camera pattern definition '" + name + "' is ignored as the name cannot be used.",
+				.lineNo = lineNo,
+			});
+			return;
+		}
+
+		CamPatternDef camPatternDef;
+		while (!sv.empty())
+		{
+			const std::size_t semicolonIdx = sv.find(';');
+			const std::string_view paramSV = sv.substr(0, semicolonIdx);
+			sv = (semicolonIdx == std::string_view::npos) ? std::string_view{} : sv.substr(semicolonIdx + 1);
+
+			const std::size_t equalIdx = paramSV.find(kOptionSeparator);
+			Graph* const pGraph = (equalIdx == std::string_view::npos) ? nullptr : CamGraphByKshName(camPatternDef.body, paramSV.substr(0, equalIdx));
+			if (pGraph == nullptr)
+			{
+				pKshDiag->warnings.push_back({
+					.type = KshLoadingWarningType::InvalidCamPatternParam,
+					.scope = WarningScope::EditorOnly,
+					.message = "Camera pattern parameter '" + std::string(paramSV) + "' in '" + name + "' is ignored.",
+					.lineNo = lineNo,
+				});
+				continue;
+			}
+
+			const std::string_view paramName = paramSV.substr(0, equalIdx);
+			const bool isIntValue = paramName == "zoom_top" || paramName == "zoom_bottom" || paramName == "zoom_side";
+			*pGraph = ParseCamPatternGraph(paramSV.substr(equalIdx + 1), isIntValue);
+		}
+
+		const auto existingIt = std::find_if(defs.begin(), defs.end(), [&name](const CamPatternDefKVP& kvp) { return kvp.name == name; });
+		if (existingIt != defs.end())
+		{
+			pKshDiag->warnings.push_back({
+				.type = KshLoadingWarningType::CamPatternDuplicateName,
+				.scope = WarningScope::EditorOnly,
+				.message = "Duplicate camera pattern definition '" + name + "' found. The later definition will be used.",
+				.lineNo = lineNo,
+			});
+			existingIt->v = std::move(camPatternDef);
+		}
+		else
+		{
+			defs.push_back(CamPatternDefKVP{ .name = name, .v = std::move(camPatternDef) });
+		}
+	}
+
 	std::tuple<RelPulse, std::int32_t, std::int32_t, std::int32_t> SplitSwingParams(std::string_view paramStr)
 	{
 		std::array<std::string, 4> params{
@@ -1787,6 +1936,14 @@ namespace
 				continue;
 			}
 
+			// User-defined camera patterns
+			if (line.starts_with("#define_cam "))
+			{
+				const std::string defUTF8 = ToUTF8(std::string_view(line).substr(12), isUTF8); // 12 = strlen("#define_cam ")
+				ParseCamPatternDefLine(defUTF8, chartData.camera.cam.pattern.def, pKshDiag, fileLineNo);
+				continue;
+			}
+
 			// User-defined audio effects
 			if (line[0] == '#')
 			{
@@ -2207,6 +2364,65 @@ namespace
 						{
 							currentMeasureLaserKeySounds.insert_or_assign(lineIdx, value);
 						}
+						else if (key == "cam_slam_l" || key == "cam_slam_r")
+						{
+							// Format: "<name>;<length>;<scale>" (the scale is optional)
+							const std::size_t semicolonIdx1 = value.find(';');
+							const std::string name = value.substr(0, semicolonIdx1);
+							if (semicolonIdx1 == std::string::npos)
+							{
+								pKshDiag->warnings.push_back({
+									.type = KshLoadingWarningType::InvalidCamPatternParam,
+									.scope = WarningScope::EditorOnly,
+									.message = "Invalid camera pattern \"" + key + "=" + value + "\" is ignored.",
+									.lineNo = optionFileLineNo,
+								});
+							}
+							else if (!IsValidKshCamPatternName(name))
+							{
+								pKshDiag->warnings.push_back({
+									.type = KshLoadingWarningType::InvalidCamPatternName,
+									.scope = WarningScope::EditorOnly,
+									.message = "Camera pattern '" + name + "' in \"" + key + "\" is ignored as the name cannot be used.",
+									.lineNo = optionFileLineNo,
+								});
+							}
+							else
+							{
+								const std::size_t semicolonIdx2 = value.find(';', semicolonIdx1 + 1);
+								const std::string_view valueSV = value;
+								CamPatternInvokeCustom custom{
+									.d = (key == "cam_slam_l") ? -1 : 1,
+									.length = KshLengthToRelPulse(valueSV.substr(semicolonIdx1 + 1, (semicolonIdx2 == std::string::npos) ? std::string_view::npos : semicolonIdx2 - semicolonIdx1 - 1)),
+								};
+								if (semicolonIdx2 != std::string::npos)
+								{
+									const double scale = ParseNumeric<double>(valueSV.substr(semicolonIdx2 + 1), 1.0);
+									if (std::abs(scale) <= kCamPatternScaleAbsMax)
+									{
+										custom.v.scale = scale;
+									}
+								}
+								// Laser slams in different directions at the same position are different laser slams
+								auto& customEvents = chartData.camera.cam.pattern.laser.slamEvent.custom[name];
+								const auto [first, last] = customEvents.equal_range(time);
+								const auto itr = std::find_if(first, last, [&custom](const auto& kvp) { return kvp.second.d == custom.d; });
+								if (itr != last)
+								{
+									pKshDiag->warnings.push_back({
+										.type = KshLoadingWarningType::DuplicateCamPatternInvocation,
+										.scope = WarningScope::EditorOnly,
+										.message = "Camera pattern '" + name + "' is invoked more than once at the same position. The later one will be used.",
+										.lineNo = optionFileLineNo,
+									});
+									itr->second = custom;
+								}
+								else
+								{
+									customEvents.emplace(time, custom);
+								}
+							}
+						}
 						else if (key == "pfiltergain")
 						{
 							const std::int32_t pfiltergainValue = ParseNumeric<std::int32_t>(value, 50);
@@ -2579,6 +2795,41 @@ namespace
 			if (!chartData.beat.scrollSpeed.contains(0))
 			{
 				chartData.beat.scrollSpeed.emplace(0, GraphValue{ 1.0 });
+			}
+		}
+
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (chartData.camera.cam.pattern.defByName(name) == nullptr)
+			{
+				pKshDiag->warnings.push_back({
+					.type = KshLoadingWarningType::UndefinedCamPattern,
+					.scope = WarningScope::EditorOnly,
+					.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.laser.slam_event.",
+					.lineNo = fileLineNo,
+				});
+			}
+		}
+
+		// Only one cam pattern can be invoked by a laser slam
+		{
+			std::set<std::pair<Pulse, std::int32_t>> invokedSlams;
+			std::set<std::pair<Pulse, std::int32_t>> warnedSlams;
+			for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+			{
+				for (const auto& [y, custom] : byPulse)
+				{
+					const std::pair<Pulse, std::int32_t> slam{ y, custom.d };
+					if (!invokedSlams.insert(slam).second && warnedSlams.insert(slam).second)
+					{
+						pKshDiag->warnings.push_back({
+							.type = KshLoadingWarningType::DuplicateCamPatternInvocation,
+							.scope = WarningScope::EditorOnly,
+							.message = "Multiple camera patterns are invoked by the same laser slam at pulse " + std::to_string(y) + ". Only the one defined first will be used.",
+							.lineNo = fileLineNo,
+						});
+					}
+				}
 			}
 		}
 
@@ -3039,6 +3290,57 @@ kson::AudioEffectDefsParseResult kson::ParseAudioEffectDefsFromKsh(const std::st
 					.v = std::move(paramsKson),
 				},
 			});
+		}
+	}
+
+	return result;
+}
+
+kson::CamPatternDefsParseResult kson::ParseCamPatternDefsFromKsh(const std::string& text)
+{
+	CamPatternDefsParseResult result;
+
+	std::istringstream stream(text);
+	std::string line;
+	std::int64_t lineNo = 0;
+
+	while (std::getline(stream, line, '\n'))
+	{
+		++lineNo;
+
+		// Eliminate CR
+		if (!line.empty() && *line.crbegin() == '\r')
+		{
+			line.pop_back();
+		}
+
+		// Skip empty lines
+		if (line.empty())
+		{
+			continue;
+		}
+
+		if (!line.starts_with("#define_cam "))
+		{
+			result.error = "Line " + std::to_string(lineNo) + ": Expected '#define_cam'";
+			return result;
+		}
+
+		KshLoadingDiag diag;
+		ParseCamPatternDefLine(std::string_view(line).substr(12), result.defs, &diag, lineNo); // 12 = strlen("#define_cam ")
+		for (const auto& warning : diag.warnings)
+		{
+			if (warning.type == KshLoadingWarningType::InvalidCamPatternName)
+			{
+				result.error = "Line " + std::to_string(lineNo) + ": Invalid camera pattern name";
+				return result;
+			}
+			if (warning.type == KshLoadingWarningType::InvalidCamPatternParam)
+			{
+				result.error = "Line " + std::to_string(lineNo) + ": Invalid parameter format";
+				return result;
+			}
+			result.warnings.push_back("Line " + std::to_string(lineNo) + ": " + warning.message);
 		}
 	}
 

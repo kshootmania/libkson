@@ -33,6 +33,11 @@ namespace kson
 		std::int32_t decayOrder = 2;
 	};
 
+	struct CamPatternInvokeCustomValue
+	{
+		double scale = 1.0;
+	};
+
 	namespace detail
 	{
 		template <typename ValueType>
@@ -47,12 +52,14 @@ namespace kson
 	using CamPatternInvokeSpin = detail::BasicCamPatternInvoke<CamPatternInvokeSpinValue>;
 	using CamPatternInvokeHalfSpin = detail::BasicCamPatternInvoke<CamPatternInvokeHalfSpinValue>;
 	using CamPatternInvokeSwing = detail::BasicCamPatternInvoke<CamPatternInvokeSwingValue>;
+	using CamPatternInvokeCustom = detail::BasicCamPatternInvoke<CamPatternInvokeCustomValue>;
 
 	struct CamPatternLaserInvokeList
 	{
 		ByPulse<CamPatternInvokeSpin> spin;
 		ByPulse<CamPatternInvokeHalfSpin> halfSpin;
 		ByPulse<CamPatternInvokeSwing> swing;
+		Dict<ByPulseMulti<CamPatternInvokeCustom>> custom; // Key: name defined in CamPatternInfo::def
 	};
 
 	struct CamPatternLaserInfo
@@ -60,9 +67,33 @@ namespace kson
 		CamPatternLaserInvokeList slamEvent;
 	};
 
+	struct CamPatternDef
+	{
+		CamGraphs body; // Keys of the graphs are relative pulses from the beginning of the pattern
+
+		// Returns the largest relative pulse of the graph points
+		[[nodiscard]]
+		RelPulse length() const;
+	};
+
+	using CamPatternDefKVP = DefKeyValuePair<CamPatternDef>;
+
+	// Returns true if the name is reserved for built-in cam patterns ("spin", "half_spin", "swing")
+	[[nodiscard]]
+	bool IsBuiltInCamPatternName(std::string_view name);
+
+	// Returns false if the name cannot be used as a cam pattern name in KSH (empty, built-in, or containing separators)
+	[[nodiscard]]
+	bool IsValidKshCamPatternName(std::string_view name);
+
 	struct CamPatternInfo
 	{
+		std::vector<CamPatternDefKVP> def;
 		CamPatternLaserInfo laser;
+
+		// Returns the definition with the specified name, or nullptr if not defined
+		[[nodiscard]]
+		const CamPatternDef* defByName(std::string_view name) const;
 	};
 
 	struct CamInfo

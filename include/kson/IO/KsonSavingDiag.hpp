@@ -1,8 +1,10 @@
 #pragma once
 #include "kson/Common/Common.hpp"
 #include "IDiag.hpp"
+#include "SavingWarningDetails.hpp"
 #include "WarningScope.hpp"
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace kson
@@ -13,11 +15,15 @@ namespace kson
 		size_t laneIdx;
 	};
 
+	using KsonSavingWarningDetails = std::variant<
+		OverlappingLaserSectionsWarningDetails,
+		CamPatternUndefinedWarningDetails>;
+
 	struct KsonSavingWarning
 	{
 		WarningScope scope;
 		std::string message;
-		OverlappingLaserSectionsWarningDetails details;
+		KsonSavingWarningDetails details;
 	};
 
 	struct KsonSavingDiag : IDiag
