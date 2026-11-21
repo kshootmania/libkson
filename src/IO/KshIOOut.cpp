@@ -774,6 +774,10 @@ namespace
 		{
 			maxPulse = std::max(maxPulse, chartData.camera.cam.body.rotationDegHighway.rbegin()->first);
 		}
+		if (!chartData.camera.cam.body.rotationDegJdgline.empty())
+		{
+			maxPulse = std::max(maxPulse, chartData.camera.cam.body.rotationDegJdgline.rbegin()->first);
+		}
 
 		// Camera zoom
 		if (!chartData.camera.cam.body.zoomTop.empty())
@@ -2438,6 +2442,52 @@ namespace
 			}
 		}
 
+		if (chartData.camera.cam.body.rotationDegJdgline.contains(pulse))
+		{
+			const auto& graphPoint = chartData.camera.cam.body.rotationDegJdgline.at(pulse);
+
+			const double clampedV = std::clamp(graphPoint.v.v, -kRotationDegAbsMax, kRotationDegAbsMax);
+			if (pKshSavingDiag && clampedV != graphPoint.v.v)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "rotation_deg_jdgline value " + std::to_string(graphPoint.v.v) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedV),
+					.details = RotationDegJdglineClampedWarningDetails{
+						.pulse = pulse,
+						.isFinalValue = false,
+						.minValue = -kRotationDegAbsMax,
+						.maxValue = kRotationDegAbsMax,
+					},
+				});
+			}
+			stream << "rotation_deg_jdgline=" << FormatDoublePrecise(clampedV) << "\r\n";
+
+			// Output vf on next line if v != vf (immediate change)
+			if (!AlmostEquals(graphPoint.v.v, graphPoint.v.vf))
+			{
+				const double clampedVf = std::clamp(graphPoint.v.vf, -kRotationDegAbsMax, kRotationDegAbsMax);
+				if (pKshSavingDiag && clampedVf != graphPoint.v.vf)
+				{
+					pKshSavingDiag->warnings.push_back({
+						.scope = WarningScope::EditorOnly,
+						.message = "rotation_deg_jdgline vf value " + std::to_string(graphPoint.v.vf) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(clampedVf),
+						.details = RotationDegJdglineClampedWarningDetails{
+							.pulse = pulse,
+							.isFinalValue = true,
+							.minValue = -kRotationDegAbsMax,
+							.maxValue = kRotationDegAbsMax,
+						},
+					});
+				}
+				stream << "rotation_deg_jdgline=" << FormatDoublePrecise(clampedVf) << "\r\n";
+			}
+
+			if (graphPoint.curve.a != 0.0 || graphPoint.curve.b != 0.0)
+			{
+				stream << "rotation_deg_jdgline_curve=" << FormatDoublePrecise(graphPoint.curve.a) << ";" << FormatDoublePrecise(graphPoint.curve.b) << "\r\n";
+			}
+		}
+
 		// Check for FX audio effect annotations (fx-l, fx-r)
 		// Output in lane order (fx-l before fx-r) to match v1 behavior
 		if (!chartData.audio.audioEffect.fx.longEvent.empty())
@@ -2677,6 +2727,10 @@ namespace
 			lookup.gcdPulses.push_back(pulse);
 		}
 		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.rotationDegHighway)
+		{
+			lookup.gcdPulses.push_back(pulse);
+		}
+		for (const auto& [pulse, graphPoint] : chartData.camera.cam.body.rotationDegJdgline)
 		{
 			lookup.gcdPulses.push_back(pulse);
 		}

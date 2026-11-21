@@ -10,6 +10,7 @@ namespace kson
 		Graph zoomTop; // "zoom_top"
 		Graph rotationDeg; // Rotation degree
 		Graph rotationDegHighway; // "rotation_deg_highway"
+		Graph rotationDegJdgline; // "rotation_deg_jdgline"
 		Graph centerSplit; // "center_split"
 		Graph highwayWipe; // "highway_wipe"
 	};
