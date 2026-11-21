@@ -3017,6 +3017,26 @@ TEST_CASE("KSH saving fractional graph values and curves", "[ksh_io][camera]")
 	REQUIRE(oss.str().find("center_split_curve=0.12345;0.98765\r\n") != std::string::npos);
 }
 
+TEST_CASE("KSH rotation_deg_highway loading and saving", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"rotation_deg_highway=10.5\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.camera.cam.body.rotationDegHighway.at(0).v.v == Approx(10.5));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("rotation_deg_highway=10.5\r\n") != std::string::npos);
+}
+
 TEST_CASE("KSH spin count and half spin deg loading and saving", "[ksh_io][camera]")
 {
 	const std::string kshContent =

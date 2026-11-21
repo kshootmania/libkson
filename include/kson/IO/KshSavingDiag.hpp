@@ -63,6 +63,14 @@ namespace kson
 		double maxValue;
 	};
 
+	struct RotationDegHighwayClampedWarningDetails
+	{
+		Pulse pulse;
+		bool isFinalValue;
+		double minValue;
+		double maxValue;
+	};
+
 	struct SpinCountClampedWarningDetails
 	{
 		Pulse pulse;
@@ -106,6 +114,7 @@ namespace kson
 		HighwayWipeClampedWarningDetails,
 		ManualTiltClampedWarningDetails,
 		RotationDegClampedWarningDetails,
+		RotationDegHighwayClampedWarningDetails,
 		SpinCountClampedWarningDetails,
 		HalfSpinDegClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
