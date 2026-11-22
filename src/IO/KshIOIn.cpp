@@ -1108,6 +1108,11 @@ namespace
 				camPatternDef.slamShake = ParseNumeric<std::int32_t>(paramSV.substr(equalIdx + 1), 1) != 0;
 				continue;
 			}
+			if (equalIdx != std::string_view::npos && paramSV.substr(0, equalIdx) == "flip_by_direction")
+			{
+				camPatternDef.flipByDirection = ParseNumeric<std::int32_t>(paramSV.substr(equalIdx + 1), 1) != 0;
+				continue;
+			}
 
 			Graph* const pGraph = (equalIdx == std::string_view::npos) ? nullptr : CamGraphByKshName(camPatternDef.body, paramSV.substr(0, equalIdx));
 			if (pGraph == nullptr)

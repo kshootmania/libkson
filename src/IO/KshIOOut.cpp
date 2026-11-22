@@ -3524,6 +3524,10 @@ namespace
 				stream << (isFirst ? " " : ";") << "slam_shake=0";
 				isFirst = false;
 			}
+			if (!def.flipByDirection)
+			{
+				stream << (isFirst ? " " : ";") << "flip_by_direction=0";
+			}
 			stream << "\r\n";
 
 			if (pKshSavingDiag && precisionLost)

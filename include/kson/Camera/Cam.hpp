@@ -73,6 +73,8 @@ namespace kson
 
 		bool slamShake = true; // Whether the default shake of a laser slam is applied together with the pattern
 
+		bool flipByDirection = true; // Whether the values are flipped for a laser slam to the left
+
 		// Returns the largest relative pulse of the graph points
 		[[nodiscard]]
 		RelPulse length() const;

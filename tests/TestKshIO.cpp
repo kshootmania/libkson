@@ -3116,23 +3116,26 @@ TEST_CASE("KSH Shift-JIS custom cam pattern name", "[ksh_io][camera]")
 	REQUIRE(chartData.camera.cam.pattern.laser.slamEvent.custom.contains(nameUTF8));
 }
 
-TEST_CASE("KSH custom cam pattern slam_shake", "[ksh_io][camera]")
+TEST_CASE("KSH custom cam pattern slam_shake and flip_by_direction", "[ksh_io][camera]")
 {
 	const auto parsed = kson::ParseCamPatternDefsFromKsh(
 		"#define_cam A zoom_side=0:0,192:100\n"
 		"#define_cam B zoom_side=0:0,192:100;slam_shake=0\n"
-		"#define_cam C slam_shake=1\n");
+		"#define_cam C zoom_side=0:0,192:100;slam_shake=1;flip_by_direction=0\n");
 	REQUIRE(parsed.error.empty());
 	REQUIRE(parsed.warnings.empty());
 	REQUIRE(parsed.defs.size() == 3);
 	REQUIRE(parsed.defs[0].v.slamShake);
+	REQUIRE(parsed.defs[0].v.flipByDirection);
 	REQUIRE_FALSE(parsed.defs[1].v.slamShake);
+	REQUIRE(parsed.defs[1].v.flipByDirection);
 	REQUIRE(parsed.defs[2].v.slamShake);
+	REQUIRE_FALSE(parsed.defs[2].v.flipByDirection);
 
 	REQUIRE(kson::SerializeCamPatternDefsToKsh(parsed.defs, nullptr) ==
 		"#define_cam A zoom_side=0:0,192:100\r\n"
 		"#define_cam B zoom_side=0:0,192:100;slam_shake=0\r\n"
-		"#define_cam C\r\n");
+		"#define_cam C zoom_side=0:0,192:100;flip_by_direction=0\r\n");
 }
 
 TEST_CASE("KSH custom cam pattern loading warnings", "[ksh_io][camera]")
