@@ -2038,6 +2038,7 @@ namespace
 							sv = sv.substr(0, sv.length() - 1);
 						}
 					}
+					name = ToUTF8(name, isUTF8);
 
 					Dict<std::string> params;
 					while (!sv.empty())

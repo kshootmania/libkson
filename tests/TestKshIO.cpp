@@ -3284,6 +3284,30 @@ TEST_CASE("KSH spin count and half spin deg out of range", "[ksh_io][camera]")
 	REQUIRE(slamEvent.halfSpin.at(kson::kResolution4 + kson::kResolution * 2).v.deg == Approx(-65535.0));
 }
 
+TEST_CASE("KSH Shift-JIS audio effect definition name", "[ksh_io][audio_effect]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"fx-l=\x97\x68\x82\xea\n"
+		"0000|10|--\n"
+		"0000|00|--\n"
+		"--\n"
+		"#define_fx \x97\x68\x82\xea type=Flanger\n";
+
+	std::istringstream iss(kshContent);
+	kson::KshLoadingDiag kshLoadingDiag;
+	const auto chartData = kson::LoadKshChartData(iss, &kshLoadingDiag);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(kshLoadingDiag.warnings.empty());
+
+	const std::string nameUTF8 = "\xe6\x8f\xba\xe3\x82\x8c";
+	REQUIRE(chartData.audio.audioEffect.fx.def.size() == 1);
+	REQUIRE(chartData.audio.audioEffect.fx.def[0].name == nameUTF8);
+	REQUIRE(chartData.audio.audioEffect.fx.longEvent.contains(nameUTF8));
+}
+
 TEST_CASE("KSH manual tilt is not rounded", "[ksh_io][tilt]")
 {
 	const std::string kshContent =
