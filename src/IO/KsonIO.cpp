@@ -616,6 +616,7 @@ namespace
 			nlohmann::json defJSON = {
 				{ "body", std::move(bodyJSON) },
 			};
+			Write(defJSON, "slam_shake", kvp.v.slamShake, true);
 			j.push_back(nlohmann::json::array({ kvp.name, std::move(defJSON) }));
 		}
 		if (!j.empty())
@@ -2348,6 +2349,7 @@ namespace
 							{
 								kvp.v.body = ParseCamGraphs(item[1]["body"], pDiag);
 							}
+							kvp.v.slamShake = GetWithDefault<bool>(item[1], "slam_shake", true);
 							const auto existingIt = std::find_if(camera.cam.pattern.def.begin(), camera.cam.pattern.def.end(),
 								[&kvp](const CamPatternDefKVP& existing) { return existing.name == kvp.name; });
 							if (existingIt != camera.cam.pattern.def.end())

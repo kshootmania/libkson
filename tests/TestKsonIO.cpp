@@ -1180,6 +1180,26 @@ TEST_CASE("KSON custom cam pattern loading warnings", "[kson_io][camera]")
 	REQUIRE(std::next(first)->second.length == 960);
 }
 
+TEST_CASE("KSON custom cam pattern slam_shake", "[kson_io][camera]")
+{
+	kson::ChartData chartData;
+	chartData.camera.cam.pattern.def.push_back({ .name = "A", .v = {} });
+	chartData.camera.cam.pattern.def.push_back({ .name = "B", .v = { .slamShake = false } });
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKsonChartData(oss, chartData) == kson::ErrorType::None);
+	const auto defJSON = nlohmann::json::parse(oss.str())["camera"]["cam"]["pattern"]["def"];
+	REQUIRE_FALSE(defJSON[0][1].contains("slam_shake"));
+	REQUIRE(defJSON[1][1]["slam_shake"] == false);
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKsonChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	REQUIRE(loaded.camera.cam.pattern.def.size() == 2);
+	REQUIRE(loaded.camera.cam.pattern.def[0].v.slamShake);
+	REQUIRE_FALSE(loaded.camera.cam.pattern.def[1].v.slamShake);
+}
+
 TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")
 {
 	const auto makeKsonData = [](const std::string& compat)

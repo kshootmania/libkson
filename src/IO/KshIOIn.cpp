@@ -1103,6 +1103,12 @@ namespace
 			sv = (semicolonIdx == std::string_view::npos) ? std::string_view{} : sv.substr(semicolonIdx + 1);
 
 			const std::size_t equalIdx = paramSV.find(kOptionSeparator);
+			if (equalIdx != std::string_view::npos && paramSV.substr(0, equalIdx) == "slam_shake")
+			{
+				camPatternDef.slamShake = ParseNumeric<std::int32_t>(paramSV.substr(equalIdx + 1), 1) != 0;
+				continue;
+			}
+
 			Graph* const pGraph = (equalIdx == std::string_view::npos) ? nullptr : CamGraphByKshName(camPatternDef.body, paramSV.substr(0, equalIdx));
 			if (pGraph == nullptr)
 			{

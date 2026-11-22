@@ -3519,6 +3519,11 @@ namespace
 					precisionLost = true;
 				}
 			}
+			if (!def.slamShake)
+			{
+				stream << (isFirst ? " " : ";") << "slam_shake=0";
+				isFirst = false;
+			}
 			stream << "\r\n";
 
 			if (pKshSavingDiag && precisionLost)

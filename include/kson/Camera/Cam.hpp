@@ -71,6 +71,8 @@ namespace kson
 	{
 		CamGraphs body; // Keys of the graphs are relative pulses from the beginning of the pattern
 
+		bool slamShake = true; // Whether the default shake of a laser slam is applied together with the pattern
+
 		// Returns the largest relative pulse of the graph points
 		[[nodiscard]]
 		RelPulse length() const;
