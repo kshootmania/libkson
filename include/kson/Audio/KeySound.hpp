@@ -17,7 +17,7 @@ namespace kson
 		KeySoundInvokeListFX chipEvent;
 	};
 
-	// Dictionary key: slam_up/slam_down/slam_swing/slam_mute
+	// Dictionary key: up/down/swing/mute
 	using KeySoundInvokeListLaser = Dict<std::set<Pulse>>;
 
 	struct KeySoundLaserLegacyInfo
