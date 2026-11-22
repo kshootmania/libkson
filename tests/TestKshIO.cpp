@@ -3351,6 +3351,24 @@ TEST_CASE("KSH Shift-JIS audio effect definition name", "[ksh_io][audio_effect]"
 	REQUIRE(chartData.audio.audioEffect.fx.longEvent.contains(nameUTF8));
 }
 
+TEST_CASE("KSH Shift-JIS comment and unknown lines", "[ksh_io][comment]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"//\x95\x5cn\n"
+		"\x95\x5c\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(chartData.editor.comment.find(0)->second == "\xe8\xa1\xa8n");
+	REQUIRE(chartData.compat.kshUnknown.line.find(0)->second == "\xe8\xa1\xa8");
+}
+
 TEST_CASE("KSH non-finite curve values, scroll_speed, and to are ignored", "[ksh_io][curve][scroll_speed]")
 {
 	const std::string kshContent =

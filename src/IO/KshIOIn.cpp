@@ -1655,7 +1655,7 @@ namespace
 			{
 				if constexpr (std::is_same_v<ChartDataType, ChartData>)
 				{
-					std::string commentText = line.substr(2); // 2 = strlen("//")
+					std::string commentText = ToUTF8(std::string_view(line).substr(2), isUTF8); // 2 = strlen("//")
 					std::size_t pos = 0;
 					while ((pos = commentText.find("\\n", pos)) != std::string::npos)
 					{
@@ -1672,7 +1672,7 @@ namespace
 			{
 				if constexpr (std::is_same_v<ChartDataType, ChartData>)
 				{
-					chartData.compat.kshUnknown.line.emplace(0, line);
+					chartData.compat.kshUnknown.line.emplace(0, ToUTF8(line, isUTF8));
 				}
 				continue;
 			}
@@ -1974,7 +1974,7 @@ namespace
 			// Comments
 			if (IsCommentLine(line))
 			{
-				std::string commentText = line.substr(2); // 2 = strlen("//")
+				std::string commentText = ToUTF8(std::string_view(line).substr(2), isUTF8); // 2 = strlen("//")
 				std::size_t pos = 0;
 				while ((pos = commentText.find("\\n", pos)) != std::string::npos)
 				{
@@ -2796,7 +2796,7 @@ namespace
 			// Insert unrecognized line
 			unknownLines.push_back({
 				.lineIdx = chartLines.size(),
-				.value = line,
+				.value = ToUTF8(line, isUTF8),
 			});
 		}
 
