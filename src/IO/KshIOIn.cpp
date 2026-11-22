@@ -2369,7 +2369,7 @@ namespace
 							if (IsTiltValueManual(value))
 							{
 								const double dValue = ParseNumeric<double>(value);
-								if (kshVersionInt < 170 && std::abs(dValue) >= 10.0)
+								if (kshVersionInt < 170 && std::isfinite(dValue) && std::abs(dValue) >= 10.0)
 								{
 									// HACK: Legacy charts with large manual tilt values often depend on the tilt scale (14 degrees) used before v1.70
 									useLegacyScaleForManualTilt = true;
