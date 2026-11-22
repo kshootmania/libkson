@@ -16,6 +16,14 @@ namespace kson
 		ZoomSide,
 	};
 
+	enum class KshMovieParam
+	{
+		Opacity,
+		Scale,
+		X,
+		Y,
+	};
+
 	struct BpmClampedWarningDetails
 	{
 		Pulse pulse;
@@ -102,6 +110,13 @@ namespace kson
 		double maxValue;
 	};
 
+	struct MovieValueClampedWarningDetails
+	{
+		KshMovieParam param;
+		double minValue;
+		double maxValue;
+	};
+
 	struct ZoomFractionLostWarningDetails
 	{
 		std::vector<KshCameraParam> params;
@@ -161,6 +176,7 @@ namespace kson
 		RotationDegLayerClampedWarningDetails,
 		SpinCountClampedWarningDetails,
 		HalfSpinDegClampedWarningDetails,
+		MovieValueClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
 		LaserPrecisionLostWarningDetails,
 		CamPatternPrecisionLostWarningDetails,

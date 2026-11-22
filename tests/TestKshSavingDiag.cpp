@@ -345,6 +345,27 @@ TEST_CASE("KSH saving CamPatternScaleClamped warning", "[ksh_saving_diag]")
 	REQUIRE(oss.str().find("cam_slam_r=Pattern;192;65535\r\n") != std::string::npos);
 }
 
+TEST_CASE("KSH saving MovieValueClamped warning", "[ksh_saving_diag]")
+{
+	auto chartData = MakeMinimalChartData();
+	chartData.bg.legacy.movie.filename = "movie.mp4";
+	chartData.bg.legacy.movie.opacity = 1e300;
+	chartData.bg.legacy.movie.scale = -1e300;
+	chartData.bg.legacy.movie.x = 1e300;
+	chartData.bg.legacy.movie.y = -1e300;
+
+	std::ostringstream oss;
+	kson::KshSavingDiag kshSavingDiag;
+	REQUIRE(kson::SaveKshChartData(oss, chartData, &kshSavingDiag) == kson::ErrorType::None);
+
+	auto warnings = FilterByDetails<kson::MovieValueClampedWarningDetails>(kshSavingDiag.warnings);
+	REQUIRE(warnings.size() == 4);
+	REQUIRE(oss.str().find("v_opacity=") == std::string::npos);
+	REQUIRE(oss.str().find("v_scale=0\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("vx=10000\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("vy=-10000\r\n") != std::string::npos);
+}
+
 TEST_CASE("KSH saving FXLongEventParamsLost warning", "[ksh_saving_diag]")
 {
 	SECTION("no warning for preservable params")

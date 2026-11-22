@@ -52,6 +52,8 @@ namespace
 	constexpr double kRotationDegAbsMax = 65535.0;
 	constexpr double kCamPatternValueAbsMax = 65535.0;
 	constexpr double kCamPatternScaleAbsMax = 65535.0;
+	constexpr double kMovieOpacityPercentMax = 100.0;
+	constexpr double kMoviePercentAbsMax = 10000.0;
 
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
@@ -264,6 +266,25 @@ namespace
 	}
 
 	std::string_view KsonPresetLaserFilterNameToKsh(const std::string& effectName);
+
+	const char* KshMoviePlacementToString(KshMoviePlacement placement)
+	{
+		switch (placement)
+		{
+		case KshMoviePlacement::kBehindLayer: return "behind_layer";
+		case KshMoviePlacement::kInFrontOfLayer: return "in_front_of_layer";
+		default: return "panel";
+		}
+	}
+
+	const char* KshMovieBlendModeToString(KshMovieBlendMode blendMode)
+	{
+		switch (blendMode)
+		{
+		case KshMovieBlendMode::kAdditive: return "additive";
+		default: return "normal";
+		}
+	}
 
 	const char* AutoTiltTypeToString(AutoTiltType type)
 	{
@@ -520,6 +541,42 @@ namespace
 						});
 					}
 				}
+			}
+		}
+
+		// Movie values
+		if (const auto& movie = chartData.bg.legacy.movie; !movie.filename.empty())
+		{
+			struct MovieValue
+			{
+				KshMovieParam param;
+				const char* name;
+				double value;
+				double minValue;
+				double maxValue;
+			};
+			const std::array<MovieValue, 4> movieValues{ {
+				{ KshMovieParam::Opacity, "opacity", movie.opacity * 100, 0.0, kMovieOpacityPercentMax },
+				{ KshMovieParam::Scale, "scale", movie.scale * 100, 0.0, kMoviePercentAbsMax },
+				{ KshMovieParam::X, "x", movie.x * 100, -kMoviePercentAbsMax, kMoviePercentAbsMax },
+				{ KshMovieParam::Y, "y", movie.y * 100, -kMoviePercentAbsMax, kMoviePercentAbsMax },
+			} };
+			for (const auto& [param, name, value, minValue, maxValue] : movieValues)
+			{
+				const double clampedValue = std::clamp(value, minValue, maxValue);
+				if (clampedValue == value)
+				{
+					continue;
+				}
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = std::string("Movie ") + name + " value " + std::to_string(value) + " clamped to " + std::to_string(clampedValue),
+					.details = MovieValueClampedWarningDetails{
+						.param = param,
+						.minValue = minValue,
+						.maxValue = maxValue,
+					},
+				});
 			}
 		}
 
@@ -1187,6 +1244,51 @@ namespace
 		{
 			stream << "v=" << bg.legacy.movie.filename << "\r\n";
 			stream << "vo=" << bg.legacy.movie.offset << "\r\n";
+			if (bg.legacy.movie.loop)
+			{
+				stream << "v_loop=1\r\n";
+			}
+			if (bg.legacy.movie.placement != KshMoviePlacement::kPanel)
+			{
+				stream << "v_placement=" << KshMoviePlacementToString(bg.legacy.movie.placement) << "\r\n";
+			}
+			if (bg.legacy.movie.blendMode != KshMovieBlendMode::kNormal)
+			{
+				stream << "v_blend_mode=" << KshMovieBlendModeToString(bg.legacy.movie.blendMode) << "\r\n";
+			}
+			const std::int32_t movieOpacity = static_cast<std::int32_t>(std::round(std::clamp(bg.legacy.movie.opacity * 100, 0.0, kMovieOpacityPercentMax)));
+			if (movieOpacity != 100)
+			{
+				stream << "v_opacity=" << movieOpacity << "\r\n";
+			}
+			const std::int32_t movieScale = static_cast<std::int32_t>(std::round(std::clamp(bg.legacy.movie.scale * 100, 0.0, kMoviePercentAbsMax)));
+			if (movieScale != 100)
+			{
+				stream << "v_scale=" << movieScale << "\r\n";
+			}
+			const std::int32_t movieX = static_cast<std::int32_t>(std::round(std::clamp(bg.legacy.movie.x * 100, -kMoviePercentAbsMax, kMoviePercentAbsMax)));
+			if (movieX != 0)
+			{
+				stream << "vx=" << movieX << "\r\n";
+			}
+			const std::int32_t movieY = static_cast<std::int32_t>(std::round(std::clamp(bg.legacy.movie.y * 100, -kMoviePercentAbsMax, kMoviePercentAbsMax)));
+			if (movieY != 0)
+			{
+				stream << "vy=" << movieY << "\r\n";
+			}
+			std::int32_t movieRotationFlags = 0;
+			if (bg.legacy.movie.rotation.tilt)
+			{
+				movieRotationFlags |= kRotationFlagTilt;
+			}
+			if (bg.legacy.movie.rotation.spin)
+			{
+				movieRotationFlags |= kRotationFlagSpin;
+			}
+			if (movieRotationFlags != 0)
+			{
+				stream << "v_rotation=" << movieRotationFlags << "\r\n";
+			}
 		}
 
 		// Preview offset

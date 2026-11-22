@@ -58,11 +58,27 @@ namespace
 	constexpr std::int64_t kSpinCountMax = 65535;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
 
+	constexpr std::int32_t kMovieOpacityPercentMax = 100;
+	constexpr std::int32_t kMoviePercentAbsMax = 10000;
+
 	constexpr std::int32_t kRotationFlagTilt = 1 << 0;
 	constexpr std::int32_t kRotationFlagSpin = 1 << 1;
 
 	constexpr std::int32_t kAudioEffectParamUnspecified = -99999;
 	const std::string kAudioEffectParamUnspecifiedStr = std::to_string(kAudioEffectParamUnspecified);
+
+	KshMoviePlacement ParseKshMoviePlacement(std::string_view str)
+	{
+		if (str == "behind_layer") return KshMoviePlacement::kBehindLayer;
+		if (str == "in_front_of_layer") return KshMoviePlacement::kInFrontOfLayer;
+		return KshMoviePlacement::kPanel;
+	}
+
+	KshMovieBlendMode ParseKshMovieBlendMode(std::string_view str)
+	{
+		if (str == "additive") return KshMovieBlendMode::kAdditive;
+		return KshMovieBlendMode::kNormal;
+	}
 
 #ifndef _MSC_VER
 	// Returns the string without the exponent part (e.g., "1e-5" -> "1")
@@ -1824,6 +1840,18 @@ namespace
 
 				chartData.bg.legacy.movie.filename = Pop(metaDataHashMap, "v");
 				chartData.bg.legacy.movie.offset = PopInt<std::int32_t>(metaDataHashMap, "vo");
+				chartData.bg.legacy.movie.loop = PopInt<std::int32_t>(metaDataHashMap, "v_loop", 0) != 0;
+				chartData.bg.legacy.movie.placement = ParseKshMoviePlacement(Pop(metaDataHashMap, "v_placement"));
+				chartData.bg.legacy.movie.blendMode = ParseKshMovieBlendMode(Pop(metaDataHashMap, "v_blend_mode"));
+				chartData.bg.legacy.movie.opacity = static_cast<double>(PopInt<std::int32_t>(metaDataHashMap, "v_opacity", 100, 0, kMovieOpacityPercentMax)) / 100;
+				chartData.bg.legacy.movie.scale = static_cast<double>(PopInt<std::int32_t>(metaDataHashMap, "v_scale", 100, 0, kMoviePercentAbsMax)) / 100;
+				chartData.bg.legacy.movie.x = static_cast<double>(PopInt<std::int32_t>(metaDataHashMap, "vx", 0, -kMoviePercentAbsMax, kMoviePercentAbsMax)) / 100;
+				chartData.bg.legacy.movie.y = static_cast<double>(PopInt<std::int32_t>(metaDataHashMap, "vy", 0, -kMoviePercentAbsMax, kMoviePercentAbsMax)) / 100;
+				const std::int32_t movieRotationFlags = PopInt<std::int32_t>(metaDataHashMap, "v_rotation", 0);
+				chartData.bg.legacy.movie.rotation = {
+					.tilt = ((movieRotationFlags & kRotationFlagTilt) != 0),
+					.spin = ((movieRotationFlags & kRotationFlagSpin) != 0),
+				};
 
 				chartData.gauge.total = PopInt<std::int32_t>(metaDataHashMap, "total", 0);
 			}

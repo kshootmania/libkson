@@ -1208,3 +1208,29 @@ TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")
 		REQUIRE(metaChart.firstBPM == Approx(100000.0));
 	}
 }
+
+TEST_CASE("KSON movie loop, placement, blend mode, opacity, scale, position, and rotation", "[kson_io][bg]")
+{
+	const std::string ksonData = R"({"format_version": 1, "bg": {"legacy": {"movie": {"filename": "movie.mp4", "loop": true, "placement": "in_front_of_layer", "blend_mode": "additive", "opacity": 0.25, "scale": 1.5, "x": -0.1, "y": 0.25, "rotation": {"tilt": true}}}}})";
+
+	std::istringstream stream(ksonData);
+	const auto chart = kson::LoadKsonChartData(stream);
+	REQUIRE(chart.error == kson::ErrorType::None);
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKsonChartData(oss, chart) == kson::ErrorType::None);
+	std::istringstream savedStream(oss.str());
+	const auto savedChart = kson::LoadKsonChartData(savedStream);
+	REQUIRE(savedChart.error == kson::ErrorType::None);
+
+	const auto& movie = savedChart.bg.legacy.movie;
+	REQUIRE(movie.loop);
+	REQUIRE(movie.placement == kson::KshMoviePlacement::kInFrontOfLayer);
+	REQUIRE(movie.blendMode == kson::KshMovieBlendMode::kAdditive);
+	REQUIRE(movie.opacity == Approx(0.25));
+	REQUIRE(movie.scale == Approx(1.5));
+	REQUIRE(movie.x == Approx(-0.1));
+	REQUIRE(movie.y == Approx(0.25));
+	REQUIRE(movie.rotation.tilt);
+	REQUIRE_FALSE(movie.rotation.spin);
+}

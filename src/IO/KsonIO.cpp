@@ -1,5 +1,6 @@
 #ifndef KSON_WITHOUT_JSON_DEPENDENCY
 #include "kson/IO/KsonIO.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -18,6 +19,10 @@ namespace
 	constexpr double kSpinCountMax = 65535.0;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
 	constexpr double kCamPatternScaleAbsMax = 65535.0;
+
+	constexpr double kMovieOpacityMax = 1.0;
+	constexpr double kMovieScaleMax = 100.0;
+	constexpr double kMoviePositionAbsMax = 100.0;
 
 	std::filesystem::path U8Path(const std::string& utf8Str)
 	{
@@ -843,6 +848,25 @@ namespace
 		return j;
 	}
 
+	const char* KshMoviePlacementToString(KshMoviePlacement placement)
+	{
+		switch (placement)
+		{
+		case KshMoviePlacement::kBehindLayer: return "behind_layer";
+		case KshMoviePlacement::kInFrontOfLayer: return "in_front_of_layer";
+		default: return "panel";
+		}
+	}
+
+	const char* KshMovieBlendModeToString(KshMovieBlendMode blendMode)
+	{
+		switch (blendMode)
+		{
+		case KshMovieBlendMode::kAdditive: return "additive";
+		default: return "normal";
+		}
+	}
+
 	const char* AutoTiltTypeToString(AutoTiltType type)
 	{
 		switch (type)
@@ -1051,6 +1075,25 @@ namespace
 				nlohmann::json movieJSON = nlohmann::json::object();
 				Write(movieJSON, "filename", d.legacy.movie.filename, "");
 				Write(movieJSON, "offset", d.legacy.movie.offset, 0);
+				Write(movieJSON, "loop", d.legacy.movie.loop, false);
+				if (d.legacy.movie.placement != KshMoviePlacement::kPanel)
+				{
+					Write(movieJSON, "placement", std::string(KshMoviePlacementToString(d.legacy.movie.placement)));
+				}
+				if (d.legacy.movie.blendMode != KshMovieBlendMode::kNormal)
+				{
+					Write(movieJSON, "blend_mode", std::string(KshMovieBlendModeToString(d.legacy.movie.blendMode)));
+				}
+				Write(movieJSON, "opacity", d.legacy.movie.opacity, 1.0);
+				Write(movieJSON, "scale", d.legacy.movie.scale, 1.0);
+				Write(movieJSON, "x", d.legacy.movie.x, 0.0);
+				Write(movieJSON, "y", d.legacy.movie.y, 0.0);
+				{
+					nlohmann::json rotationJSON = nlohmann::json::object();
+					Write(rotationJSON, "tilt", d.legacy.movie.rotation.tilt, false);
+					Write(rotationJSON, "spin", d.legacy.movie.rotation.spin, false);
+					Write(movieJSON, "rotation", std::move(rotationJSON));
+				}
 				Write(legacyJSON, "movie", std::move(movieJSON));
 			}
 			Write(j, "legacy", std::move(legacyJSON));
@@ -2141,6 +2184,19 @@ namespace
 		return graphs;
 	}
 
+	KshMoviePlacement ParseKshMoviePlacement(const std::string& str)
+	{
+		if (str == "behind_layer") return KshMoviePlacement::kBehindLayer;
+		if (str == "in_front_of_layer") return KshMoviePlacement::kInFrontOfLayer;
+		return KshMoviePlacement::kPanel;
+	}
+
+	KshMovieBlendMode ParseKshMovieBlendMode(const std::string& str)
+	{
+		if (str == "additive") return KshMovieBlendMode::kAdditive;
+		return KshMovieBlendMode::kNormal;
+	}
+
 	AutoTiltType ParseAutoTiltType(const std::string& str)
 	{
 		if (str == "bigger") return AutoTiltType::kBigger;
@@ -2566,6 +2622,20 @@ namespace
 			const auto& movieJ = j["movie"];
 			legacy.movie.filename = GetWithDefault<std::string>(movieJ, "filename", "");
 			legacy.movie.offset = GetWithDefault<std::int32_t>(movieJ, "offset", 0);
+			legacy.movie.loop = GetWithDefault<bool>(movieJ, "loop", false);
+			legacy.movie.placement = ParseKshMoviePlacement(GetWithDefault<std::string>(movieJ, "placement", "panel"));
+			legacy.movie.blendMode = ParseKshMovieBlendMode(GetWithDefault<std::string>(movieJ, "blend_mode", "normal"));
+			legacy.movie.opacity = std::clamp(GetWithDefault<double>(movieJ, "opacity", 1.0), 0.0, kMovieOpacityMax);
+			legacy.movie.scale = std::clamp(GetWithDefault<double>(movieJ, "scale", 1.0), 0.0, kMovieScaleMax);
+			legacy.movie.x = std::clamp(GetWithDefault<double>(movieJ, "x", 0.0), -kMoviePositionAbsMax, kMoviePositionAbsMax);
+			legacy.movie.y = std::clamp(GetWithDefault<double>(movieJ, "y", 0.0), -kMoviePositionAbsMax, kMoviePositionAbsMax);
+
+			if (movieJ.contains("rotation") && movieJ["rotation"].is_object())
+			{
+				const auto& rotationJ = movieJ["rotation"];
+				legacy.movie.rotation.tilt = GetWithDefault<bool>(rotationJ, "tilt", false);
+				legacy.movie.rotation.spin = GetWithDefault<bool>(rotationJ, "spin", false);
+			}
 		}
 		
 		return legacy;

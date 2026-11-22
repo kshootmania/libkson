@@ -3305,3 +3305,69 @@ TEST_CASE("KSH exponent part of values is not parsed", "[ksh_io]")
 	REQUIRE(chartData.camera.cam.body.centerSplit.at(0).v.v == Approx(1.5));
 }
 
+TEST_CASE("KSH movie loop, placement, blend mode, opacity, scale, position, and rotation", "[ksh_io][bg]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"v=movie.mp4\n"
+		"vo=-500\n"
+		"v_loop=1\n"
+		"v_placement=behind_layer\n"
+		"v_blend_mode=additive\n"
+		"v_opacity=50\n"
+		"v_scale=130\n"
+		"vx=-10\n"
+		"vy=25\n"
+		"v_rotation=2\n"
+		"t=120\n"
+		"--\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	const auto& movie = chartData.bg.legacy.movie;
+	REQUIRE(movie.loop);
+	REQUIRE(movie.placement == kson::KshMoviePlacement::kBehindLayer);
+	REQUIRE(movie.blendMode == kson::KshMovieBlendMode::kAdditive);
+	REQUIRE(movie.opacity == Approx(0.5));
+	REQUIRE(movie.scale == Approx(1.3));
+	REQUIRE(movie.x == Approx(-0.1));
+	REQUIRE(movie.y == Approx(0.25));
+	REQUIRE_FALSE(movie.rotation.tilt);
+	REQUIRE(movie.rotation.spin);
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("v=movie.mp4\r\nvo=-500\r\nv_loop=1\r\nv_placement=behind_layer\r\nv_blend_mode=additive\r\nv_opacity=50\r\nv_scale=130\r\nvx=-10\r\nvy=25\r\nv_rotation=2\r\n") != std::string::npos);
+
+	chartData.bg.legacy.movie = kson::KshMovieInfo{ .filename = "movie.mp4" };
+	std::ostringstream ossDefault;
+	REQUIRE(kson::SaveKshChartData(ossDefault, chartData) == kson::ErrorType::None);
+	REQUIRE(ossDefault.str().find("v=movie.mp4\r\nvo=0\r\npo=") != std::string::npos);
+}
+
+TEST_CASE("KSH movie values out of range are clamped", "[ksh_io][bg]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"v=movie.mp4\n"
+		"v_opacity=101\n"
+		"v_scale=10001\n"
+		"vx=-10001\n"
+		"vy=10001\n"
+		"t=120\n"
+		"--\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto loaded = kson::LoadKshChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	REQUIRE(loaded.bg.legacy.movie.opacity == Approx(1.0));
+	REQUIRE(loaded.bg.legacy.movie.scale == Approx(100.0));
+	REQUIRE(loaded.bg.legacy.movie.x == Approx(-100.0));
+	REQUIRE(loaded.bg.legacy.movie.y == Approx(100.0));
+}
