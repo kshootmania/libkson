@@ -3258,7 +3258,7 @@ TEST_CASE("KSH spin count and half spin deg loading and saving", "[ksh_io][camer
 	REQUIRE(oss.str().find("@>192\r\n") != std::string::npos);
 }
 
-TEST_CASE("KSH spin count and half spin deg out of range", "[ksh_io][camera]")
+TEST_CASE("KSH spin count, half spin deg, and swing repeat out of range", "[ksh_io][camera]")
 {
 	const std::string kshContent =
 		"title=Test\n"
@@ -3271,6 +3271,9 @@ TEST_CASE("KSH spin count and half spin deg out of range", "[ksh_io][camera]")
 		"0000|00|--@>192;nan\n"
 		"0000|00|--@<192;-65535\n"
 		"0000|00|--\n"
+		"--\n"
+		"0000|00|--S<192;250;65536;2\n"
+		"0000|00|--S>192;250;65535;2\n"
 		"--\n";
 
 	std::istringstream iss(kshContent);
@@ -3282,6 +3285,8 @@ TEST_CASE("KSH spin count and half spin deg out of range", "[ksh_io][camera]")
 	REQUIRE(slamEvent.halfSpin.at(kson::kResolution4).v.deg == Approx(60.0));
 	REQUIRE(slamEvent.halfSpin.at(kson::kResolution4 + kson::kResolution).v.deg == Approx(60.0));
 	REQUIRE(slamEvent.halfSpin.at(kson::kResolution4 + kson::kResolution * 2).v.deg == Approx(-65535.0));
+	REQUIRE(slamEvent.swing.at(kson::kResolution4 * 2).v.repeat == 3);
+	REQUIRE(slamEvent.swing.at(kson::kResolution4 * 2 + kson::kResolution * 2).v.repeat == 65535);
 }
 
 TEST_CASE("KSH Shift-JIS audio effect definition name", "[ksh_io][audio_effect]")

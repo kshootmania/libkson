@@ -57,6 +57,7 @@ namespace
 
 	constexpr std::int64_t kSpinCountMax = 65535;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
+	constexpr std::int64_t kSwingRepeatMax = 65535;
 
 	constexpr std::int32_t kMovieOpacityPercentMax = 100;
 	constexpr std::int32_t kMoviePercentAbsMax = 10000;
@@ -1154,9 +1155,10 @@ namespace
 
 	std::tuple<RelPulse, std::int32_t, std::int32_t, std::int32_t> SplitSwingParams(std::string_view paramStr)
 	{
-		std::array<std::string, 4> params{
+		const std::array<std::string, 4> defaultParams{
 			"192", "250", "3", "2"
 		};
+		std::array<std::string, 4> params = defaultParams;
 
 		const std::string paramStrClone(paramStr);
 		std::stringstream ss(paramStrClone);
@@ -1168,10 +1170,16 @@ namespace
 			++i;
 		}
 
+		std::int64_t repeat = ParseNumeric<std::int64_t>(params[2]);
+		if (repeat < 0 || repeat > kSwingRepeatMax)
+		{
+			repeat = ParseNumeric<std::int64_t>(defaultParams[2]);
+		}
+
 		return std::make_tuple(
 			KshLengthToRelPulse(params[0]),
 			ParseNumeric<std::int32_t>(params[1]),
-			ParseNumeric<std::int32_t>(params[2]),
+			static_cast<std::int32_t>(repeat),
 			ParseNumeric<std::int32_t>(params[3]));
 	}
 

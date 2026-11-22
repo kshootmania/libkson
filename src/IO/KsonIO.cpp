@@ -18,6 +18,7 @@ namespace
 
 	constexpr double kSpinCountMax = 65535.0;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
+	constexpr double kSwingRepeatMax = 65535.0;
 	constexpr double kCamPatternScaleAbsMax = 65535.0;
 
 	constexpr double kMovieOpacityMax = 1.0;
@@ -2477,7 +2478,11 @@ namespace
 										}
 										if (item[3].contains("repeat"))
 										{
-											swing.v.repeat = item[3]["repeat"].get<std::int32_t>();
+											const double repeat = item[3]["repeat"].get<double>();
+											if (0.0 <= repeat && repeat <= kSwingRepeatMax)
+											{
+												swing.v.repeat = static_cast<std::int32_t>(repeat);
+											}
 										}
 										if (item[3].contains("decay_order"))
 										{

@@ -63,6 +63,7 @@ namespace
 
 	constexpr std::int32_t kSpinCountMax = 65535;
 	constexpr double kHalfSpinDegAbsMax = 65535.0;
+	constexpr std::int32_t kSwingRepeatMax = 65535;
 
 	constexpr std::int32_t kVerBPMLimitAdded = 130;
 	constexpr std::int32_t kVerFXFormatChanged = 160; // FX format changed (alphabets to fx-l/fx-r)
@@ -2821,7 +2822,19 @@ namespace
 			const char dirChar = swingEvent.d < 0 ? '<' : '>';
 			const std::int32_t kshLength = ToKshResolution(swingEvent.length);
 			const std::int32_t scale = static_cast<std::int32_t>(std::round(swingEvent.v.scale));
-			const std::int32_t repeat = swingEvent.v.repeat;
+			const std::int32_t repeat = std::clamp(swingEvent.v.repeat, 0, kSwingRepeatMax);
+			if (pKshSavingDiag && repeat != swingEvent.v.repeat)
+			{
+				pKshSavingDiag->warnings.push_back({
+					.scope = WarningScope::EditorOnly,
+					.message = "Swing repeat " + std::to_string(swingEvent.v.repeat) + " at pulse " + std::to_string(pulse) + " clamped to " + std::to_string(repeat),
+					.details = SwingRepeatClampedWarningDetails{
+						.pulse = pulse,
+						.minValue = 0,
+						.maxValue = kSwingRepeatMax,
+					},
+				});
+			}
 			const std::int32_t decayOrder = swingEvent.v.decayOrder;
 
 			stream << "S" << dirChar << kshLength;

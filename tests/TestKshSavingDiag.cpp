@@ -118,6 +118,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	chartData.camera.cam.body.rotationDegLayer[kson::kResolution4] = kson::GraphPoint(100000.0);
 	chartData.camera.cam.pattern.laser.slamEvent.spin[kson::kResolution4] = kson::CamPatternInvokeSpin{ .d = 1, .length = kson::kResolution4, .v = { .count = 65536 } };
 	chartData.camera.cam.pattern.laser.slamEvent.halfSpin[kson::kResolution4 * 2] = kson::CamPatternInvokeHalfSpin{ .d = 1, .length = kson::kResolution4, .v = { .deg = 100000.0 } };
+	chartData.camera.cam.pattern.laser.slamEvent.swing[kson::kResolution4 * 3] = kson::CamPatternInvokeSwing{ .d = 1, .length = kson::kResolution4, .v = { .repeat = 65536 } };
 
 	const auto warnings = SaveAndGetWarnings(chartData);
 	const auto bpmWarnings = FilterByDetails<kson::BpmClampedWarningDetails>(warnings);
@@ -131,6 +132,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	const auto rotationLayerWarnings = FilterByDetails<kson::RotationDegLayerClampedWarningDetails>(warnings);
 	const auto spinCountWarnings = FilterByDetails<kson::SpinCountClampedWarningDetails>(warnings);
 	const auto halfSpinDegWarnings = FilterByDetails<kson::HalfSpinDegClampedWarningDetails>(warnings);
+	const auto swingRepeatWarnings = FilterByDetails<kson::SwingRepeatClampedWarningDetails>(warnings);
 
 	REQUIRE(bpmWarnings.size() == 1);
 	REQUIRE(zoomWarnings.size() == 1);
@@ -143,6 +145,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	REQUIRE(rotationLayerWarnings.size() == 1);
 	REQUIRE(spinCountWarnings.size() == 1);
 	REQUIRE(halfSpinDegWarnings.size() == 1);
+	REQUIRE(swingRepeatWarnings.size() == 1);
 	REQUIRE(std::get<kson::BpmClampedWarningDetails>(bpmWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::ZoomValueClampedWarningDetails>(zoomWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::CenterSplitClampedWarningDetails>(centerSplitWarnings[0].details).pulse == kson::kResolution4);
@@ -154,6 +157,7 @@ TEST_CASE("KSH saving positional warning details", "[ksh_saving_diag]")
 	REQUIRE(std::get<kson::RotationDegLayerClampedWarningDetails>(rotationLayerWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::SpinCountClampedWarningDetails>(spinCountWarnings[0].details).pulse == kson::kResolution4);
 	REQUIRE(std::get<kson::HalfSpinDegClampedWarningDetails>(halfSpinDegWarnings[0].details).pulse == kson::kResolution4 * 2);
+	REQUIRE(std::get<kson::SwingRepeatClampedWarningDetails>(swingRepeatWarnings[0].details).pulse == kson::kResolution4 * 3);
 }
 
 TEST_CASE("KSH saving LaserPrecisionLost warning", "[ksh_saving_diag]")

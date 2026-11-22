@@ -110,6 +110,13 @@ namespace kson
 		double maxValue;
 	};
 
+	struct SwingRepeatClampedWarningDetails
+	{
+		Pulse pulse;
+		std::int32_t minValue;
+		std::int32_t maxValue;
+	};
+
 	struct MovieValueClampedWarningDetails
 	{
 		KshMovieParam param;
@@ -176,6 +183,7 @@ namespace kson
 		RotationDegLayerClampedWarningDetails,
 		SpinCountClampedWarningDetails,
 		HalfSpinDegClampedWarningDetails,
+		SwingRepeatClampedWarningDetails,
 		MovieValueClampedWarningDetails,
 		ZoomFractionLostWarningDetails,
 		LaserPrecisionLostWarningDetails,

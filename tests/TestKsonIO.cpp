@@ -1095,11 +1095,12 @@ TEST_CASE("KSON saving warning for undefined cam pattern", "[kson_io][saving_dia
 	REQUIRE(diag.playerWarnings().empty());
 }
 
-TEST_CASE("KSON spin count and half spin deg", "[kson_io][camera]")
+TEST_CASE("KSON spin count, half spin deg, and swing repeat", "[kson_io][camera]")
 {
 	const std::string ksonData = R"({"format_version": 1, "camera": {"cam": {"pattern": {"laser": {"slam_event": {
 		"spin": [[0, 1, 960, {"count": 2}], [960, 1, 960, {"count": 1e30}], [1920, 1, 960, {"count": 65535}]],
-		"half_spin": [[0, 1, 960, {"deg": 90.5}], [960, 1, 960, {"deg": 1e300}], [1920, 1, 960, {"deg": -65535.0}]]
+		"half_spin": [[0, 1, 960, {"deg": 90.5}], [960, 1, 960, {"deg": 1e300}], [1920, 1, 960, {"deg": -65535.0}]],
+		"swing": [[0, 1, 960, {"repeat": 1e30}], [960, 1, 960, {"repeat": 65535}]]
 	}}}}}})";
 
 	std::istringstream stream(ksonData);
@@ -1118,6 +1119,8 @@ TEST_CASE("KSON spin count and half spin deg", "[kson_io][camera]")
 	REQUIRE(slamEvent.halfSpin.at(0).v.deg == Approx(90.5));
 	REQUIRE(slamEvent.halfSpin.at(960).v.deg == Approx(60.0));
 	REQUIRE(slamEvent.halfSpin.at(1920).v.deg == Approx(-65535.0));
+	REQUIRE(slamEvent.swing.at(0).v.repeat == 3);
+	REQUIRE(slamEvent.swing.at(960).v.repeat == 65535);
 }
 
 TEST_CASE("KSON custom cam pattern", "[kson_io][camera]")
