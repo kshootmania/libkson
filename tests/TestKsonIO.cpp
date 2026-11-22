@@ -442,8 +442,8 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
                     "laser": {
                         "vol": [[0, 0.5], [960, 1.0], [1920, 0.75]],
                         "slam_event": {
-                            "slam_up": [240, 480, 720],
-                            "slam_down": [960, 1200]
+                            "up": [240, 480, 720],
+                            "down": [960, 1200]
                         },
                         "legacy": {
                             "vol_auto": true
@@ -477,9 +477,9 @@ TEST_CASE("KSON Audio Effect Loading", "[kson_io][audio_effect]") {
         REQUIRE(laserKeySound.vol.at(960) == Approx(1.0));
         REQUIRE(laserKeySound.vol.at(1920) == Approx(0.75));
         
-        REQUIRE(laserKeySound.slamEvent.count("slam_up") == 1);
-        REQUIRE(laserKeySound.slamEvent.at("slam_up").size() == 3);
-        REQUIRE(laserKeySound.slamEvent.at("slam_up").count(240) == 1);
+        REQUIRE(laserKeySound.slamEvent.count("up") == 1);
+        REQUIRE(laserKeySound.slamEvent.at("up").size() == 3);
+        REQUIRE(laserKeySound.slamEvent.at("up").count(240) == 1);
         
         REQUIRE(laserKeySound.legacy.volAuto == true);
     }
