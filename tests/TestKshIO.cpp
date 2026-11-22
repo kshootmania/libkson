@@ -3308,6 +3308,41 @@ TEST_CASE("KSH Shift-JIS audio effect definition name", "[ksh_io][audio_effect]"
 	REQUIRE(chartData.audio.audioEffect.fx.longEvent.contains(nameUTF8));
 }
 
+TEST_CASE("KSH non-finite curve values, scroll_speed, and to are ignored", "[ksh_io][curve][scroll_speed]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"to=nan\n"
+		"--\n"
+		"zoom_top=0\n"
+		"zoom_top_curve=nan;0.5\n"
+		"zoom_bottom=0\n"
+		"zoom_bottom_curve=0.5;inf\n"
+		"scroll_speed=2\n"
+		"0000|00|--\n"
+		"zoom_top=100\n"
+		"zoom_bottom=100\n"
+		"scroll_speed=nan\n"
+		"0000|00|--\n"
+		"--\n";
+
+	std::istringstream iss(kshContent);
+	const auto chartData = kson::LoadKshChartData(iss);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+
+	const auto& body = chartData.camera.cam.body;
+	REQUIRE(body.zoomTop.at(0).curve.a == Approx(0.0));
+	REQUIRE(body.zoomTop.at(0).curve.b == Approx(0.0));
+	REQUIRE(body.zoomBottom.at(0).curve.a == Approx(0.0));
+	REQUIRE(body.zoomBottom.at(0).curve.b == Approx(0.0));
+
+	REQUIRE(chartData.beat.scrollSpeed.size() == 1);
+	REQUIRE(chartData.beat.scrollSpeed.at(0).v.v == Approx(2.0));
+
+	REQUIRE(chartData.meta.stdBPM == Approx(0.0));
+}
+
 TEST_CASE("KSH manual tilt is not rounded", "[ksh_io][tilt]")
 {
 	const std::string kshContent =

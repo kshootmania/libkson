@@ -611,6 +611,10 @@ namespace
 
 		const double a = ParseNumeric<double>(value.substr(0, separatorPos));
 		const double b = ParseNumeric<double>(value.substr(separatorPos + 1));
+		if (!std::isfinite(a) || !std::isfinite(b))
+		{
+			return std::nullopt;
+		}
 
 		return GraphCurveValue{ a, b };
 	}
@@ -1778,7 +1782,8 @@ namespace
 			}
 			chartData.meta.dispBPM = Pop(metaDataHashMap, "t", "");
 
-			chartData.meta.stdBPM = ParseNumeric<double>(Pop(metaDataHashMap, "to", "0"), 0.0);
+			const double stdBPM = ParseNumeric<double>(Pop(metaDataHashMap, "to", "0"), 0.0);
+			chartData.meta.stdBPM = std::isfinite(stdBPM) ? stdBPM : 0.0;
 
 			const auto bgmFilenames = Split<4>(Pop(metaDataHashMap, "m"), ';');
 			chartData.audio.bgm.filename = bgmFilenames[0];
@@ -2312,7 +2317,10 @@ namespace
 						else if (key == "scroll_speed")
 						{
 							const double dValue = ParseNumeric<double>(value);
-							InsertGraphPointOrAssignVf(chartData.beat.scrollSpeed, time, dValue);
+							if (std::isfinite(dValue))
+							{
+								InsertGraphPointOrAssignVf(chartData.beat.scrollSpeed, time, dValue);
+							}
 						}
 						else if (key == "rotation_deg")
 						{
