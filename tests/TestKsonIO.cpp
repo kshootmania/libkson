@@ -1083,14 +1083,16 @@ TEST_CASE("KSON saving warning for undefined cam pattern", "[kson_io][saving_dia
 	chart.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
 	chart.camera.cam.pattern.laser.slamEvent.custom["Pattern"].emplace(0, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
 	chart.camera.cam.pattern.laser.slamEvent.custom["Other"].emplace(960, kson::CamPatternInvokeCustom{ .d = 1, .length = kson::kResolution4 });
+	chart.camera.cam.pattern.pulseEvent["OtherPulse"].emplace(0, kson::CamPatternInvokePulse{ .length = kson::kResolution4 });
 
 	kson::KsonSavingDiag diag;
 	std::ostringstream oss;
 	const kson::ErrorType result = kson::SaveKsonChartData(oss, chart, &diag);
 
 	REQUIRE(result == kson::ErrorType::None);
-	REQUIRE(diag.warnings.size() == 1);
+	REQUIRE(diag.warnings.size() == 2);
 	REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(diag.warnings[0].details).name == "Other");
+	REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(diag.warnings[1].details).name == "OtherPulse");
 	REQUIRE(!diag.editorWarnings().empty());
 	REQUIRE(diag.playerWarnings().empty());
 }
@@ -1154,7 +1156,8 @@ TEST_CASE("KSON custom cam pattern loading warnings", "[kson_io][camera]")
 {
 	const std::string ksonData = R"({"format_version": 1, "camera": {"cam": {"pattern": {
 		"def": [["A", {"body": {"zoom_top": [[0, 10.0]]}}], ["B", {"body": {}}], ["A", {"body": {"zoom_top": [[0, 20.0]]}}], ["spin", {"body": {}}]],
-		"laser": {"slam_event": {"A": [[0, 1, 960, {"scale": 65536.0}]], "B": [[0, 1, 960], [960, -1, 960], [960, 1, 480], [960, 1, 960]], "Undefined": [[1920, 1, 960]]}}
+		"laser": {"slam_event": {"A": [[0, 1, 960, {"scale": 65536.0}]], "B": [[0, 1, 960], [960, -1, 960], [960, 1, 480], [960, 1, 960]], "Undefined": [[1920, 1, 960]]}},
+		"pulse_event": {"spin": [[0, 960]], "Undefined": [[0, 960]], "B": [[0, 480], [0, 960]]}
 	}}}})";
 
 	std::istringstream stream(ksonData);
@@ -1166,10 +1169,10 @@ TEST_CASE("KSON custom cam pattern loading warnings", "[kson_io][camera]")
 	{
 		return std::count_if(diag.warnings.begin(), diag.warnings.end(), [type](const kson::KsonLoadingWarning& warning) { return warning.type == type; });
 	};
-	REQUIRE(fnCount(kson::KsonLoadingWarningType::InvalidCamPatternName) == 1);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::InvalidCamPatternName) == 2);
 	REQUIRE(fnCount(kson::KsonLoadingWarningType::CamPatternDuplicateName) == 1);
-	REQUIRE(fnCount(kson::KsonLoadingWarningType::UndefinedCamPattern) == 1);
-	REQUIRE(fnCount(kson::KsonLoadingWarningType::DuplicateCamPatternInvocation) == 2);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::UndefinedCamPattern) == 2);
+	REQUIRE(fnCount(kson::KsonLoadingWarningType::DuplicateCamPatternInvocation) == 3);
 
 	const auto& pattern = chart.camera.cam.pattern;
 	REQUIRE(pattern.def.size() == 2);
@@ -1181,6 +1184,8 @@ TEST_CASE("KSON custom cam pattern loading warnings", "[kson_io][camera]")
 	REQUIRE(std::distance(first, last) == 2);
 	REQUIRE(first->second.d == -1);
 	REQUIRE(std::next(first)->second.length == 960);
+	REQUIRE_FALSE(pattern.pulseEvent.contains("spin"));
+	REQUIRE(pattern.pulseEvent.at("B").at(0).length == 960);
 }
 
 TEST_CASE("KSON custom cam pattern slam_shake and flip_by_direction", "[kson_io][camera]")
@@ -1205,6 +1210,29 @@ TEST_CASE("KSON custom cam pattern slam_shake and flip_by_direction", "[kson_io]
 	REQUIRE(loaded.camera.cam.pattern.def[0].v.flipByDirection);
 	REQUIRE_FALSE(loaded.camera.cam.pattern.def[1].v.slamShake);
 	REQUIRE_FALSE(loaded.camera.cam.pattern.def[1].v.flipByDirection);
+}
+
+TEST_CASE("KSON custom cam pattern invoked by pulse", "[kson_io][camera]")
+{
+	kson::ChartData chartData;
+	chartData.camera.cam.pattern.def.push_back({ .name = "Pattern", .v = {} });
+	chartData.camera.cam.pattern.pulseEvent["Pattern"].emplace(0, kson::CamPatternInvokePulse{ .length = 480 });
+	chartData.camera.cam.pattern.pulseEvent["Pattern"].emplace(960, kson::CamPatternInvokePulse{ .length = 240, .v = { .scale = 2.0 } });
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKsonChartData(oss, chartData) == kson::ErrorType::None);
+	const auto pulseEventJSON = nlohmann::json::parse(oss.str())["camera"]["cam"]["pattern"]["pulse_event"];
+	REQUIRE(pulseEventJSON["Pattern"] == nlohmann::json::parse(R"([[0, 480], [960, 240, {"scale": 2.0}]])"));
+
+	std::istringstream iss(oss.str());
+	const auto loaded = kson::LoadKsonChartData(iss);
+	REQUIRE(loaded.error == kson::ErrorType::None);
+	const auto& events = loaded.camera.cam.pattern.pulseEvent.at("Pattern");
+	REQUIRE(events.size() == 2);
+	REQUIRE(events.at(0).length == 480);
+	REQUIRE(events.at(0).v.scale == Approx(1.0));
+	REQUIRE(events.at(960).length == 240);
+	REQUIRE(events.at(960).v.scale == Approx(2.0));
 }
 
 TEST_CASE("KSON BPM limit depends on ksh_version", "[kson_io][beat]")

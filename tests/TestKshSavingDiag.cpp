@@ -299,6 +299,16 @@ TEST_CASE("KSH saving CamPatternUndefined warning", "[ksh_saving_diag]")
 		REQUIRE(warnings.size() == 1);
 		REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(warnings[0].details).name == "A B");
 	}
+
+	SECTION("warning for undefined name in pulse_event")
+	{
+		auto chartData = MakeMinimalChartData();
+		chartData.camera.cam.pattern.pulseEvent["Other"].emplace(0, kson::CamPatternInvokePulse{ .length = kson::kResolution4 });
+
+		auto warnings = FilterByDetails<kson::CamPatternUndefinedWarningDetails>(SaveAndGetWarnings(chartData));
+		REQUIRE(warnings.size() == 1);
+		REQUIRE(std::get<kson::CamPatternUndefinedWarningDetails>(warnings[0].details).name == "Other");
+	}
 }
 
 TEST_CASE("KSH saving CamPatternValueClamped warning", "[ksh_saving_diag]")

@@ -3138,6 +3138,44 @@ TEST_CASE("KSH custom cam pattern slam_shake and flip_by_direction", "[ksh_io][c
 		"#define_cam C zoom_side=0:0,192:100;flip_by_direction=0\r\n");
 }
 
+TEST_CASE("KSH custom cam pattern invoked by pulse", "[ksh_io][camera]")
+{
+	const std::string kshContent =
+		"title=Test\n"
+		"t=120\n"
+		"--\n"
+		"cam_play=Shake;192\n"
+		"0000|00|--\n"
+		"cam_play=Shake;48\n"
+		"cam_play=Shake;96;1.5\n"
+		"cam_play=Undefined;96\n"
+		"0000|00|--\n"
+		"--\n"
+		"#define_cam Shake zoom_side=0:0,192:100\n";
+
+	std::istringstream iss(kshContent);
+	kson::KshLoadingDiag kshLoadingDiag;
+	const auto chartData = kson::LoadKshChartData(iss, &kshLoadingDiag);
+	REQUIRE(chartData.error == kson::ErrorType::None);
+	REQUIRE(kshLoadingDiag.warnings.size() == 2);
+	REQUIRE(kshLoadingDiag.warnings[0].type == kson::KshLoadingWarningType::DuplicateCamPatternInvocation);
+	REQUIRE(kshLoadingDiag.warnings[1].type == kson::KshLoadingWarningType::UndefinedCamPattern);
+
+	const auto& pulseEvent = chartData.camera.cam.pattern.pulseEvent;
+	REQUIRE(chartData.camera.cam.pattern.laser.slamEvent.custom.empty());
+	REQUIRE(pulseEvent.at("Shake").size() == 2);
+	REQUIRE(pulseEvent.at("Shake").at(0).length == kson::kResolution4);
+	REQUIRE(pulseEvent.at("Shake").at(0).v.scale == Approx(1.0));
+	REQUIRE(pulseEvent.at("Shake").at(kson::kResolution * 2).length == kson::kResolution * 2);
+	REQUIRE(pulseEvent.at("Shake").at(kson::kResolution * 2).v.scale == Approx(1.5));
+
+	std::ostringstream oss;
+	REQUIRE(kson::SaveKshChartData(oss, chartData) == kson::ErrorType::None);
+	REQUIRE(oss.str().find("cam_play=Shake;192\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("cam_play=Shake;96;1.5\r\n") != std::string::npos);
+	REQUIRE(oss.str().find("cam_play=Undefined;96\r\n") != std::string::npos);
+}
+
 TEST_CASE("KSH custom cam pattern loading warnings", "[ksh_io][camera]")
 {
 	const std::string kshContent =

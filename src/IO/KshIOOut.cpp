@@ -398,6 +398,20 @@ namespace
 				.details = CamPatternUndefinedWarningDetails{ .name = name },
 			});
 		}
+
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
+		{
+			if (byPulse.empty() || IsBuiltInCamPatternName(name) || chartData.camera.cam.pattern.defByName(name) != nullptr)
+			{
+				continue;
+			}
+
+			pKshSavingDiag->warnings.push_back({
+				.scope = WarningScope::EditorOnly,
+				.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.pulse_event",
+				.details = CamPatternUndefinedWarningDetails{ .name = name },
+			});
+		}
 	}
 
 	void ScanForDataLossWarnings(const ChartData& chartData, KshSavingDiag* pKshSavingDiag)
@@ -904,6 +918,13 @@ namespace
 			maxPulse = std::max(maxPulse, chartData.camera.cam.pattern.laser.slamEvent.swing.rbegin()->first);
 		}
 		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
+		{
+			if (!byPulse.empty())
+			{
+				maxPulse = std::max(maxPulse, byPulse.rbegin()->first);
+			}
+		}
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
 		{
 			if (!byPulse.empty())
 			{
@@ -2372,6 +2393,20 @@ namespace
 			}
 		}
 
+		// Check for custom cam patterns invoked by pulse (cam_play)
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
+		{
+			const auto itr = byPulse.find(pulse);
+			if (!IsValidKshCamPatternName(name) || itr == byPulse.end())
+			{
+				continue;
+			}
+			const CamPatternInvokePulse& pulseEvent = itr->second;
+			stream << "cam_play=" << name << ";" << ToKshResolution(pulseEvent.length);
+			WriteCamPatternScale(stream, name, pulse, pulseEvent.v.scale, pKshSavingDiag);
+			stream << "\r\n";
+		}
+
 		if (chartData.camera.tilt.contains(pulse))
 		{
 			const auto& tiltValue = chartData.camera.tilt.at(pulse);
@@ -3016,6 +3051,13 @@ namespace
 		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.laser.slamEvent.custom)
 		{
 			for (const auto& [pulse, customEvent] : byPulse)
+			{
+				lookup.gcdPulses.push_back(pulse);
+			}
+		}
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
+		{
+			for (const auto& [pulse, pulseEvent] : byPulse)
 			{
 				lookup.gcdPulses.push_back(pulse);
 			}

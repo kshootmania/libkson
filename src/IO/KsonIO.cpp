@@ -590,6 +590,32 @@ namespace
 		}
 	}
 
+	void WriteCamPatternInvokePulseByPulse(nlohmann::json& json, const char* key, const ByPulse<CamPatternInvokePulse>& byPulse)
+	{
+		if (byPulse.empty())
+		{
+			return;
+		}
+
+		nlohmann::json& j = json[key];
+		j = nlohmann::json::array();
+		for (const auto& [y, invoke] : byPulse)
+		{
+			nlohmann::json vJSON = nlohmann::json::object();
+			{
+				Write(vJSON, "scale", invoke.v.scale, 1.0);
+			}
+			if (vJSON.empty())
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.length }));
+			}
+			else
+			{
+				j.push_back(nlohmann::json::array({ y, invoke.length, std::move(vJSON) }));
+			}
+		}
+	}
+
 	void WriteCamPatternDef(nlohmann::json& json, const char* key, const std::vector<CamPatternDefKVP>& def)
 	{
 		if (def.empty())
@@ -1032,6 +1058,18 @@ namespace
 						Write(laserJSON, "slam_event", std::move(slamEventJSON));
 					}
 					Write(patternJSON, "laser", std::move(laserJSON));
+				}
+				{
+					nlohmann::json pulseEventJSON = nlohmann::json::object();
+					for (const auto& [name, byPulse] : d.cam.pattern.pulseEvent)
+					{
+						if (IsBuiltInCamPatternName(name))
+						{
+							continue;
+						}
+						WriteCamPatternInvokePulseByPulse(pulseEventJSON, name.c_str(), byPulse);
+					}
+					Write(patternJSON, "pulse_event", std::move(pulseEventJSON));
 				}
 				Write(camJSON, "pattern", std::move(patternJSON));
 			}
@@ -2584,6 +2622,76 @@ namespace
 						}
 					}
 				}
+
+				if (patternJ.contains("pulse_event") && patternJ["pulse_event"].is_object())
+				{
+					for (const auto& [name, items] : patternJ["pulse_event"].items())
+					{
+						if (IsBuiltInCamPatternName(name))
+						{
+							pDiag->warnings.push_back({
+								.type = KsonLoadingWarningType::InvalidCamPatternName,
+								.scope = WarningScope::EditorOnly,
+								.message = "Camera pattern '" + name + "' in camera.cam.pattern.pulse_event is ignored as the name cannot be used",
+							});
+							continue;
+						}
+						if (!items.is_array())
+						{
+							continue;
+						}
+
+						for (const auto& item : items)
+						{
+							if (item.is_array() && item.size() >= 2)
+							{
+								const std::optional<Pulse> yOpt = ReadPulse(item[0], pDiag);
+								if (!yOpt.has_value())
+								{
+									continue;
+								}
+								const Pulse y = *yOpt;
+								const std::optional<RelPulse> length = ReadRelPulse(item[1], y, pDiag);
+								if (!length.has_value())
+								{
+									continue;
+								}
+								CamPatternInvokePulse invoke;
+								invoke.length = *length;
+								if (item.size() >= 3 && item[2].is_object() && item[2].contains("scale"))
+								{
+									const double scale = item[2]["scale"].get<double>();
+									if (std::abs(scale) <= kCamPatternScaleAbsMax)
+									{
+										invoke.v.scale = scale;
+									}
+								}
+								auto& pulseEvents = camera.cam.pattern.pulseEvent[name];
+								if (pulseEvents.contains(y))
+								{
+									pDiag->warnings.push_back({
+										.type = KsonLoadingWarningType::DuplicateCamPatternInvocation,
+										.scope = WarningScope::EditorOnly,
+										.message = "Camera pattern '" + name + "' is invoked more than once at the same position (the later one is used)",
+									});
+								}
+								pulseEvents.insert_or_assign(y, std::move(invoke));
+							}
+						}
+					}
+				}
+
+				for (const auto& [name, byPulse] : camera.cam.pattern.pulseEvent)
+				{
+					if (camera.cam.pattern.defByName(name) == nullptr)
+					{
+						pDiag->warnings.push_back({
+							.type = KsonLoadingWarningType::UndefinedCamPattern,
+							.scope = WarningScope::EditorOnly,
+							.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.pulse_event",
+						});
+					}
+				}
 			}
 		}
 		
@@ -2798,6 +2906,20 @@ namespace
 			pKsonDiag->warnings.push_back({
 				.scope = kson::WarningScope::EditorOnly,
 				.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.laser.slam_event",
+				.details = kson::CamPatternUndefinedWarningDetails{ .name = name },
+			});
+		}
+
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
+		{
+			if (byPulse.empty() || kson::IsBuiltInCamPatternName(name) || chartData.camera.cam.pattern.defByName(name) != nullptr)
+			{
+				continue;
+			}
+
+			pKsonDiag->warnings.push_back({
+				.scope = kson::WarningScope::EditorOnly,
+				.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.pulse_event",
 				.details = kson::CamPatternUndefinedWarningDetails{ .name = name },
 			});
 		}

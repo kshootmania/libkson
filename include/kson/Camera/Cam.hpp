@@ -67,6 +67,12 @@ namespace kson
 		CamPatternLaserInvokeList slamEvent;
 	};
 
+	struct CamPatternInvokePulse
+	{
+		RelPulse length = 0;
+		CamPatternInvokeCustomValue v = {};
+	};
+
 	struct CamPatternDef
 	{
 		CamGraphs body; // Keys of the graphs are relative pulses from the beginning of the pattern
@@ -94,6 +100,7 @@ namespace kson
 	{
 		std::vector<CamPatternDefKVP> def;
 		CamPatternLaserInfo laser;
+		Dict<ByPulse<CamPatternInvokePulse>> pulseEvent; // Key: name defined in def
 
 		// Returns the definition with the specified name, or nullptr if not defined
 		[[nodiscard]]

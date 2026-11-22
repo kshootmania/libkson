@@ -2420,7 +2420,7 @@ namespace
 						{
 							currentMeasureLaserKeySounds.insert_or_assign(lineIdx, value);
 						}
-						else if (key == "cam_slam_l" || key == "cam_slam_r")
+						else if (key == "cam_slam_l" || key == "cam_slam_r" || key == "cam_play")
 						{
 							// Format: "<name>;<length>;<scale>" (the scale is optional)
 							const std::size_t semicolonIdx1 = value.find(';');
@@ -2459,11 +2459,7 @@ namespace
 										custom.v.scale = scale;
 									}
 								}
-								// Laser slams in different directions at the same position are different laser slams
-								auto& customEvents = chartData.camera.cam.pattern.laser.slamEvent.custom[name];
-								const auto [first, last] = customEvents.equal_range(time);
-								const auto itr = std::find_if(first, last, [&custom](const auto& kvp) { return kvp.second.d == custom.d; });
-								if (itr != last)
+								const auto warnDuplicate = [&]
 								{
 									pKshDiag->warnings.push_back({
 										.type = KshLoadingWarningType::DuplicateCamPatternInvocation,
@@ -2471,11 +2467,31 @@ namespace
 										.message = "Camera pattern '" + name + "' is invoked more than once at the same position. The later one will be used.",
 										.lineNo = optionFileLineNo,
 									});
-									itr->second = custom;
+								};
+								if (key == "cam_play")
+								{
+									auto& pulseEvents = chartData.camera.cam.pattern.pulseEvent[name];
+									if (pulseEvents.contains(time))
+									{
+										warnDuplicate();
+									}
+									pulseEvents.insert_or_assign(time, CamPatternInvokePulse{ .length = custom.length, .v = custom.v });
 								}
 								else
 								{
-									customEvents.emplace(time, custom);
+									// Laser slams in different directions at the same position are different laser slams
+									auto& customEvents = chartData.camera.cam.pattern.laser.slamEvent.custom[name];
+									const auto [first, last] = customEvents.equal_range(time);
+									const auto itr = std::find_if(first, last, [&custom](const auto& kvp) { return kvp.second.d == custom.d; });
+									if (itr != last)
+									{
+										warnDuplicate();
+										itr->second = custom;
+									}
+									else
+									{
+										customEvents.emplace(time, custom);
+									}
 								}
 							}
 						}
@@ -2886,6 +2902,19 @@ namespace
 						});
 					}
 				}
+			}
+		}
+
+		for (const auto& [name, byPulse] : chartData.camera.cam.pattern.pulseEvent)
+		{
+			if (chartData.camera.cam.pattern.defByName(name) == nullptr)
+			{
+				pKshDiag->warnings.push_back({
+					.type = KshLoadingWarningType::UndefinedCamPattern,
+					.scope = WarningScope::EditorOnly,
+					.message = "Undefined camera pattern '" + name + "' is specified in camera.cam.pattern.pulse_event.",
+					.lineNo = fileLineNo,
+				});
 			}
 		}
 
