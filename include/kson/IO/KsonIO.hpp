@@ -6,7 +6,7 @@
 
 namespace kson
 {
-	inline constexpr std::int32_t kKsonFormatVersion = 1; // kson format version number (1 for kson 0.9.0)
+	inline constexpr std::int32_t kKsonFormatVersion = 2; // kson format version number (2 for kson 1.1.0)
 
 	ErrorType SaveKsonChartData(std::ostream& stream, const ChartData& chartData);
 
