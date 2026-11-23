@@ -2066,7 +2066,7 @@ namespace
 							pKshDiag->warnings.push_back({
 								.type = KshLoadingWarningType::InvalidAudioEffectParam,
 								.scope = WarningScope::EditorOnly,
-								.message = "Audio effect parameter '" + std::string(paramSV) + "' in '" + name + "' is ignored as it is not in 'key=value' format.",
+								.message = "Audio effect parameter '" + ToUTF8(paramSV, isUTF8) + "' in '" + name + "' is ignored as it is not in 'key=value' format.",
 								.lineNo = fileLineNo,
 							});
 							if (semicolonIdx == std::string_view::npos)
