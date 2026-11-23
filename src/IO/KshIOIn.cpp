@@ -1637,8 +1637,8 @@ namespace
 		{
 			++headerLineNo;
 
-			// Eliminate CR
-			if (!line.empty() && *line.crbegin() == '\r')
+			// Eliminate CRs
+			while (!line.empty() && *line.crbegin() == '\r')
 			{
 				line.pop_back();
 			}
@@ -1959,8 +1959,8 @@ namespace
 		{
 			++fileLineNo;
 
-			// Eliminate CR
-			if (!line.empty() && *line.crbegin() == '\r')
+			// Eliminate CRs
+			while (!line.empty() && *line.crbegin() == '\r')
 			{
 				line.pop_back();
 			}
@@ -3217,8 +3217,8 @@ kson::AudioEffectDefsParseResult kson::ParseAudioEffectDefsFromKsh(const std::st
 	{
 		++lineNo;
 
-		// Eliminate CR
-		if (!line.empty() && *line.crbegin() == '\r')
+		// Eliminate CRs
+		while (!line.empty() && *line.crbegin() == '\r')
 		{
 			line.pop_back();
 		}
@@ -3393,8 +3393,8 @@ kson::CamPatternDefsParseResult kson::ParseCamPatternDefsFromKsh(const std::stri
 	{
 		++lineNo;
 
-		// Eliminate CR
-		if (!line.empty() && *line.crbegin() == '\r')
+		// Eliminate CRs
+		while (!line.empty() && *line.crbegin() == '\r')
 		{
 			line.pop_back();
 		}

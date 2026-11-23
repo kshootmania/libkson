@@ -2634,6 +2634,43 @@ t=120
 }
 
 
+TEST_CASE("KSH lines ending with multiple CRs", "[ksh_io]")
+{
+	SECTION("Chart file")
+	{
+		const std::string kshContent =
+			"title=Test Title\r\r\n"
+			"t=120\r\r\n"
+			"--\r\r\n"
+			"0000|00|--\r\r\n"
+			"--\r\r\n"
+			"#define_fx MyEcho feedbackLevel=60%;type=Echo\r\r\r\n";
+
+		std::istringstream iss(kshContent);
+		const auto loaded = kson::LoadKshChartData(iss);
+		REQUIRE(loaded.error == kson::ErrorType::None);
+		REQUIRE(loaded.meta.title == "Test Title");
+		REQUIRE(loaded.audio.audioEffect.fx.def.size() == 1);
+		REQUIRE(loaded.audio.audioEffect.fx.def[0].v.type == kson::AudioEffectType::Echo);
+	}
+
+	SECTION("Audio effect definition text")
+	{
+		const auto parsed = kson::ParseAudioEffectDefsFromKsh("#define_filter MyFilter gain=50%;type=PeakingFilter\r\r\n");
+		REQUIRE(parsed.error.empty());
+		REQUIRE(parsed.laserDefs.size() == 1);
+		REQUIRE(parsed.laserDefs[0].v.type == kson::AudioEffectType::PeakingFilter);
+	}
+
+	SECTION("Camera pattern definition text")
+	{
+		const auto parsed = kson::ParseCamPatternDefsFromKsh("#define_cam MyCam\r\r\n");
+		REQUIRE(parsed.error.empty());
+		REQUIRE(parsed.defs.size() == 1);
+		REQUIRE(parsed.defs[0].name == "MyCam");
+	}
+}
+
 TEST_CASE("KSH Echo feedback_level without wave_length", "[ksh_io][audio_effect]")
 {
 	kson::ChartData chartData;
